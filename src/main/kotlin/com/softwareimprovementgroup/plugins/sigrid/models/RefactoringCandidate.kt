@@ -47,3 +47,22 @@ data class LineRange(
     val startLine: Int,
     val endLine: Int,
 )
+
+data class RefactoringCandidate(
+    val id: String,
+    val category: RefactoringCategory,
+    val severity: MaintainabilitySeverity,
+    val status: MaintainabilityFindingStatus,
+    val statusLabel: String,
+    val weight: Int,
+    val technology: String,
+    val snapshotDate: String,
+    val name: String,
+    val mcCabe: Int?,
+    val fanIn: Int?,
+    val component: String?,
+    val parameters: Int?,
+    val displayLocation: String,
+    val description: String,
+    val fileLocations: List<FileLocation>,
+)

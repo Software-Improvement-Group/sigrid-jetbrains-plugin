@@ -27,3 +27,15 @@ data class SecurityFindingResponse(
     val weaknessIds: List<String>,
     val categories: List<String>,
 )
+
+data class SecurityFinding(
+    val id: String,
+    val href: String,
+    val severity: RiskSeverity,
+    val filePath: String,
+    val displayFilePath: String,
+    val type: String,
+    val status: FindingStatus,
+    val statusLabel: String,
+    val fileLocations: List<FileLocation>,
+)

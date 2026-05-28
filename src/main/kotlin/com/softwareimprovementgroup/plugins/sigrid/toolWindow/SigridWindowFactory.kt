@@ -19,8 +19,8 @@ class SigridWindowFactory : ToolWindowFactory {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val contentFactory = ContentFactory.getInstance()
 
-        val maintainabilityContent = contentFactory.createContent(MaintainabilityPanel(), "Maintainability", false)
-        val securityContent = contentFactory.createContent(SecurityPanel(), "Security", false)
+        val maintainabilityContent = contentFactory.createContent(MaintainabilityPanel(project), "Maintainability", false)
+        val securityContent = contentFactory.createContent(SecurityPanel(project), "Security", false)
         val openSourceHealthContent = contentFactory.createContent(OpenSourceHealthPanel(), "Open Source Health", false)
 
         toolWindow.contentManager.addContent(maintainabilityContent)
