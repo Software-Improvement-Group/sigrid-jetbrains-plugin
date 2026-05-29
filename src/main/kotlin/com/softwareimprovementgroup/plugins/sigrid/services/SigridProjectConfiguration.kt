@@ -1,8 +1,5 @@
 package com.softwareimprovementgroup.plugins.sigrid.services
 
-import com.intellij.credentialStore.CredentialAttributes
-import com.intellij.credentialStore.Credentials
-import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.components.*
 import com.intellij.openapi.project.Project
 
@@ -28,30 +25,27 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
     )
 
     private var _state = State()
+    private val apiKeyOverrideCredential by lazy {
+        PasswordSafeCredential("com.softwareimprovementgroup.plugins.sigrid/apiKey/${project.locationHash}")
+    }
+
+    init {
+        apiKeyOverrideCredential.loadAsync()
+    }
 
     override fun getState(): State = _state
 
     override fun loadState(state: State) {
         _state = state
+        apiKeyOverrideCredential.loadAsync()
     }
 
-    // Per-project API key override stored in the OS credential store under a project-scoped key
     var apiKeyOverride: String
-        get() {
-            val attributes = CredentialAttributes(apiKeyCredentialKey())
-            return PasswordSafe.instance.get(attributes)?.getPasswordAsString() ?: ""
-        }
-        set(value) {
-            val attributes = CredentialAttributes(apiKeyCredentialKey())
-            PasswordSafe.instance.set(attributes, if (value.isBlank()) null else Credentials(null, value))
-        }
+        get() = apiKeyOverrideCredential.get()
+        set(value) = apiKeyOverrideCredential.set(value)
 
-    private fun apiKeyCredentialKey() =
-        "com.softwareimprovementgroup.plugins.sigrid/apiKey/${project.locationHash}"
-
-    // Effective values — project override wins when set, otherwise falls back to global
     val effectiveApiKey: String
-        get() = apiKeyOverride.ifBlank { SigridConfiguration.getInstance().apiKey }
+        get() = apiKeyOverrideCredential.get().ifBlank { SigridConfiguration.getInstance().apiKey }
 
     val effectiveCustomer: String
         get() = _state.customerOverride.ifBlank { SigridConfiguration.getInstance().customer }

@@ -5,9 +5,8 @@ import com.softwareimprovementgroup.plugins.sigrid.mappers.SecurityFindingMapper
 import com.softwareimprovementgroup.plugins.sigrid.models.SecurityFinding
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
-class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(project) {
+class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(project, arrayOf("Risk", "Location", "Description", "Status")) {
     override val emptyMessage = "No security findings found."
-    override val columns = arrayOf("Risk", "Location", "Description", "Status")
 
     override fun fetch(subsystem: String): List<SecurityFinding> =
         SecurityFindingMapper.map(SigridApiService.getInstance().getSecurityFindings(project), subsystem)

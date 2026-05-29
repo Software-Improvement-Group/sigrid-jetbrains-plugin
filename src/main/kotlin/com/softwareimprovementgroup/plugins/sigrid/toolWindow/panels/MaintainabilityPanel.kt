@@ -5,9 +5,8 @@ import com.softwareimprovementgroup.plugins.sigrid.mappers.RefactoringCandidateM
 import com.softwareimprovementgroup.plugins.sigrid.models.RefactoringCandidate
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
-class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>(project) {
+class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>(project, arrayOf("Risk", "Location", "Description", "Status")) {
     override val emptyMessage = "No refactoring candidates found."
-    override val columns = arrayOf("Risk", "Location", "Description", "Status")
 
     override fun fetch(subsystem: String): List<RefactoringCandidate> =
         RefactoringCandidateMapper.map(SigridApiService.getInstance().getAllRefactoringCandidates(project), subsystem)

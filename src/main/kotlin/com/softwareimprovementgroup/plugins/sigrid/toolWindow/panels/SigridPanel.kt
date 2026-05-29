@@ -18,21 +18,21 @@ private const val CARD_LOADING = "loading"
 private const val CARD_ERROR = "error"
 private const val CARD_TABLE = "table"
 
-abstract class SigridPanel<T>(protected val project: Project) : JBPanel<SigridPanel<T>>(BorderLayout()) {
+abstract class SigridPanel<T>(
+    protected val project: Project,
+    columns: Array<String>,
+) : JBPanel<SigridPanel<T>>(BorderLayout()) {
 
     protected abstract val emptyMessage: String
-    protected abstract val columns: Array<String>
     protected abstract fun fetch(subsystem: String): List<T>
     protected abstract fun T.toRow(): Array<String>
 
-    private val tableModel by lazy { DefaultTableModel(columns, 0) }
-    private val table by lazy {
-        JBTable(tableModel).apply {
-            isStriped = true
-            setDefaultEditor(Any::class.java, null)
-            columnModel.getColumn(0).maxWidth = 80
-            columnModel.getColumn(columns.size - 1).maxWidth = 100
-        }
+    private val tableModel = DefaultTableModel(columns, 0)
+    private val table = JBTable(tableModel).apply {
+        isStriped = true
+        setDefaultEditor(Any::class.java, null)
+        columnModel.getColumn(0).maxWidth = 80
+        columnModel.getColumn(columns.size - 1).maxWidth = 100
     }
 
     private val cardLayout = CardLayout()

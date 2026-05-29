@@ -27,7 +27,7 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
         reset()
         val global = SigridConfiguration.getInstance()
         panel = panel {
-            group("Overrides") {
+            group("General") {
                 row("API Key:") {
                     cell(apiKeyOverrideField).align(AlignX.FILL)
                         .comment("Leave blank to use the global API key")
