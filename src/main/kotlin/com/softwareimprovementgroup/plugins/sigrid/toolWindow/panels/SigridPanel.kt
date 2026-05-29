@@ -6,12 +6,15 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.JBTextField
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import javax.swing.JButton
 import javax.swing.JPanel
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 import javax.swing.table.DefaultTableModel
 
 private const val CARD_LOADING = "loading"
@@ -26,6 +29,9 @@ abstract class SigridPanel<T>(
     protected abstract val emptyMessage: String
     protected abstract fun fetch(subsystem: String): List<T>
     protected abstract fun T.toRow(): Array<String>
+    protected abstract fun T.matchesSearch(query: String): Boolean
+
+    private var allFindings: List<T> = emptyList()
 
     private val tableModel = DefaultTableModel(columns, 0)
     private val table = JBTable(tableModel).apply {
@@ -39,9 +45,26 @@ abstract class SigridPanel<T>(
     private val cards = JPanel(cardLayout)
     private val statusLabel = JBLabel().apply { horizontalAlignment = JBLabel.CENTER }
 
+    private val searchField = JBTextField().apply {
+        emptyText.text = "Search…"
+    }
+
+    // Suppresses onSearchChange during setSearchText to avoid feedback loops
+    private var suppressSearchCallback = false
+
+    var onRefresh: () -> Unit = ::loadData
+    var onSearchChange: (String) -> Unit = {}
+
     init {
+        searchField.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(e: DocumentEvent) = onSearchFieldChanged()
+            override fun removeUpdate(e: DocumentEvent) = onSearchFieldChanged()
+            override fun changedUpdate(e: DocumentEvent) = onSearchFieldChanged()
+        })
+
         val toolbar = JPanel(BorderLayout()).apply {
-            add(JButton("Refresh").apply { addActionListener { loadData() } }, BorderLayout.EAST)
+            add(searchField, BorderLayout.CENTER)
+            add(JButton("Refresh").apply { addActionListener { onRefresh() } }, BorderLayout.EAST)
         }
 
         cards.add(JBLabel("Loading…").apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
@@ -54,7 +77,40 @@ abstract class SigridPanel<T>(
         loadData()
     }
 
-    private fun loadData() {
+    private fun onSearchFieldChanged() {
+        applyFilter()
+        if (!suppressSearchCallback) {
+            onSearchChange(searchField.text)
+        }
+    }
+
+    fun setSearchText(text: String) {
+        suppressSearchCallback = true
+        try {
+            searchField.text = text
+        } finally {
+            suppressSearchCallback = false
+        }
+        applyFilter()
+    }
+
+    private fun applyFilter() {
+        val query = searchField.text.trim()
+        val filtered = if (query.isEmpty()) allFindings else allFindings.filter { it.matchesSearch(query) }
+        tableModel.rowCount = 0
+        if (filtered.isEmpty()) {
+            if (allFindings.isEmpty()) {
+                showError(emptyMessage)
+            } else {
+                showError("No findings match \"$query\".")
+            }
+        } else {
+            filtered.forEach { tableModel.addRow(it.toRow()) }
+            showCard(CARD_TABLE)
+        }
+    }
+
+    fun loadData() {
         showCard(CARD_LOADING)
 
         ApplicationManager.getApplication().executeOnPooledThread {
@@ -67,13 +123,8 @@ abstract class SigridPanel<T>(
             try {
                 val findings = fetch(projectConfig.subsystem)
                 ApplicationManager.getApplication().invokeLater {
-                    tableModel.rowCount = 0
-                    if (findings.isEmpty()) {
-                        showError(emptyMessage)
-                    } else {
-                        findings.forEach { tableModel.addRow(it.toRow()) }
-                        showCard(CARD_TABLE)
-                    }
+                    allFindings = findings
+                    applyFilter()
                 }
             } catch (e: Exception) {
                 showError(toErrorMessage(e))

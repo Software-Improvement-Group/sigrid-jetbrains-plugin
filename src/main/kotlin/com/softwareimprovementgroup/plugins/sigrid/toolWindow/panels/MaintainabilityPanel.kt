@@ -11,6 +11,11 @@ class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>
     override fun fetch(subsystem: String): List<RefactoringCandidate> =
         RefactoringCandidateMapper.map(SigridApiService.getInstance().getAllRefactoringCandidates(project), subsystem)
 
+    override fun RefactoringCandidate.matchesSearch(query: String) =
+        displayLocation.contains(query, ignoreCase = true) ||
+        description.contains(query, ignoreCase = true) ||
+        statusLabel.contains(query, ignoreCase = true)
+
     override fun RefactoringCandidate.toRow(): Array<String> = arrayOf(
         severity.name,
         displayLocation,

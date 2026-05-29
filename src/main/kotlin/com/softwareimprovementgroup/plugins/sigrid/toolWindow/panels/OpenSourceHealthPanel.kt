@@ -14,6 +14,11 @@ class OpenSourceHealthPanel(project: Project) : SigridPanel<OpenSourceHealthDepe
     override fun fetch(subsystem: String): List<OpenSourceHealthDependency> =
         OpenSourceHealthMapper.map(SigridApiService.getInstance().getOpenSourceHealthFindings(project), subsystem)
 
+    override fun OpenSourceHealthDependency.matchesSearch(query: String) =
+        displayName.contains(query, ignoreCase = true) ||
+        version.contains(query, ignoreCase = true) ||
+        dependencyType.contains(query, ignoreCase = true)
+
     override fun OpenSourceHealthDependency.toRow(): Array<String> = arrayOf(
         risk.name,
         displayName,

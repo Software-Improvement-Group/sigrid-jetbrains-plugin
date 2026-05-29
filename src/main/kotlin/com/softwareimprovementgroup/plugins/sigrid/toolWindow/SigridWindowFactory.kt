@@ -19,15 +19,21 @@ class SigridWindowFactory : ToolWindowFactory {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val contentFactory = ContentFactory.getInstance()
 
-        val maintainabilityContent = contentFactory.createContent(MaintainabilityPanel(project), "Maintainability", false)
-        val securityContent = contentFactory.createContent(SecurityPanel(project), "Security", false)
-        val openSourceHealthContent = contentFactory.createContent(OpenSourceHealthPanel(project), "Open Source Health", false)
+        val maintainabilityPanel = MaintainabilityPanel(project)
+        val securityPanel = SecurityPanel(project)
+        val oshPanel = OpenSourceHealthPanel(project)
 
-        toolWindow.contentManager.addContent(maintainabilityContent)
-        toolWindow.contentManager.addContent(securityContent)
-        toolWindow.contentManager.addContent(openSourceHealthContent)
+        val allPanels = listOf(maintainabilityPanel, securityPanel, oshPanel)
+        allPanels.forEach { panel -> panel.onRefresh = { allPanels.forEach { it.loadData() } } }
+        allPanels.forEach { panel ->
+            panel.onSearchChange = { query -> allPanels.filter { it !== panel }.forEach { it.setSearchText(query) } }
+        }
 
-        toolWindow.contentManager.setSelectedContent(maintainabilityContent)
+        toolWindow.contentManager.addContent(contentFactory.createContent(maintainabilityPanel, "Maintainability", false))
+        toolWindow.contentManager.addContent(contentFactory.createContent(securityPanel, "Security", false))
+        toolWindow.contentManager.addContent(contentFactory.createContent(oshPanel, "Open Source Health", false))
+
+        toolWindow.contentManager.setSelectedContent(toolWindow.contentManager.getContent(0)!!)
     }
 
     override fun shouldBeAvailable(project: Project) = true

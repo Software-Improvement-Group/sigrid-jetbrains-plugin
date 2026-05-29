@@ -11,6 +11,11 @@ class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(project, ar
     override fun fetch(subsystem: String): List<SecurityFinding> =
         SecurityFindingMapper.map(SigridApiService.getInstance().getSecurityFindings(project), subsystem)
 
+    override fun SecurityFinding.matchesSearch(query: String) =
+        displayFilePath.contains(query, ignoreCase = true) ||
+        type.contains(query, ignoreCase = true) ||
+        statusLabel.contains(query, ignoreCase = true)
+
     override fun SecurityFinding.toRow(): Array<String> = arrayOf(
         severity.name,
         fileLocations.firstOrNull()?.let { loc ->
