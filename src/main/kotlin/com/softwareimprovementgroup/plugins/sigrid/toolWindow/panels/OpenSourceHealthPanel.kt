@@ -1,14 +1,27 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBPanel
-import java.awt.BorderLayout
+import com.intellij.openapi.project.Project
+import com.softwareimprovementgroup.plugins.sigrid.mappers.OpenSourceHealthMapper
+import com.softwareimprovementgroup.plugins.sigrid.models.OpenSourceHealthDependency
+import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
-class OpenSourceHealthPanel : JBPanel<OpenSourceHealthPanel>(BorderLayout()) {
+class OpenSourceHealthPanel(project: Project) : SigridPanel<OpenSourceHealthDependency>(
+    project,
+    arrayOf("Risk", "Library", "Version", "Transitive", "License", "Vulnerabilities", "Freshness", "Activity"),
+) {
+    override val emptyMessage = "No open source health findings found."
 
-    init {
-        val label = JBLabel("Open source health findings will appear here.")
-        label.horizontalAlignment = JBLabel.CENTER
-        add(label, BorderLayout.CENTER)
-    }
+    override fun fetch(subsystem: String): List<OpenSourceHealthDependency> =
+        OpenSourceHealthMapper.map(SigridApiService.getInstance().getOpenSourceHealthFindings(project), subsystem)
+
+    override fun OpenSourceHealthDependency.toRow(): Array<String> = arrayOf(
+        risk.name,
+        displayName,
+        version,
+        dependencyType,
+        licenseRisk.name,
+        vulnerabilityRisk.name,
+        freshnessRisk.name,
+        activityRisk.name,
+    )
 }

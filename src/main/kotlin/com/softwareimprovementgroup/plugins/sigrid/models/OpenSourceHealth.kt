@@ -45,3 +45,20 @@ data class Property(
     val name: String,
     val value: String,
 )
+
+data class OpenSourceHealthDependency(
+    val name: String,
+    val displayName: String,
+    val version: String,
+    val group: String,
+    val dependencyType: String,
+    val purl: String,
+    val risk: RiskSeverity,
+    val licenseRisk: RiskSeverity,
+    val vulnerabilityRisk: RiskSeverity,
+    val freshnessRisk: RiskSeverity,
+    val activityRisk: RiskSeverity,
+    val stabilityRisk: RiskSeverity,
+    val managementRisk: RiskSeverity,
+    val fileLocations: List<FileLocation>,
+)

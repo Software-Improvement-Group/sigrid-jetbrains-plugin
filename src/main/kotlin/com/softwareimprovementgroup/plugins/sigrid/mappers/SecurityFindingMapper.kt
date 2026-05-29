@@ -31,16 +31,4 @@ object SecurityFindingMapper {
         )
     }
 
-    private fun normalizePath(path: String, subsystem: String): String {
-        if (subsystem.isBlank()) return path
-        val prefix = "$subsystem/"
-        return if (path.startsWith(prefix)) path.removePrefix(prefix) else path
-    }
-
-    private fun toDisplayFilePath(path: String, prefix: String = ".../"): String {
-        if (path.isBlank()) return ""
-        val fileName = path.substringAfterLast("/")
-        val dir = path.substringBeforeLast("/", "")
-        return if (dir.isBlank()) fileName else "$prefix$fileName"
-    }
 }

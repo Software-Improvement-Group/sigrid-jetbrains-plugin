@@ -21,7 +21,7 @@ class SigridWindowFactory : ToolWindowFactory {
 
         val maintainabilityContent = contentFactory.createContent(MaintainabilityPanel(project), "Maintainability", false)
         val securityContent = contentFactory.createContent(SecurityPanel(project), "Security", false)
-        val openSourceHealthContent = contentFactory.createContent(OpenSourceHealthPanel(), "Open Source Health", false)
+        val openSourceHealthContent = contentFactory.createContent(OpenSourceHealthPanel(project), "Open Source Health", false)
 
         toolWindow.contentManager.addContent(maintainabilityContent)
         toolWindow.contentManager.addContent(securityContent)
