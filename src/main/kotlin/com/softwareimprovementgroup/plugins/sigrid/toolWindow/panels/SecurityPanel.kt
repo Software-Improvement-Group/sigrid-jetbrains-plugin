@@ -5,7 +5,11 @@ import com.softwareimprovementgroup.plugins.sigrid.mappers.SecurityFindingMapper
 import com.softwareimprovementgroup.plugins.sigrid.models.SecurityFinding
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
-class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(project, arrayOf("Risk", "Location", "Description", "Status")) {
+class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(
+    project,
+    arrayOf("Risk", "Location", "Description", "Status"),
+    setOf("Risk", "Status")
+) {
     override val emptyMessage = "No security findings found."
 
     override fun fetch(subsystem: String): List<SecurityFinding> =
@@ -16,8 +20,8 @@ class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(project, ar
         type.contains(query, ignoreCase = true) ||
         statusLabel.contains(query, ignoreCase = true)
 
-    override fun SecurityFinding.toRow(): Array<String> = arrayOf(
-        severity.name,
+    override fun SecurityFinding.toRow(): Array<Any> = arrayOf(
+        severity.toRiskIcon(),
         fileLocations.firstOrNull()?.let { loc ->
             if (loc.startLine != null && loc.startLine > 0) "${loc.filePath}:${loc.startLine}" else loc.filePath
         } ?: displayFilePath,

@@ -8,6 +8,7 @@ import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 class OpenSourceHealthPanel(project: Project) : SigridPanel<OpenSourceHealthDependency>(
     project,
     arrayOf("Risk", "Library", "Version", "Transitive", "License", "Vulnerabilities", "Freshness", "Activity"),
+    setOf("Risk", "Transitive", "License", "Vulnerabilities", "Freshness", "Activity"),
 ) {
     override val emptyMessage = "No open source health findings found."
 
@@ -19,14 +20,14 @@ class OpenSourceHealthPanel(project: Project) : SigridPanel<OpenSourceHealthDepe
         version.contains(query, ignoreCase = true) ||
         dependencyType.contains(query, ignoreCase = true)
 
-    override fun OpenSourceHealthDependency.toRow(): Array<String> = arrayOf(
-        risk.name,
+    override fun OpenSourceHealthDependency.toRow(): Array<Any> = arrayOf(
+        risk.toRiskIcon(),
         displayName,
         version,
         dependencyType,
-        licenseRisk.name,
-        vulnerabilityRisk.name,
-        freshnessRisk.name,
-        activityRisk.name,
+        licenseRisk.toRiskIcon(),
+        vulnerabilityRisk.toRiskIcon(),
+        freshnessRisk.toRiskIcon(),
+        activityRisk.toRiskIcon(),
     )
 }

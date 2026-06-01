@@ -5,7 +5,11 @@ import com.softwareimprovementgroup.plugins.sigrid.mappers.RefactoringCandidateM
 import com.softwareimprovementgroup.plugins.sigrid.models.RefactoringCandidate
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
-class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>(project, arrayOf("Risk", "Location", "Description", "Status")) {
+class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>(
+    project,
+    arrayOf("Risk", "Location", "Description", "Status"),
+    setOf("Risk", "Status")
+) {
     override val emptyMessage = "No refactoring candidates found."
 
     override fun fetch(subsystem: String): List<RefactoringCandidate> =
@@ -16,8 +20,8 @@ class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>
         description.contains(query, ignoreCase = true) ||
         statusLabel.contains(query, ignoreCase = true)
 
-    override fun RefactoringCandidate.toRow(): Array<String> = arrayOf(
-        severity.name,
+    override fun RefactoringCandidate.toRow(): Array<Any> = arrayOf(
+        severity.toRiskIcon(),
         displayLocation,
         description,
         statusLabel,

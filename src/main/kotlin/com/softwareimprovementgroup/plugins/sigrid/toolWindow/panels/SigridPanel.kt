@@ -13,8 +13,10 @@ import java.awt.BorderLayout
 import java.awt.CardLayout
 import javax.swing.JButton
 import javax.swing.JPanel
+import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
+import javax.swing.table.DefaultTableCellRenderer
 import javax.swing.table.DefaultTableModel
 
 private const val CARD_LOADING = "loading"
@@ -24,21 +26,38 @@ private const val CARD_TABLE = "table"
 abstract class SigridPanel<T>(
     protected val project: Project,
     columns: Array<String>,
+    centeredColumns: Set<String> = emptySet(),
 ) : JBPanel<SigridPanel<T>>(BorderLayout()) {
 
     protected abstract val emptyMessage: String
     protected abstract fun fetch(subsystem: String): List<T>
-    protected abstract fun T.toRow(): Array<String>
+    protected abstract fun T.toRow(): Array<Any>
     protected abstract fun T.matchesSearch(query: String): Boolean
 
     private var allFindings: List<T> = emptyList()
 
-    private val tableModel = DefaultTableModel(columns, 0)
+    private val tableModel = object : DefaultTableModel(columns, 0) {
+        override fun getColumnClass(column: Int): Class<*> =
+            if (rowCount > 0) getValueAt(0, column)?.javaClass ?: Any::class.java else Any::class.java
+    }
+    private val riskIconRenderer = RiskIconCellRenderer()
+    private val centeredCellRenderer = DefaultTableCellRenderer().apply {
+        horizontalAlignment = SwingConstants.CENTER
+    }
+
     private val table = JBTable(tableModel).apply {
         isStriped = true
         setDefaultEditor(Any::class.java, null)
+        setDefaultRenderer(RiskIcon::class.java, riskIconRenderer)
         columnModel.getColumn(0).maxWidth = 80
         columnModel.getColumn(columns.size - 1).maxWidth = 100
+        columns.forEachIndexed { i, name ->
+            if (name in centeredColumns) {
+                val col = columnModel.getColumn(i)
+                col.headerRenderer = centeredCellRenderer
+                col.cellRenderer = FindingCellRenderer(centeredCellRenderer, riskIconRenderer)
+            }
+        }
     }
 
     private val cardLayout = CardLayout()
