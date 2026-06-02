@@ -18,13 +18,16 @@ class SigridConfiguration : PersistentStateComponent<SigridConfiguration.State> 
     data class State(
         var sigridUrl: String = SIGRID_DEFAULT_URL,
         var customer: String = "",
+        var jiraUser: String = "",
     )
 
     private var _state = State()
     private val apiKeyCredential = PasswordSafeCredential("com.softwareimprovementgroup.plugins.sigrid/apiKey")
+    private val jiraTokenCredential = PasswordSafeCredential("com.softwareimprovementgroup.plugins.sigrid/jiraToken")
 
     init {
         apiKeyCredential.loadAsync()
+        jiraTokenCredential.loadAsync()
     }
 
     override fun getState(): State = _state
@@ -32,6 +35,7 @@ class SigridConfiguration : PersistentStateComponent<SigridConfiguration.State> 
     override fun loadState(state: State) {
         _state = state
         apiKeyCredential.loadAsync()
+        jiraTokenCredential.loadAsync()
     }
 
     var sigridUrl: String
@@ -45,6 +49,14 @@ class SigridConfiguration : PersistentStateComponent<SigridConfiguration.State> 
     var apiKey: String
         get() = apiKeyCredential.get()
         set(value) = apiKeyCredential.set(value)
+
+    var jiraUser: String
+        get() = _state.jiraUser
+        set(value) { _state.jiraUser = value }
+
+    var jiraToken: String
+        get() = jiraTokenCredential.get()
+        set(value) = jiraTokenCredential.set(value)
 
     fun getSigridApiBaseUrl(): String {
         val base = _state.sigridUrl.trimEnd('/').ifBlank { SIGRID_DEFAULT_URL }

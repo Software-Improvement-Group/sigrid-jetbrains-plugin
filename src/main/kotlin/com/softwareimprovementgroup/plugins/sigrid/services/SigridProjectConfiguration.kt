@@ -19,8 +19,7 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
         var customerOverride: String = "",
         var sigridUrlOverride: String = "",
         var jiraBaseUrl: String = "",
-        var jiraUser: String = "",
-        var jiraToken: String = "",
+        var jiraUserOverride: String = "",
         var jiraProjectKey: String = "",
     )
 
@@ -28,9 +27,13 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
     private val apiKeyOverrideCredential by lazy {
         PasswordSafeCredential("com.softwareimprovementgroup.plugins.sigrid/apiKey/${project.locationHash}")
     }
+    private val jiraTokenOverrideCredential by lazy {
+        PasswordSafeCredential("com.softwareimprovementgroup.plugins.sigrid/jiraToken/${project.locationHash}")
+    }
 
     init {
         apiKeyOverrideCredential.loadAsync()
+        jiraTokenOverrideCredential.loadAsync()
     }
 
     override fun getState(): State = _state
@@ -38,6 +41,7 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
     override fun loadState(state: State) {
         _state = state
         apiKeyOverrideCredential.loadAsync()
+        jiraTokenOverrideCredential.loadAsync()
     }
 
     var apiKeyOverride: String
@@ -62,9 +66,15 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
     val isConfigurationValid: Boolean
         get() = effectiveApiKey.isNotBlank() && effectiveCustomer.isNotBlank() && _state.system.isNotBlank()
 
+    val effectiveJiraUser: String
+        get() = _state.jiraUserOverride.ifBlank { SigridConfiguration.getInstance().jiraUser }
+
+    val effectiveJiraToken: String
+        get() = jiraTokenOverrideCredential.get().ifBlank { SigridConfiguration.getInstance().jiraToken }
+
     val isJiraConfigured: Boolean
-        get() = _state.jiraBaseUrl.isNotBlank() && _state.jiraUser.isNotBlank() &&
-                _state.jiraToken.isNotBlank() && _state.jiraProjectKey.isNotBlank()
+        get() = _state.jiraBaseUrl.isNotBlank() && effectiveJiraUser.isNotBlank() &&
+                effectiveJiraToken.isNotBlank() && _state.jiraProjectKey.isNotBlank()
 
     var system: String
         get() = _state.system
@@ -86,13 +96,13 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
         get() = _state.jiraBaseUrl
         set(value) { _state.jiraBaseUrl = value }
 
-    var jiraUser: String
-        get() = _state.jiraUser
-        set(value) { _state.jiraUser = value }
+    var jiraUserOverride: String
+        get() = _state.jiraUserOverride
+        set(value) { _state.jiraUserOverride = value }
 
-    var jiraToken: String
-        get() = _state.jiraToken
-        set(value) { _state.jiraToken = value }
+    var jiraTokenOverride: String
+        get() = jiraTokenOverrideCredential.get()
+        set(value) = jiraTokenOverrideCredential.set(value)
 
     var jiraProjectKey: String
         get() = _state.jiraProjectKey
