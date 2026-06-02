@@ -17,7 +17,7 @@ data class OshMetadataResponse(
 data class OshDependencyResponse(
     val type: String,
     val name: String,
-    val group: String,
+    val group: String?,
     val version: String,
     val purl: String,
     val properties: List<Property>,
@@ -50,7 +50,7 @@ data class OpenSourceHealthDependency(
     val name: String,
     val displayName: String,
     val version: String,
-    val group: String,
+    val group: String?,
     val dependencyType: String,
     val purl: String,
     val risk: RiskSeverity,

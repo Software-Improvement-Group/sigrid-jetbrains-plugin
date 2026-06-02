@@ -42,7 +42,7 @@ object OpenSourceHealthMapper {
 
         return OpenSourceHealthDependency(
             name = component.name,
-            displayName = if (component.group.isNotBlank()) "${component.group}/${component.name}" else component.name,
+            displayName = if (!component.group.isNullOrBlank()) "${component.group}/${component.name}" else component.name,
             version = component.version,
             group = component.group,
             dependencyType = props[DEPENDENCY_TYPE_KEY]?.let { snakeCaseToTitleCase(it) } ?: "Unknown",

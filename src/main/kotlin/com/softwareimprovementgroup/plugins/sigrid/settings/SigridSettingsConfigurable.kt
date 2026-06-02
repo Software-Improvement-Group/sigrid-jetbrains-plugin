@@ -22,19 +22,18 @@ class SigridSettingsConfigurable : Configurable {
         reset()
         panel = panel {
             group(SigridBundle["settings.group.general"]) {
-                SigridBundle["settings.global.group"]
-                    row(SigridBundle["settings.api.key.label"]) {
-                        cell(apiKeyField).align(AlignX.FILL)
-                            .comment(SigridBundle["settings.api.key.comment"])
-                    }
-                    row(SigridBundle["settings.customer.label"]) {
-                        textField().bindText(::customer).align(AlignX.FILL)
-                            .comment(SigridBundle["settings.global.customer.comment"])
-                    }
-                    row(SigridBundle["settings.sigrid.url.label"]) {
-                        textField().bindText(::sigridUrl).align(AlignX.FILL)
-                            .comment(SigridBundle["settings.global.sigrid.url.comment", SigridConfiguration.SIGRID_DEFAULT_URL])
-                    }
+                row(SigridBundle["settings.api.key.label"]) {
+                    cell(apiKeyField).align(AlignX.FILL)
+                        .comment(SigridBundle["settings.api.key.comment"])
+                }
+                row(SigridBundle["settings.customer.label"]) {
+                    textField().bindText(::customer).align(AlignX.FILL)
+                        .comment(SigridBundle["settings.global.customer.comment"])
+                }
+                row(SigridBundle["settings.sigrid.url.label"]) {
+                    textField().bindText(::sigridUrl).align(AlignX.FILL)
+                        .comment(SigridBundle["settings.global.sigrid.url.comment", SigridConfiguration.SIGRID_DEFAULT_URL])
+                }
             }
             // TODO: Uncomment when Jira integration is implemented
             /*group(SigridBundle["settings.group.jira"]) {
