@@ -64,4 +64,4 @@ Use the search bar at the top of each tab to filter findings by any text.
 
 ## License
 
-[MIT](LICENSE)
+[Apache License 2.0](./LICENSE)
