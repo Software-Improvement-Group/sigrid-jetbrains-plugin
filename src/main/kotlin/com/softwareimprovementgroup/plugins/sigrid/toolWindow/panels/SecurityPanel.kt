@@ -1,16 +1,17 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
 import com.intellij.openapi.project.Project
+import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.mappers.SecurityFindingMapper
 import com.softwareimprovementgroup.plugins.sigrid.models.SecurityFinding
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
 class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(
     project,
-    arrayOf("Risk", "Location", "Description", "Status"),
-    setOf("Risk", "Status")
+    arrayOf(SigridBundle["column.risk"], SigridBundle["column.location"], SigridBundle["column.description"], SigridBundle["column.status"]),
+    setOf(SigridBundle["column.risk"], SigridBundle["column.status"])
 ) {
-    override val emptyMessage = "No security findings found."
+    override val emptyMessage = SigridBundle["security.empty"]
 
     override fun fetch(subsystem: String): List<SecurityFinding> =
         SecurityFindingMapper.map(SigridApiService.getInstance().getSecurityFindings(project), subsystem)

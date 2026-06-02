@@ -8,6 +8,7 @@ import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.table.JBTable
+import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import java.awt.BorderLayout
 import java.awt.CardLayout
@@ -65,7 +66,7 @@ abstract class SigridPanel<T>(
     private val statusLabel = JBLabel().apply { horizontalAlignment = JBLabel.CENTER }
 
     private val searchField = JBTextField().apply {
-        emptyText.text = "Search…"
+        emptyText.text = SigridBundle["panel.search.placeholder"]
     }
 
     // Suppresses onSearchChange during setSearchText to avoid feedback loops
@@ -83,10 +84,10 @@ abstract class SigridPanel<T>(
 
         val toolbar = JPanel(BorderLayout()).apply {
             add(searchField, BorderLayout.CENTER)
-            add(JButton("Refresh").apply { addActionListener { onRefresh() } }, BorderLayout.EAST)
+            add(JButton(SigridBundle["panel.refresh.button"]).apply { addActionListener { onRefresh() } }, BorderLayout.EAST)
         }
 
-        cards.add(JBLabel("Loading…").apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
+        cards.add(JBLabel(SigridBundle["panel.loading"]).apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
         cards.add(statusLabel, CARD_ERROR)
         cards.add(JBScrollPane(table), CARD_TABLE)
 
@@ -121,7 +122,7 @@ abstract class SigridPanel<T>(
             if (allFindings.isEmpty()) {
                 showError(emptyMessage)
             } else {
-                showError("No findings match \"$query\".")
+                showError(SigridBundle["panel.no.findings.match", query])
             }
         } else {
             filtered.forEach { tableModel.addRow(it.toRow()) }
@@ -135,7 +136,7 @@ abstract class SigridPanel<T>(
         ApplicationManager.getApplication().executeOnPooledThread {
             val projectConfig = SigridProjectConfiguration.getInstance(project)
             if (!projectConfig.isConfigurationValid) {
-                showError("Sigrid is not configured. Go to Settings → Tools → Sigrid.")
+                showError(SigridBundle["panel.not.configured"])
                 return@executeOnPooledThread
             }
 
@@ -168,10 +169,10 @@ abstract class SigridPanel<T>(
     private fun toErrorMessage(e: Exception): String {
         val status = e.message?.substringAfter("HTTP ")?.substringBefore(" ")?.toIntOrNull()
         return when (status) {
-            401  -> "Unauthorized — please verify your API key."
-            403  -> "Forbidden — you do not have access to this system."
-            404  -> "Not found — please verify the customer and system name."
-            else -> "Failed to load findings: ${e.message}"
+            401  -> SigridBundle["panel.error.unauthorized"]
+            403  -> SigridBundle["panel.error.forbidden"]
+            404  -> SigridBundle["panel.error.not.found"]
+            else -> SigridBundle["panel.error.generic", e.message ?: ""]
         }
     }
 }

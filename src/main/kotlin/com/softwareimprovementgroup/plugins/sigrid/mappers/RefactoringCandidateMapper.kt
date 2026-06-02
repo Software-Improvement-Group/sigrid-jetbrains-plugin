@@ -1,5 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.mappers
 
+import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.*
 
 object RefactoringCandidateMapper {
@@ -48,18 +49,18 @@ object RefactoringCandidateMapper {
         val first = toDisplayFilePath(locations[0].file, prefix)
         if (locations.size == 1) return first
         val second = toDisplayFilePath(locations[1].file, prefix)
-        if (locations.size == 2) return "$first and $second"
-        return "$first, $second and ${locations.size - 2} other files"
+        if (locations.size == 2) return SigridBundle["mapper.location.two", first, second]
+        return SigridBundle["mapper.location.many", first, second, locations.size - 2]
     }
 
     private fun description(category: RefactoringCategory, r: RefactoringCandidateResponse): String {
         val name = r.name?.replace(",", ", ")
         return when (category) {
-            RefactoringCategory.Duplication     -> "${r.weight} lines of code are duplicated between ${displayLocation(r, noPathPrefix = true)}."
-            RefactoringCategory.UnitSize        -> "$name contains ${r.weight} lines of code."
-            RefactoringCategory.UnitComplexity  -> "$name defines ${r.mcCabe} decision points."
-            RefactoringCategory.UnitInterfacing -> "$name has ${r.parameters} parameters."
-            RefactoringCategory.ModuleCoupling  -> "${toDisplayFilePath(r.file, "")} has ${r.fanIn} incoming dependencies from other units."
+            RefactoringCategory.Duplication     -> SigridBundle["mapper.description.duplication", r.weight, displayLocation(r, noPathPrefix = true)]
+            RefactoringCategory.UnitSize        -> SigridBundle["mapper.description.unit.size", name ?: "", r.weight]
+            RefactoringCategory.UnitComplexity  -> SigridBundle["mapper.description.unit.complexity", name ?: "", r.mcCabe ?: 0]
+            RefactoringCategory.UnitInterfacing -> SigridBundle["mapper.description.unit.interfacing", name ?: "", r.parameters ?: 0]
+            RefactoringCategory.ModuleCoupling  -> SigridBundle["mapper.description.module.coupling", toDisplayFilePath(r.file, ""), r.fanIn ?: 0]
         }
     }
 

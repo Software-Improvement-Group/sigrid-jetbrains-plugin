@@ -9,19 +9,19 @@
 
     <depends>com.intellij.modules.platform</depends>
 
-    <resource-bundle>messages.MyBundle</resource-bundle>
+    <resource-bundle>messages.Sigrid</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
 <applicationConfigurable
                 instance="com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsConfigurable"
-                displayName="Sigrid"
                 id="com.softwareimprovementgroup.plugins.sigrid.settings"
-                parentId="tools"/>
+                parentId="tools"
+                key="settings.display.name"/>
         <projectConfigurable
                 instance="com.softwareimprovementgroup.plugins.sigrid.settings.SigridProjectSettingsConfigurable"
-                displayName="Project"
                 id="com.softwareimprovementgroup.plugins.sigrid.settings.project"
-                parentId="com.softwareimprovementgroup.plugins.sigrid.settings"/>
+                parentId="com.softwareimprovementgroup.plugins.sigrid.settings"
+                key="settings.project.display.name"/>
 
         <toolWindow
                 factoryClass="com.softwareimprovementgroup.plugins.sigrid.toolWindow.SigridWindowFactory"

@@ -3,6 +3,7 @@ package com.softwareimprovementgroup.plugins.sigrid.settings
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.*
+import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridConfiguration
 import javax.swing.JComponent
 import javax.swing.JPasswordField
@@ -13,22 +14,22 @@ class SigridSettingsConfigurable : Configurable {
     private var customer = ""
     private var sigridUrl = ""
 
-    override fun getDisplayName() = "Sigrid"
+    override fun getDisplayName() = SigridBundle["settings.display.name"]
 
     override fun createComponent(): JComponent {
         reset()
         panel = panel {
-            row("API Key:") {
+            row(SigridBundle["settings.api.key.label"]) {
                 cell(apiKeyField).align(AlignX.FILL)
-                    .comment("Your Sigrid personal access token")
+                    .comment(SigridBundle["settings.api.key.comment"])
             }
-            row("Customer:") {
+            row(SigridBundle["settings.customer.label"]) {
                 textField().bindText(::customer).align(AlignX.FILL)
-                    .comment("Default customer used across all projects; can be overridden per workspace")
+                    .comment(SigridBundle["settings.global.customer.comment"])
             }
-            row("Sigrid URL:") {
+            row(SigridBundle["settings.sigrid.url.label"]) {
                 textField().bindText(::sigridUrl).align(AlignX.FILL)
-                    .comment("Default: ${SigridConfiguration.SIGRID_DEFAULT_URL}; can be overridden per workspace")
+                    .comment(SigridBundle["settings.global.sigrid.url.comment", SigridConfiguration.SIGRID_DEFAULT_URL])
             }
         }
         return panel!!

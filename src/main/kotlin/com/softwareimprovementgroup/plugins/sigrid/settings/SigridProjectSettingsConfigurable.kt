@@ -4,6 +4,7 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.*
+import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridConfiguration
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import javax.swing.JComponent
@@ -21,46 +22,46 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
     private var jiraToken = ""
     private var jiraProjectKey = ""
 
-    override fun getDisplayName() = "Project"
+    override fun getDisplayName() = SigridBundle["settings.project.display.name"]
 
     override fun createComponent(): JComponent {
         reset()
         val global = SigridConfiguration.getInstance()
         panel = panel {
-            group("General") {
-                row("API Key:") {
+            group(SigridBundle["settings.project.general.group"]) {
+                row(SigridBundle["settings.api.key.label"]) {
                     cell(apiKeyOverrideField).align(AlignX.FILL)
-                        .comment("Leave blank to use the global API key")
+                        .comment(SigridBundle["settings.project.api.key.comment"])
                 }
-                row("Customer:") {
+                row(SigridBundle["settings.customer.label"]) {
                     textField().bindText(::customerOverride).align(AlignX.FILL)
-                        .comment("Leave blank to use global: <i>${global.customer.ifBlank { "not set" }}</i>")
+                        .comment(SigridBundle["settings.project.override.comment", global.customer.ifBlank { SigridBundle["settings.project.not.set"] }])
                 }
-                row("Sigrid URL:") {
+                row(SigridBundle["settings.sigrid.url.label"]) {
                     textField().bindText(::sigridUrlOverride).align(AlignX.FILL)
-                        .comment("Leave blank to use global: <i>${global.sigridUrl.ifBlank { SigridConfiguration.SIGRID_DEFAULT_URL }}</i>")
+                        .comment(SigridBundle["settings.project.override.comment", global.sigridUrl.ifBlank { SigridConfiguration.SIGRID_DEFAULT_URL }])
                 }
             }
-            group("System") {
-                row("System:") {
+            group(SigridBundle["settings.project.system.group"]) {
+                row(SigridBundle["settings.project.system.label"]) {
                     textField().bindText(::system).align(AlignX.FILL)
                 }
-                row("Subsystem:") {
+                row(SigridBundle["settings.project.subsystem.label"]) {
                     textField().bindText(::subsystem).align(AlignX.FILL)
-                        .comment("Optional — leave blank to include all subsystems")
+                        .comment(SigridBundle["settings.project.subsystem.comment"])
                 }
             }
-            group("Jira Integration (Optional)") {
-                row("Base URL:") {
+            group(SigridBundle["settings.project.jira.group"]) {
+                row(SigridBundle["settings.project.jira.base.url.label"]) {
                     textField().bindText(::jiraBaseUrl).align(AlignX.FILL)
                 }
-                row("User:") {
+                row(SigridBundle["settings.project.jira.user.label"]) {
                     textField().bindText(::jiraUser).align(AlignX.FILL)
                 }
-                row("Token:") {
+                row(SigridBundle["settings.project.jira.token.label"]) {
                     textField().bindText(::jiraToken).align(AlignX.FILL)
                 }
-                row("Project Key:") {
+                row(SigridBundle["settings.project.jira.project.key.label"]) {
                     textField().bindText(::jiraProjectKey).align(AlignX.FILL)
                 }
             }
