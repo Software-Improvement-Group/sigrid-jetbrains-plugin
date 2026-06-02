@@ -29,6 +29,5 @@
                 anchor="bottom"
                 icon="/icons/sigrid.png"
         />
-        <postStartupActivity implementation="com.softwareimprovementgroup.plugins.sigrid.startup.MyProjectActivity" />
     </extensions>
 </idea-plugin>
