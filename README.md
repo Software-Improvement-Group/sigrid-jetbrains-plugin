@@ -12,7 +12,7 @@ A JetBrains IDE plugin that lets you view and manage [Sigrid](https://www.softwa
 
 ## Requirements
 
-- One of the following JetBrains IDEs, version 2025.2 or later:
+- One of the following JetBrains IDEs, version 2026.1 or later:
   - IntelliJ IDEA (Community & Ultimate)
   - PyCharm (Community & Professional)
   - WebStorm
