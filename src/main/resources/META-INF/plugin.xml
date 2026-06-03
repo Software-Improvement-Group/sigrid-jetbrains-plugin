@@ -1,0 +1,33 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>com.softwareimprovementgroup.plugins.sigrid</id>
+    <name>Sigrid</name>
+    <vendor>Software Improvement Group</vendor>
+    <description><![CDATA[
+        <p><b>Sigrid Plugin for JetBrains IDEs</b> lets you view and manage maintainability, security and open source health findings in your JetBrains IDEs.</p>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <resource-bundle>messages.Sigrid</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+<applicationConfigurable
+                instance="com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsConfigurable"
+                id="com.softwareimprovementgroup.plugins.sigrid.settings"
+                parentId="tools"
+                key="settings.display.name"/>
+        <projectConfigurable
+                instance="com.softwareimprovementgroup.plugins.sigrid.settings.SigridProjectSettingsConfigurable"
+                id="com.softwareimprovementgroup.plugins.sigrid.settings.project"
+                parentId="com.softwareimprovementgroup.plugins.sigrid.settings"
+                key="settings.project.display.name"/>
+
+        <toolWindow
+                factoryClass="com.softwareimprovementgroup.plugins.sigrid.toolWindow.SigridWindowFactory"
+                id="Sigrid"
+                anchor="bottom"
+                icon="/icons/sigrid.png"
+        />
+    </extensions>
+</idea-plugin>

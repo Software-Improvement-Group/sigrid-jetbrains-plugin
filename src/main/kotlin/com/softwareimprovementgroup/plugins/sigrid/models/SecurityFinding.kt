@@ -1,0 +1,41 @@
+package com.softwareimprovementgroup.plugins.sigrid.models
+
+data class SecurityFindingResponse(
+    val id: String,
+    val href: String,
+    val firstSeenAnalysisDate: String,
+    val lastSeenAnalysisDate: String,
+    val firstSeenSnapshotDate: String,
+    val lastSeenSnapshotDate: String,
+    val filePath: String?,
+    val startLine: Int,
+    val endLine: Int,
+    val component: String,
+    val type: String,
+    val cweId: String,
+    val severity: String,
+    val impact: String,
+    val exploitability: String,
+    val severityScore: Float,
+    val impactScore: Float,
+    val exploitabilityScore: Float,
+    val status: String,
+    val remark: String,
+    val toolName: String?,
+    val isManualFinding: Boolean,
+    val isSeverityOverridden: Boolean,
+    val weaknessIds: List<String>,
+    val categories: List<String>,
+)
+
+data class SecurityFinding(
+    val id: String,
+    val href: String,
+    val severity: RiskSeverity,
+    val filePath: String,
+    val displayFilePath: String,
+    val type: String,
+    val status: FindingStatus,
+    val statusLabel: String,
+    val fileLocations: List<FileLocation>,
+)
