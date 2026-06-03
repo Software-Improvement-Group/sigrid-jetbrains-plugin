@@ -13,7 +13,7 @@ import javax.swing.JComponent
 class FindingNavigator(private val project: Project, private val anchor: JComponent) {
 
     fun navigate(locations: List<FileLocation>, event: MouseEvent?) {
-        val valid = locations.filter { it.filePath.isNotBlank() }
+        val valid = filterValidLocations(locations)
         if (valid.isEmpty()) return
         if (valid.size == 1) {
             openFileLocation(valid[0])
@@ -26,8 +26,7 @@ class FindingNavigator(private val project: Project, private val anchor: JCompon
         val basePath = project.basePath ?: return
         val absolutePath = "$basePath/${location.filePath}"
         val vFile = LocalFileSystem.getInstance().findFileByPath(absolutePath) ?: return
-        val line = if (location.startLine != null && location.startLine > 0) location.startLine - 1 else 0
-        OpenFileDescriptor(project, vFile, line, 0).navigate(true)
+        OpenFileDescriptor(project, vFile, editorLine(location), 0).navigate(true)
     }
 
     private fun showLocationPopup(locations: List<FileLocation>, event: MouseEvent?) {
@@ -37,8 +36,7 @@ class FindingNavigator(private val project: Project, private val anchor: JCompon
             ): java.awt.Component {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
                 val loc = value as? FileLocation ?: return this
-                val line = if (loc.startLine != null && loc.startLine > 0) ":${loc.startLine}" else ""
-                text = "${loc.filePath.substringAfterLast("/")}$line"
+                text = popupItemText(loc)
                 toolTipText = loc.filePath
                 border = javax.swing.BorderFactory.createEmptyBorder(0, 8, 0, 8)
                 return this
@@ -54,6 +52,19 @@ class FindingNavigator(private val project: Project, private val anchor: JCompon
             popup.show(RelativePoint(event.component, event.point))
         } else {
             popup.showInCenterOf(anchor)
+        }
+    }
+
+    companion object {
+        fun filterValidLocations(locations: List<FileLocation>): List<FileLocation> =
+            locations.filter { it.filePath.isNotBlank() }
+
+        fun editorLine(location: FileLocation): Int =
+            if (location.startLine != null && location.startLine > 0) location.startLine - 1 else 0
+
+        fun popupItemText(location: FileLocation): String {
+            val line = if (location.startLine != null && location.startLine > 0) ":${location.startLine}" else ""
+            return "${location.filePath.substringAfterLast("/")}$line"
         }
     }
 }
