@@ -1,16 +1,12 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.JBColor
-import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
-import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
@@ -77,7 +73,7 @@ abstract class SigridPanel<T>(
                     if (viewRow < 0) return
                     val modelRow = convertRowIndexToModel(viewRow)
                     val finding = displayedFindings.getOrNull(modelRow) ?: return
-                    navigateToFinding(finding, e)
+                    navigator.navigate(finding.getFileLocations(), e)
                 }
             }
         })
@@ -88,11 +84,12 @@ abstract class SigridPanel<T>(
                     if (viewRow < 0) return
                     val modelRow = convertRowIndexToModel(viewRow)
                     val finding = displayedFindings.getOrNull(modelRow) ?: return
-                    navigateToFinding(finding, null)
+                    navigator.navigate(finding.getFileLocations(), null)
                 }
             }
         })
     }
+    private val navigator: FindingNavigator by lazy { FindingNavigator(project, table) }
 
     private val cardLayout = CardLayout()
     private val cards = JPanel(cardLayout)
@@ -211,48 +208,4 @@ abstract class SigridPanel<T>(
         }
     }
 
-    private fun navigateToFinding(finding: T, event: MouseEvent?) {
-        val locations = finding.getFileLocations().filter { it.filePath.isNotBlank() }
-        if (locations.isEmpty()) return
-        if (locations.size == 1) {
-            openFileLocation(locations[0])
-        } else {
-            showLocationPopup(locations, event)
-        }
-    }
-
-    private fun openFileLocation(location: FileLocation) {
-        val basePath = project.basePath ?: return
-        val absolutePath = "$basePath/${location.filePath}"
-        val vFile = LocalFileSystem.getInstance().findFileByPath(absolutePath) ?: return
-        val line = if (location.startLine != null && location.startLine > 0) location.startLine - 1 else 0
-        OpenFileDescriptor(project, vFile, line, 0).navigate(true)
-    }
-
-    private fun showLocationPopup(locations: List<FileLocation>, event: MouseEvent?) {
-        val renderer = object : javax.swing.DefaultListCellRenderer() {
-            override fun getListCellRendererComponent(
-                list: javax.swing.JList<*>, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
-            ): java.awt.Component {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-                val loc = value as? FileLocation ?: return this
-                val line = if (loc.startLine != null && loc.startLine > 0) ":${loc.startLine}" else ""
-                text = "${loc.filePath.substringAfterLast("/")}$line"
-                toolTipText = loc.filePath
-                border = javax.swing.BorderFactory.createEmptyBorder(0, 8, 0, 8)
-                return this
-            }
-        }
-        val popup = JBPopupFactory.getInstance()
-            .createPopupChooserBuilder(locations)
-            .setTitle(SigridBundle["panel.location.popup.title"])
-            .setRenderer(renderer)
-            .setItemChosenCallback { openFileLocation(it) }
-            .createPopup()
-        if (event != null) {
-            popup.show(RelativePoint(event.component, event.point))
-        } else {
-            popup.showInCenterOf(table)
-        }
-    }
 }
