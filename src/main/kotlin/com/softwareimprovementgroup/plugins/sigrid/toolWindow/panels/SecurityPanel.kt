@@ -3,6 +3,7 @@ package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 import com.intellij.openapi.project.Project
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.mappers.SecurityFindingMapper
+import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.models.SecurityFinding
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
@@ -29,4 +30,6 @@ class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(
         type,
         statusLabel,
     )
+
+    override fun SecurityFinding.getFileLocations(): List<FileLocation> = fileLocations
 }
