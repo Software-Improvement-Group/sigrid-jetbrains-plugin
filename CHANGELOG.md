@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.2] - 2026-06-05
+
+### Added
+
+- **File navigation** — double-clicking a finding in any panel opens the corresponding file at the exact line in the editor. When a finding spans multiple locations a popup lets you choose which one to jump to.
+- **`FindingNavigator`** — dedicated class encapsulating navigation logic (location filtering, line mapping, multi-location popup) extracted from the panel layer for reuse and testability.
+- **Unit tests** for `FindingNavigator` covering single-location navigation, multi-location popup, invalid/missing file handling, line-number edge cases, and popup item text formatting.
+
 ## [0.0.1] - 2026-06-02
 
 ### Added
