@@ -20,7 +20,7 @@ data class SecurityFindingResponse(
     val impactScore: Float,
     val exploitabilityScore: Float,
     val status: String,
-    val remark: String,
+    val remark: String?,
     val toolName: String?,
     val isManualFinding: Boolean,
     val isSeverityOverridden: Boolean,
@@ -37,5 +37,6 @@ data class SecurityFinding(
     val type: String,
     val status: FindingStatus,
     val statusLabel: String,
+    val remark: String,
     val fileLocations: List<FileLocation>,
 )

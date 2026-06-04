@@ -28,7 +28,7 @@ object RefactoringCandidateMapper {
         category = category,
         severity = MaintainabilitySeverity.from(r.severity),
         status = MaintainabilityFindingStatus.from(r.status),
-        statusLabel = snakeCaseToTitleCase(r.status),
+        statusLabel = "${MaintainabilityFindingStatus.from(r.status).icon} ${snakeCaseToTitleCase(r.status)}",
         weight = r.weight,
         technology = r.technology,
         snapshotDate = r.snapshotDate,
@@ -39,6 +39,7 @@ object RefactoringCandidateMapper {
         parameters = r.parameters,
         displayLocation = displayLocation(r),
         description = description(category, r),
+        remark = "",
         fileLocations = fileLocations(category, r, subsystem),
     )
 

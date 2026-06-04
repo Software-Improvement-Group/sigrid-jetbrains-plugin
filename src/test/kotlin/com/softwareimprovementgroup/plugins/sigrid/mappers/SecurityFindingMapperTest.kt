@@ -105,9 +105,16 @@ class SecurityFindingMapperTest {
     }
 
     @Test
-    fun map_statusLabel_snakeCaseToTitleCase() {
+    fun map_statusLabel_includesIconAndTitleCase() {
         val result = SecurityFindingMapper.map(listOf(makeResponse(status = "WILL_FIX")), "")
-        assertEquals("Will Fix", result[0].statusLabel)
+        assertEquals("🔧 Will Fix", result[0].statusLabel)
+    }
+
+    @Test
+    fun map_remark_preservedFromResponse() {
+        val response = makeResponse().copy(remark = "needs review")
+        val result = SecurityFindingMapper.map(listOf(response), "")
+        assertEquals("needs review", result[0].remark)
     }
 
     @Test

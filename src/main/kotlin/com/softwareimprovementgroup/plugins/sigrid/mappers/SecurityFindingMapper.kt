@@ -19,7 +19,8 @@ object SecurityFindingMapper {
             displayFilePath = toDisplayFilePath(filePath),
             type = r.type,
             status = FindingStatus.from(r.status),
-            statusLabel = snakeCaseToTitleCase(r.status),
+            statusLabel = "${FindingStatus.from(r.status).icon} ${snakeCaseToTitleCase(r.status)}",
+            remark = r.remark ?: "",
             fileLocations = listOf(
                 FileLocation(
                     component = r.component,

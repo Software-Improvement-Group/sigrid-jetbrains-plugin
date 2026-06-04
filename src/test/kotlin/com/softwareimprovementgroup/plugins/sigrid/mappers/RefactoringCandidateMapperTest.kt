@@ -101,9 +101,15 @@ class RefactoringCandidateMapperTest {
     }
 
     @Test
-    fun map_statusLabel_snakeCaseToTitleCase() {
+    fun map_statusLabel_includesIconAndTitleCase() {
         val result = RefactoringCandidateMapper.map(makeMap(RefactoringCategory.UnitSize, listOf(makeResponse(status = "WILL_FIX"))), "")
-        assertEquals("Will Fix", result[0].statusLabel)
+        assertEquals("🔧 Will Fix", result[0].statusLabel)
+    }
+
+    @Test
+    fun map_remark_isAlwaysEmpty() {
+        val result = RefactoringCandidateMapper.map(makeMap(RefactoringCategory.UnitSize, listOf(makeResponse())), "")
+        assertEquals("", result[0].remark)
     }
 
     @Test

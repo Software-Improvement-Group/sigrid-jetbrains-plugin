@@ -41,6 +41,13 @@ abstract class SigridPanel<T>(
     protected abstract fun T.matchesSearch(query: String): Boolean
     protected abstract fun T.getFileLocations(): List<FileLocation>
 
+    protected open fun T.isEditable(): Boolean = false
+    protected open fun T.getId(): String = ""
+    protected open fun T.getEditDescription(): String = ""
+    protected open fun T.getStatusOptions(): List<Pair<String, String>> = emptyList()
+    protected open fun T.getCurrentStatus(): String = ""
+    protected open fun T.getCurrentRemark(): String = ""
+
     private var allFindings: List<T> = emptyList()
     private var displayedFindings: List<T> = emptyList()
 
@@ -76,6 +83,9 @@ abstract class SigridPanel<T>(
                     navigator.navigate(finding.getFileLocations(), e)
                 }
             }
+
+            override fun mousePressed(e: MouseEvent) = editPopupHandler.maybeShow(e)
+            override fun mouseReleased(e: MouseEvent) = editPopupHandler.maybeShow(e)
         })
         addKeyListener(object : KeyAdapter() {
             override fun keyPressed(e: KeyEvent) {
@@ -90,6 +100,20 @@ abstract class SigridPanel<T>(
         })
     }
     private val navigator: FindingNavigator by lazy { FindingNavigator(project, table) }
+    private val editPopupHandler: FindingEditPopupHandler<T> by lazy {
+        FindingEditPopupHandler(
+            project = project,
+            table = table,
+            getDisplayedFindings = { displayedFindings },
+            isEditable = { it.isEditable() },
+            getId = { it.getId() },
+            getEditDescription = { it.getEditDescription() },
+            getStatusOptions = { it.getStatusOptions() },
+            getCurrentStatus = { it.getCurrentStatus() },
+            getCurrentRemark = { it.getCurrentRemark() },
+            onReload = ::loadData,
+        )
+    }
 
     private val cardLayout = CardLayout()
     private val cards = JPanel(cardLayout)

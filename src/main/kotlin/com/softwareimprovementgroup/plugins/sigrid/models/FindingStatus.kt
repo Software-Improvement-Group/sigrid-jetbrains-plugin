@@ -1,12 +1,12 @@
 package com.softwareimprovementgroup.plugins.sigrid.models
 
-enum class FindingStatus(val apiValue: String) {
-    Raw("RAW"),
-    Refined("REFINED"),
-    WillFix("WILL_FIX"),
-    Fixed("FIXED"),
-    Accepted("ACCEPTED"),
-    FalsePositive("FALSE_POSITIVE");
+enum class FindingStatus(val apiValue: String, val icon: String) {
+    Raw("RAW", "❓"),
+    Refined("REFINED", "🔍"),
+    WillFix("WILL_FIX", "🔧"),
+    Fixed("FIXED", "✅"),
+    Accepted("ACCEPTED", "😐"),
+    FalsePositive("FALSE_POSITIVE", "🚫");
 
     companion object {
         fun from(value: String): FindingStatus =
@@ -14,10 +14,10 @@ enum class FindingStatus(val apiValue: String) {
     }
 }
 
-enum class MaintainabilityFindingStatus(val apiValue: String) {
-    Raw("RAW"),
-    WillFix("WILL_FIX"),
-    Accepted("ACCEPTED");
+enum class MaintainabilityFindingStatus(val apiValue: String, val icon: String) {
+    Raw("RAW", "❓"),
+    WillFix("WILL_FIX", "🔧"),
+    Accepted("ACCEPTED", "😐");
 
     companion object {
         fun from(value: String): MaintainabilityFindingStatus =
