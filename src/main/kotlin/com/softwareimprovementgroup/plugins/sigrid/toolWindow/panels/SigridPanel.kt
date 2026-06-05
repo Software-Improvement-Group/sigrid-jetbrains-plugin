@@ -43,6 +43,7 @@ abstract class SigridPanel<T>(
 
     protected open fun T.isEditable(): Boolean = false
     protected open fun T.getId(): String = ""
+    protected open fun T.getDisplayLocation(): String = ""
     protected open fun T.getEditDescription(): String = ""
     protected open fun T.getStatusOptions(): List<Pair<String, String>> = emptyList()
     protected open fun T.getCurrentStatus(): String = ""
@@ -107,6 +108,7 @@ abstract class SigridPanel<T>(
             getDisplayedFindings = { displayedFindings },
             isEditable = { it.isEditable() },
             getId = { it.getId() },
+            getDisplayLocation = { it.getDisplayLocation() },
             getEditDescription = { it.getEditDescription() },
             getStatusOptions = { it.getStatusOptions() },
             getCurrentStatus = { it.getCurrentStatus() },
@@ -171,6 +173,12 @@ abstract class SigridPanel<T>(
     private fun applyFilter() {
         val query = searchField.text.trim()
         val filtered = if (query.isEmpty()) allFindings else allFindings.filter { it.matchesSearch(query) }
+
+        val selectedId = table.selectedRow
+            .takeIf { it >= 0 }
+            ?.let { table.convertRowIndexToModel(it) }
+            ?.let { displayedFindings.getOrNull(it)?.getId()?.takeIf { id -> id.isNotEmpty() } }
+
         tableModel.rowCount = 0
         if (filtered.isEmpty()) {
             displayedFindings = emptyList()
@@ -183,6 +191,7 @@ abstract class SigridPanel<T>(
             displayedFindings = filtered
             filtered.forEach { tableModel.addRow(it.toRow()) }
             showCard(CARD_TABLE)
+            selectRowById(selectedId, filtered)
         }
     }
 
@@ -204,6 +213,20 @@ abstract class SigridPanel<T>(
                 }
             } catch (e: Exception) {
                 showError(toErrorMessage(e))
+            }
+        }
+    }
+
+    private fun selectRowById(
+        selectedId: String?,
+        filtered: List<T>
+    ) {
+        if (selectedId != null) {
+            val rowToSelect = filtered.indexOfFirst { it.getId() == selectedId }
+            if (rowToSelect >= 0) {
+                val viewRow = table.convertRowIndexToView(rowToSelect)
+                table.selectionModel.setSelectionInterval(viewRow, viewRow)
+                table.scrollRectToVisible(table.getCellRect(viewRow, 0, true))
             }
         }
     }

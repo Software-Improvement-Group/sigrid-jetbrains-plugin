@@ -20,6 +20,7 @@ private const val MIN_HEIGHT = 200
 
 class EditFindingDialog(
     project: Project,
+    displayLocation: String,
     private val description: String,
     private val statusOptions: List<Pair<String, String>>,
     currentStatus: String,
@@ -37,7 +38,7 @@ class EditFindingDialog(
     }
 
     init {
-        title = SigridBundle["finding.edit.title"]
+        title = "${SigridBundle["finding.edit.title"]}: $displayLocation"
         init()
     }
 

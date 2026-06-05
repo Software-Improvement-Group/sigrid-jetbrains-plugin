@@ -35,6 +35,7 @@ class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(
 
     override fun SecurityFinding.isEditable() = true
     override fun SecurityFinding.getId() = id
+    override fun SecurityFinding.getDisplayLocation() = displayFilePath
     override fun SecurityFinding.getEditDescription() = type
     override fun SecurityFinding.getStatusOptions() = FindingStatus.entries.map { "${it.icon} ${snakeCaseToTitleCase(it.apiValue)}" to it.apiValue }
     override fun SecurityFinding.getCurrentStatus() = status.apiValue

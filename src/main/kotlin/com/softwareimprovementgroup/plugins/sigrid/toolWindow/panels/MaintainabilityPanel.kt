@@ -35,6 +35,7 @@ class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>
 
     override fun RefactoringCandidate.isEditable() = true
     override fun RefactoringCandidate.getId() = id
+    override fun RefactoringCandidate.getDisplayLocation() = displayLocation
     override fun RefactoringCandidate.getEditDescription() = description
     override fun RefactoringCandidate.getStatusOptions() = MaintainabilityFindingStatus.entries.map { "${it.icon} ${snakeCaseToTitleCase(it.apiValue)}" to it.apiValue }
     override fun RefactoringCandidate.getCurrentStatus() = status.apiValue

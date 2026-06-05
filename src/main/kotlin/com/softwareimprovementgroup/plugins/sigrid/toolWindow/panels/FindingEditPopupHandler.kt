@@ -15,6 +15,7 @@ class FindingEditPopupHandler<T>(
     private val getDisplayedFindings: () -> List<T>,
     private val isEditable: (T) -> Boolean,
     private val getId: (T) -> String,
+    private val getDisplayLocation: (T) -> String,
     private val getEditDescription: (T) -> String,
     private val getStatusOptions: (T) -> List<Pair<String, String>>,
     private val getCurrentStatus: (T) -> String,
@@ -34,6 +35,7 @@ class FindingEditPopupHandler<T>(
         editItem.addActionListener {
             val dialog = EditFindingDialog(
                 project,
+                getDisplayLocation(finding),
                 getEditDescription(finding),
                 getStatusOptions(finding),
                 getCurrentStatus(finding),
