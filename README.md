@@ -7,6 +7,7 @@ A JetBrains IDE plugin that lets you view and manage [Sigrid](https://www.softwa
 - **Maintainability** — browse refactoring candidates surfaced by Sigrid, with severity icons and file locations.
 - **Security** — review security findings with risk levels directly in your project context.
 - **Open Source Health** — inspect third-party dependency risks flagged by Sigrid.
+- **File navigation** — double-click any finding to jump to the exact file and line in the editor; a picker appears when a finding has multiple locations.
 - **Search** — filter findings across all three panels with a real-time search bar.
 - **Settings** — configure your Sigrid API key, customer name, and API base URL globally (IDE-level), with per-project overrides.
 
@@ -51,7 +52,7 @@ Once configured, open the **Sigrid** tool window at the bottom of the IDE. The w
 | Security | Security findings with risk level and file location |
 | Open Source Health | OSH findings for your project's dependencies |
 
-Use the search bar at the top of each tab to filter findings by any text.
+Use the search bar at the top of each tab to filter findings by any text. Double-click a row to open the file at the finding's location; if the finding has multiple locations a picker lets you choose.
 
 ## Development
 

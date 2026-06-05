@@ -3,6 +3,7 @@ package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 import com.intellij.openapi.project.Project
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.mappers.OpenSourceHealthMapper
+import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.models.OpenSourceHealthDependency
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
@@ -31,4 +32,6 @@ class OpenSourceHealthPanel(project: Project) : SigridPanel<OpenSourceHealthDepe
         freshnessRisk.toRiskIcon(),
         activityRisk.toRiskIcon(),
     )
+
+    override fun OpenSourceHealthDependency.getFileLocations(): List<FileLocation> = fileLocations
 }

@@ -3,6 +3,7 @@ package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 import com.intellij.openapi.project.Project
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.mappers.RefactoringCandidateMapper
+import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.models.RefactoringCandidate
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
@@ -27,4 +28,6 @@ class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>
         description,
         statusLabel,
     )
+
+    override fun RefactoringCandidate.getFileLocations(): List<FileLocation> = fileLocations
 }

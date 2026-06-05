@@ -9,9 +9,14 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
+import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.event.KeyAdapter
+import java.awt.event.KeyEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.SwingConstants
@@ -34,8 +39,10 @@ abstract class SigridPanel<T>(
     protected abstract fun fetch(subsystem: String): List<T>
     protected abstract fun T.toRow(): Array<Any>
     protected abstract fun T.matchesSearch(query: String): Boolean
+    protected abstract fun T.getFileLocations(): List<FileLocation>
 
     private var allFindings: List<T> = emptyList()
+    private var displayedFindings: List<T> = emptyList()
 
     private val tableModel = object : DefaultTableModel(columns, 0) {
         override fun getColumnClass(column: Int): Class<*> =
@@ -59,7 +66,30 @@ abstract class SigridPanel<T>(
                 col.cellRenderer = FindingCellRenderer(centeredCellRenderer, riskIconRenderer)
             }
         }
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                if (e.clickCount == 2) {
+                    val viewRow = rowAtPoint(e.point)
+                    if (viewRow < 0) return
+                    val modelRow = convertRowIndexToModel(viewRow)
+                    val finding = displayedFindings.getOrNull(modelRow) ?: return
+                    navigator.navigate(finding.getFileLocations(), e)
+                }
+            }
+        })
+        addKeyListener(object : KeyAdapter() {
+            override fun keyPressed(e: KeyEvent) {
+                if (e.keyCode == KeyEvent.VK_ENTER) {
+                    val viewRow = selectedRow
+                    if (viewRow < 0) return
+                    val modelRow = convertRowIndexToModel(viewRow)
+                    val finding = displayedFindings.getOrNull(modelRow) ?: return
+                    navigator.navigate(finding.getFileLocations(), null)
+                }
+            }
+        })
     }
+    private val navigator: FindingNavigator by lazy { FindingNavigator(project, table) }
 
     private val cardLayout = CardLayout()
     private val cards = JPanel(cardLayout)
@@ -119,12 +149,14 @@ abstract class SigridPanel<T>(
         val filtered = if (query.isEmpty()) allFindings else allFindings.filter { it.matchesSearch(query) }
         tableModel.rowCount = 0
         if (filtered.isEmpty()) {
+            displayedFindings = emptyList()
             if (allFindings.isEmpty()) {
                 showError(emptyMessage)
             } else {
                 showError(SigridBundle["panel.no.findings.match", query])
             }
         } else {
+            displayedFindings = filtered
             filtered.forEach { tableModel.addRow(it.toRow()) }
             showCard(CARD_TABLE)
         }
@@ -175,4 +207,5 @@ abstract class SigridPanel<T>(
             else -> SigridBundle["panel.error.generic", e.message ?: ""]
         }
     }
+
 }
