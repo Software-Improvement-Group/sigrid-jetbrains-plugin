@@ -32,24 +32,35 @@ class FindingEditPopupHandler<T>(
         if (!isEditable(finding)) return
         val popup = JPopupMenu()
         val editItem = JMenuItem(SigridBundle["finding.edit.menu.item"])
-        editItem.addActionListener {
-            val dialog = EditFindingDialog(
-                project,
-                getDisplayLocation(finding),
-                getEditDescription(finding),
-                getStatusOptions(finding),
-                getCurrentStatus(finding),
-                getCurrentRemark(finding),
-            )
-            if (dialog.showAndGet()) {
-                val request = dialog.getResult() ?: return@addActionListener
-                ApplicationManager.getApplication().executeOnPooledThread {
-                    SigridApiService.getInstance().editFinding(project, getId(finding), request)
-                    ApplicationManager.getApplication().invokeLater { onReload() }
-                }
-            }
-        }
+        editItem.addActionListener { triggerEdit(finding) }
         popup.add(editItem)
         popup.show(e.component, e.x, e.y)
+    }
+
+    fun triggerEditForSelectedRow() {
+        val viewRow = table.selectedRow
+        if (viewRow < 0) return
+        val modelRow = table.convertRowIndexToModel(viewRow)
+        val finding = getDisplayedFindings().getOrNull(modelRow) ?: return
+        if (!isEditable(finding)) return
+        triggerEdit(finding)
+    }
+
+    private fun triggerEdit(finding: T) {
+        val dialog = EditFindingDialog(
+            project,
+            getDisplayLocation(finding),
+            getEditDescription(finding),
+            getStatusOptions(finding),
+            getCurrentStatus(finding),
+            getCurrentRemark(finding),
+        )
+        if (dialog.showAndGet()) {
+            val request = dialog.getResult() ?: return
+            ApplicationManager.getApplication().executeOnPooledThread {
+                SigridApiService.getInstance().editFinding(project, getId(finding), request)
+                ApplicationManager.getApplication().invokeLater { onReload() }
+            }
+        }
     }
 }

@@ -117,6 +117,10 @@ abstract class SigridPanel<T>(
         )
     }
 
+    private val editButton = JButton(SigridBundle["finding.edit.button"]).apply {
+        isEnabled = false
+    }
+
     private val cardLayout = CardLayout()
     private val cards = JPanel(cardLayout)
     private val statusLabel = JBLabel().apply { horizontalAlignment = JBLabel.CENTER }
@@ -132,6 +136,23 @@ abstract class SigridPanel<T>(
     var onSearchChange: (String) -> Unit = {}
 
     init {
+        editButton.addActionListener { editPopupHandler.triggerEditForSelectedRow() }
+        table.addKeyListener(object : KeyAdapter() {
+            override fun keyPressed(e: KeyEvent) {
+                if (e.keyCode == KeyEvent.VK_F2) editPopupHandler.triggerEditForSelectedRow()
+            }
+        })
+        table.selectionModel.addListSelectionListener { e ->
+            if (!e.valueIsAdjusting) {
+                val viewRow = table.selectedRow
+                val editable = viewRow >= 0 && run {
+                    val modelRow = table.convertRowIndexToModel(viewRow)
+                    displayedFindings.getOrNull(modelRow)?.isEditable() == true
+                }
+                editButton.isEnabled = editable
+            }
+        }
+
         searchField.document.addDocumentListener(object : DocumentListener {
             override fun insertUpdate(e: DocumentEvent) = onSearchFieldChanged()
             override fun removeUpdate(e: DocumentEvent) = onSearchFieldChanged()
@@ -139,8 +160,12 @@ abstract class SigridPanel<T>(
         })
 
         val toolbar = JPanel(BorderLayout()).apply {
+            val buttons = JPanel().apply {
+                add(editButton)
+                add(JButton(SigridBundle["panel.refresh.button"]).apply { addActionListener { onRefresh() } })
+            }
             add(searchField, BorderLayout.CENTER)
-            add(JButton(SigridBundle["panel.refresh.button"]).apply { addActionListener { onRefresh() } }, BorderLayout.EAST)
+            add(buttons, BorderLayout.EAST)
         }
 
         cards.add(JBLabel(SigridBundle["panel.loading"]).apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
