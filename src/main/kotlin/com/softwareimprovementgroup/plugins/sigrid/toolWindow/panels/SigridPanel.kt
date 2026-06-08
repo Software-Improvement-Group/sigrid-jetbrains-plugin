@@ -6,7 +6,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTextField
+import com.intellij.ui.SearchTextField
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
@@ -125,8 +125,8 @@ abstract class SigridPanel<T>(
     private val cards = JPanel(cardLayout)
     private val statusLabel = JBLabel().apply { horizontalAlignment = JBLabel.CENTER }
 
-    private val searchField = JBTextField().apply {
-        emptyText.text = SigridBundle["panel.search.placeholder"]
+    private val searchField = SearchTextField(false).apply {
+        textEditor.emptyText.text = SigridBundle["panel.search.placeholder"]
     }
 
     // Suppresses onSearchChange during setSearchText to avoid feedback loops
@@ -152,7 +152,7 @@ abstract class SigridPanel<T>(
             }
         }
 
-        searchField.document.addDocumentListener(object : DocumentListener {
+        searchField.textEditor.document.addDocumentListener(object : DocumentListener {
             override fun insertUpdate(e: DocumentEvent) = onSearchFieldChanged()
             override fun removeUpdate(e: DocumentEvent) = onSearchFieldChanged()
             override fun changedUpdate(e: DocumentEvent) = onSearchFieldChanged()
