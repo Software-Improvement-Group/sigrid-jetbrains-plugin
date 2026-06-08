@@ -119,6 +119,7 @@ abstract class SigridPanel<T>(
 
     private val editButton = JButton(SigridBundle["finding.edit.button"]).apply {
         isEnabled = false
+        toolTipText = SigridBundle["finding.edit.button.tooltip"]
     }
 
     private val cardLayout = CardLayout()
@@ -157,9 +158,11 @@ abstract class SigridPanel<T>(
             override fun changedUpdate(e: DocumentEvent) = onSearchFieldChanged()
         })
 
+        searchField.preferredSize = java.awt.Dimension(220, searchField.preferredSize.height)
+
         val toolbar = JPanel(BorderLayout()).apply {
-            add(searchField, BorderLayout.CENTER)
-            add(editButton, BorderLayout.EAST)
+            add(editButton, BorderLayout.WEST)
+            add(searchField, BorderLayout.EAST)
         }
 
         cards.add(JBLabel(SigridBundle["panel.loading"]).apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
