@@ -1,12 +1,18 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
+import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
+import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.SearchTextField
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
@@ -17,7 +23,6 @@ import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
@@ -117,18 +122,29 @@ abstract class SigridPanel<T>(
         )
     }
 
-    private val editButton = JButton(SigridBundle["finding.edit.button"]).apply {
-        isEnabled = false
-        toolTipText = SigridBundle["finding.edit.button.tooltip"]
+    private var editActionEnabled = false
+
+    private val editAction = object : AnAction(
+        SigridBundle["finding.edit.button"],
+        SigridBundle["finding.edit.button.tooltip"],
+        AllIcons.Actions.Edit,
+    ) {
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = editActionEnabled
+        }
+        override fun actionPerformed(e: AnActionEvent) {
+            editPopupHandler.triggerEditForSelectedRow()
+        }
+    }
+
+    private val searchField = SearchTextField(false).apply {
+        textEditor.emptyText.text = SigridBundle["panel.search.placeholder"]
     }
 
     private val cardLayout = CardLayout()
     private val cards = JPanel(cardLayout)
     private val statusLabel = JBLabel().apply { horizontalAlignment = JBLabel.CENTER }
-
-    private val searchField = SearchTextField(false).apply {
-        textEditor.emptyText.text = SigridBundle["panel.search.placeholder"]
-    }
 
     // Suppresses onSearchChange during setSearchText to avoid feedback loops
     private var suppressSearchCallback = false
@@ -136,7 +152,6 @@ abstract class SigridPanel<T>(
     var onSearchChange: (String) -> Unit = {}
 
     init {
-        editButton.addActionListener { editPopupHandler.triggerEditForSelectedRow() }
         table.addKeyListener(object : KeyAdapter() {
             override fun keyPressed(e: KeyEvent) {
                 if (e.keyCode == KeyEvent.VK_F2) editPopupHandler.triggerEditForSelectedRow()
@@ -144,11 +159,10 @@ abstract class SigridPanel<T>(
         })
         table.selectionModel.addListSelectionListener { e ->
             if (!e.valueIsAdjusting) {
-                val editable = table.selectedRows.any { viewRow ->
+                editActionEnabled = table.selectedRows.any { viewRow ->
                     val modelRow = table.convertRowIndexToModel(viewRow)
                     displayedFindings.getOrNull(modelRow)?.isEditable() == true
                 }
-                editButton.isEnabled = editable
             }
         }
 
@@ -160,8 +174,14 @@ abstract class SigridPanel<T>(
 
         searchField.preferredSize = java.awt.Dimension(220, searchField.preferredSize.height)
 
-        val toolbar = JPanel(BorderLayout()).apply {
-            add(editButton, BorderLayout.WEST)
+        val actionGroup = DefaultActionGroup(editAction)
+        val toolbar = ActionManager.getInstance()
+            .createActionToolbar("SigridPanel", actionGroup, true)
+            .apply { targetComponent = this@SigridPanel }
+            .component
+
+        val topBar = JPanel(BorderLayout()).apply {
+            add(toolbar, BorderLayout.WEST)
             add(searchField, BorderLayout.EAST)
         }
 
@@ -169,7 +189,7 @@ abstract class SigridPanel<T>(
         cards.add(statusLabel, CARD_ERROR)
         cards.add(JBScrollPane(table), CARD_TABLE)
 
-        add(toolbar, BorderLayout.NORTH)
+        add(topBar, BorderLayout.NORTH)
         add(cards, BorderLayout.CENTER)
 
         loadData()
