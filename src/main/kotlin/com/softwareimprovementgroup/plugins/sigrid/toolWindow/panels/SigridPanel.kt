@@ -199,10 +199,10 @@ abstract class SigridPanel<T>(
         val query = searchField.text.trim()
         val filtered = if (query.isEmpty()) allFindings else allFindings.filter { it.matchesSearch(query) }
 
-        val selectedId = table.selectedRow
-            .takeIf { it >= 0 }
-            ?.let { table.convertRowIndexToModel(it) }
-            ?.let { displayedFindings.getOrNull(it)?.getId()?.takeIf { id -> id.isNotEmpty() } }
+        val selectedIds = table.selectedRows
+            .map { table.convertRowIndexToModel(it) }
+            .mapNotNull { displayedFindings.getOrNull(it)?.getId()?.takeIf { id -> id.isNotEmpty() } }
+            .toSet()
 
         tableModel.rowCount = 0
         if (filtered.isEmpty()) {
@@ -216,7 +216,7 @@ abstract class SigridPanel<T>(
             displayedFindings = filtered
             filtered.forEach { tableModel.addRow(it.toRow()) }
             showCard(CARD_TABLE)
-            selectRowById(selectedId, filtered)
+            selectRowsById(selectedIds, filtered)
         }
     }
 
@@ -242,17 +242,21 @@ abstract class SigridPanel<T>(
         }
     }
 
-    private fun selectRowById(
-        selectedId: String?,
-        filtered: List<T>
-    ) {
-        if (selectedId != null) {
-            val rowToSelect = filtered.indexOfFirst { it.getId() == selectedId }
-            if (rowToSelect >= 0) {
-                val viewRow = table.convertRowIndexToView(rowToSelect)
-                table.selectionModel.setSelectionInterval(viewRow, viewRow)
-                table.scrollRectToVisible(table.getCellRect(viewRow, 0, true))
+    private fun selectRowsById(selectedIds: Set<String>, filtered: List<T>) {
+        if (selectedIds.isEmpty()) return
+        table.clearSelection()
+        var firstSelectedViewRow = -1
+        filtered.forEachIndexed { modelRow, finding ->
+            if (finding.getId() in selectedIds) {
+                val viewRow = table.convertRowIndexToView(modelRow)
+                if (viewRow >= 0) {
+                    table.selectionModel.addSelectionInterval(viewRow, viewRow)
+                    if (firstSelectedViewRow < 0) firstSelectedViewRow = viewRow
+                }
             }
+        }
+        if (firstSelectedViewRow >= 0) {
+            table.scrollRectToVisible(table.getCellRect(firstSelectedViewRow, 0, true))
         }
     }
 

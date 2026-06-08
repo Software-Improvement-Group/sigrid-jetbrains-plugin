@@ -5,9 +5,11 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
+import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
 import javax.swing.JMenuItem
 import javax.swing.JPopupMenu
+import javax.swing.KeyStroke
 
 class FindingEditPopupHandler<T>(
     private val project: Project,
@@ -26,12 +28,13 @@ class FindingEditPopupHandler<T>(
         if (!e.isPopupTrigger) return
         val viewRow = table.rowAtPoint(e.point)
         if (viewRow < 0) return
-        table.setRowSelectionInterval(viewRow, viewRow)
+        if (!table.isRowSelected(viewRow)) table.setRowSelectionInterval(viewRow, viewRow)
         val modelRow = table.convertRowIndexToModel(viewRow)
         val finding = getDisplayedFindings().getOrNull(modelRow) ?: return
         if (!isEditable(finding)) return
         val popup = JPopupMenu()
         val editItem = JMenuItem(SigridBundle["finding.edit.menu.item"])
+        editItem.accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)
         editItem.addActionListener { triggerEdit(finding) }
         popup.add(editItem)
         popup.show(e.component, e.x, e.y)
