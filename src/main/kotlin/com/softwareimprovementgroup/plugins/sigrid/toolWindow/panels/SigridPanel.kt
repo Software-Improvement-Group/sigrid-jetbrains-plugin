@@ -132,7 +132,6 @@ abstract class SigridPanel<T>(
     // Suppresses onSearchChange during setSearchText to avoid feedback loops
     private var suppressSearchCallback = false
 
-    var onRefresh: () -> Unit = ::loadData
     var onSearchChange: (String) -> Unit = {}
 
     init {
@@ -159,12 +158,8 @@ abstract class SigridPanel<T>(
         })
 
         val toolbar = JPanel(BorderLayout()).apply {
-            val buttons = JPanel().apply {
-                add(editButton)
-                add(JButton(SigridBundle["panel.refresh.button"]).apply { addActionListener { onRefresh() } })
-            }
             add(searchField, BorderLayout.CENTER)
-            add(buttons, BorderLayout.EAST)
+            add(editButton, BorderLayout.EAST)
         }
 
         cards.add(JBLabel(SigridBundle["panel.loading"]).apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
