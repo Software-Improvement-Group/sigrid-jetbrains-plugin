@@ -2,6 +2,7 @@ package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
@@ -10,6 +11,8 @@ import java.awt.event.MouseEvent
 import javax.swing.JMenuItem
 import javax.swing.JPopupMenu
 import javax.swing.KeyStroke
+
+private const val MAX_EDIT_ITEMS_SIZE = 25
 
 class FindingEditPopupHandler<T>(
     private val project: Project,
@@ -29,39 +32,65 @@ class FindingEditPopupHandler<T>(
         val viewRow = table.rowAtPoint(e.point)
         if (viewRow < 0) return
         if (!table.isRowSelected(viewRow)) table.setRowSelectionInterval(viewRow, viewRow)
-        val modelRow = table.convertRowIndexToModel(viewRow)
-        val finding = getDisplayedFindings().getOrNull(modelRow) ?: return
-        if (!isEditable(finding)) return
+        if (!hasEditableFindings()) return
         val popup = JPopupMenu()
         val editItem = JMenuItem(SigridBundle["finding.edit.menu.item"])
         editItem.accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)
-        editItem.addActionListener { triggerEdit(finding) }
+        editItem.addActionListener { triggerEditForSelectedRow() }
         popup.add(editItem)
         popup.show(e.component, e.x, e.y)
     }
 
     fun triggerEditForSelectedRow() {
-        val viewRow = table.selectedRow
-        if (viewRow < 0) return
-        val modelRow = table.convertRowIndexToModel(viewRow)
-        val finding = getDisplayedFindings().getOrNull(modelRow) ?: return
-        if (!isEditable(finding)) return
-        triggerEdit(finding)
+        val findings = selectedEditableFindings() ?: return
+        if (findings.isEmpty()) return
+        triggerEdit(findings)
     }
 
-    private fun triggerEdit(finding: T) {
+    private fun hasEditableFindings(): Boolean {
+        val displayedFindings = getDisplayedFindings()
+        return table.selectedRows
+            .map { table.convertRowIndexToModel(it) }
+            .mapNotNull { displayedFindings.getOrNull(it) }
+            .any { isEditable(it) }
+    }
+
+    private fun selectedEditableFindings(): List<T>? {
+        val displayedFindings = getDisplayedFindings()
+        val findings = table.selectedRows
+            .map { table.convertRowIndexToModel(it) }
+            .mapNotNull { displayedFindings.getOrNull(it) }
+            .filter { isEditable(it) }
+        if (findings.size > MAX_EDIT_ITEMS_SIZE) {
+            Messages.showErrorDialog(table, SigridBundle["finding.edit.too.many", MAX_EDIT_ITEMS_SIZE])
+            return null
+        }
+        return findings
+    }
+
+    private fun triggerEdit(findings: List<T>) {
+        val count = findings.size
+        val statusOptions = getStatusOptions(findings.first())
+        val commonStatus = findings.map { getCurrentStatus(it) }.toSet().singleOrNull()
+        val commonRemark = findings.map { getCurrentRemark(it) }.toSet().singleOrNull()
+        val displayLocation = if (count == 1) getDisplayLocation(findings.first()) else ""
+        val description = if (count == 1) getEditDescription(findings.first()) else ""
+
         val dialog = EditFindingDialog(
-            project,
-            getDisplayLocation(finding),
-            getEditDescription(finding),
-            getStatusOptions(finding),
-            getCurrentStatus(finding),
-            getCurrentRemark(finding),
+            project = project,
+            displayLocation = displayLocation,
+            description = description,
+            statusOptions = statusOptions,
+            currentStatus = commonStatus,
+            currentRemark = commonRemark,
+            count = count,
         )
         if (dialog.showAndGet()) {
             val request = dialog.getResult() ?: return
             ApplicationManager.getApplication().executeOnPooledThread {
-                SigridApiService.getInstance().editFinding(project, getId(finding), request)
+                for (finding in findings) {
+                    SigridApiService.getInstance().editFinding(project, getId(finding), request)
+                }
                 ApplicationManager.getApplication().invokeLater { onReload() }
             }
         }

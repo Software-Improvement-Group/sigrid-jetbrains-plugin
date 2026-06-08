@@ -144,8 +144,7 @@ abstract class SigridPanel<T>(
         })
         table.selectionModel.addListSelectionListener { e ->
             if (!e.valueIsAdjusting) {
-                val viewRow = table.selectedRow
-                val editable = viewRow >= 0 && run {
+                val editable = table.selectedRows.any { viewRow ->
                     val modelRow = table.convertRowIndexToModel(viewRow)
                     displayedFindings.getOrNull(modelRow)?.isEditable() == true
                 }
