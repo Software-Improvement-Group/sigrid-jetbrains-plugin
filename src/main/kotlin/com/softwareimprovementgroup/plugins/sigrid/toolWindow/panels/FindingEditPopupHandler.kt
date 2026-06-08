@@ -12,8 +12,6 @@ import javax.swing.JMenuItem
 import javax.swing.JPopupMenu
 import javax.swing.KeyStroke
 
-private const val MAX_EDIT_ITEMS_SIZE = 25
-
 class FindingEditPopupHandler<T>(
     private val project: Project,
     private val table: JBTable,
@@ -71,8 +69,8 @@ class FindingEditPopupHandler<T>(
     private fun triggerEdit(findings: List<T>) {
         val count = findings.size
         val statusOptions = getStatusOptions(findings.first())
-        val commonStatus = findings.map { getCurrentStatus(it) }.toSet().singleOrNull()
-        val commonRemark = findings.map { getCurrentRemark(it) }.toSet().singleOrNull()
+        val commonStatus = detectCommonValue(findings.map { getCurrentStatus(it) })
+        val commonRemark = detectCommonValue(findings.map { getCurrentRemark(it) })
         val displayLocation = if (count == 1) getDisplayLocation(findings.first()) else ""
         val description = if (count == 1) getEditDescription(findings.first()) else ""
 
@@ -94,5 +92,12 @@ class FindingEditPopupHandler<T>(
                 ApplicationManager.getApplication().invokeLater { onReload() }
             }
         }
+    }
+
+    companion object {
+        internal const val MAX_EDIT_ITEMS_SIZE = 25
+
+        internal fun detectCommonValue(values: List<String>): String? =
+            values.toSet().singleOrNull()
     }
 }

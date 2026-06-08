@@ -35,7 +35,7 @@ class EditFindingDialog(
 
     // When statuses are mixed, prepend a "(mixed)" sentinel so the user can choose to leave them unchanged.
     private val effectiveStatusOptions: List<Pair<String, String>> =
-        if (isMixedStatus) listOf(SigridBundle["finding.edit.status.mixed"] to "") + statusOptions else statusOptions
+        buildEffectiveStatusOptions(isMixedStatus, statusOptions, SigridBundle["finding.edit.status.mixed"])
 
     private val statusCombo = ComboBox(effectiveStatusOptions.map { it.first }.toTypedArray()).apply {
         val currentIndex = effectiveStatusOptions.indexOfFirst { it.second == currentStatus }
@@ -98,17 +98,30 @@ class EditFindingDialog(
 
     fun getResult(): FindingRequest? {
         if (!isOK) return null
-        val selectedIndex = statusCombo.selectedIndex
-        val statusApiValue = when {
-            selectedIndex < 0 -> null
-            isMixedStatus && selectedIndex == 0 -> null  // sentinel selected — leave status unchanged
-            else -> effectiveStatusOptions[selectedIndex].second
-        }
-        // For mixed remarks, blank means "don't change"; non-blank applies to all.
-        val remarkValue = when {
-            isMixedRemark && remarkArea.text.isEmpty() -> null
-            else -> remarkArea.text
-        }
+        val statusApiValue = resolveStatus(isMixedStatus, statusCombo.selectedIndex, effectiveStatusOptions)
+        val remarkValue = resolveRemark(isMixedRemark, remarkArea.text)
         return FindingRequest(status = statusApiValue, remark = remarkValue)
+    }
+
+    companion object {
+        internal fun buildEffectiveStatusOptions(
+            isMixedStatus: Boolean,
+            statusOptions: List<Pair<String, String>>,
+            mixedLabel: String = "(mixed)",
+        ): List<Pair<String, String>> =
+            if (isMixedStatus) listOf(mixedLabel to "") + statusOptions else statusOptions
+
+        internal fun resolveStatus(
+            isMixedStatus: Boolean,
+            selectedIndex: Int,
+            effectiveOptions: List<Pair<String, String>>,
+        ): String? = when {
+            selectedIndex < 0 -> null
+            isMixedStatus && selectedIndex == 0 -> null   // sentinel = leave unchanged
+            else -> effectiveOptions[selectedIndex].second
+        }
+
+        internal fun resolveRemark(isMixedRemark: Boolean, text: String): String? =
+            if (isMixedRemark && text.isEmpty()) null else text
     }
 }
