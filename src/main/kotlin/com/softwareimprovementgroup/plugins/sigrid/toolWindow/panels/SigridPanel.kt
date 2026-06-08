@@ -76,7 +76,7 @@ abstract class SigridPanel<T>(
         }
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
-                if (e.clickCount == 2) {
+                if (e.button == MouseEvent.BUTTON1 && e.clickCount == 2) {
                     val viewRow = rowAtPoint(e.point)
                     if (viewRow < 0) return
                     val modelRow = convertRowIndexToModel(viewRow)
