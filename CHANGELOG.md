@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.3] - 2026-06-09
+
+### Added
+
+- **Edit findings** — click the edit button (or press the keyboard shortcut) on any finding to open a dialog for changing its status and adding a remark; the change is sent to the Sigrid API immediately.
+- **Batch editing** — select multiple rows in the findings table and edit all of them at once; supports mixed statuses and remarks, capped at 25 findings per batch.
+- **Multi-row selection** — findings tables now support multi-row selection via standard keyboard and mouse gestures.
+- **Global refresh** — a single Refresh action in the tool window title bar replaces the per-panel refresh buttons; one click reloads data across all tabs.
+- **Unit tests** — coverage for `EditFindingDialog` and `FindingEditPopupHandler`, including status/remark resolution logic for mixed-selection batches.
+
+### Changed
+
+- **Search field** — upgraded from `JBTextField` to `SearchTextField` for a more native look and built-in clear button.
+- **Edit dialog title** — now includes the finding's file location for easier identification.
+- **Row selection preserved on refresh** — the selected finding row is restored after data is reloaded.
+- **Edit button tooltip** — tooltip text added to the edit toolbar button.
+
+### Fixed
+
+- Security findings displayed incorrect file locations in the table.
+
 ## [0.0.2] - 2026-06-05
 
 ### Added
