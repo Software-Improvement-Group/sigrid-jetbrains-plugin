@@ -85,8 +85,8 @@ abstract class SigridPanel<T>(
                 }
             }
 
-            override fun mousePressed(e: MouseEvent) = editPopupHandler.maybeShow(e)
-            override fun mouseReleased(e: MouseEvent) = editPopupHandler.maybeShow(e)
+            override fun mousePressed(e: MouseEvent) = contextMenuHandler.handlePopupTrigger(e)
+            override fun mouseReleased(e: MouseEvent) = contextMenuHandler.handlePopupTrigger(e)
         })
         addKeyListener(object : KeyAdapter() {
             override fun keyPressed(e: KeyEvent) {
@@ -101,8 +101,8 @@ abstract class SigridPanel<T>(
         })
     }
     private val navigator: FindingNavigator by lazy { FindingNavigator(project, table) }
-    private val editPopupHandler: FindingEditPopupHandler<T> by lazy {
-        FindingEditPopupHandler(
+    private val contextMenuHandler: FindingContextMenuHandler<T> by lazy {
+        FindingContextMenuHandler(
             project = project,
             table = table,
             getDisplayedFindings = { displayedFindings },
@@ -114,6 +114,8 @@ abstract class SigridPanel<T>(
             getCurrentStatus = { it.getCurrentStatus() },
             getCurrentRemark = { it.getCurrentRemark() },
             onReload = ::loadData,
+            getFileLocations = { it.getFileLocations() },
+            navigator = navigator,
         )
     }
 
@@ -136,10 +138,10 @@ abstract class SigridPanel<T>(
     var onSearchChange: (String) -> Unit = {}
 
     init {
-        editButton.addActionListener { editPopupHandler.triggerEditForSelectedRow() }
+        editButton.addActionListener { contextMenuHandler.triggerEditForSelectedRow() }
         table.addKeyListener(object : KeyAdapter() {
             override fun keyPressed(e: KeyEvent) {
-                if (e.keyCode == KeyEvent.VK_F2) editPopupHandler.triggerEditForSelectedRow()
+                if (e.keyCode == KeyEvent.VK_F2) contextMenuHandler.triggerEditForSelectedRow()
             }
         })
         table.selectionModel.addListSelectionListener { e ->
