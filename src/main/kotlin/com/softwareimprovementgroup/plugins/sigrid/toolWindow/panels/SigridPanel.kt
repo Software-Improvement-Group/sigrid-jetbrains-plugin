@@ -237,7 +237,7 @@ abstract class SigridPanel<T>(
             if (activePath != null) {
                 filtered = filtered.filter { finding ->
                     finding.getFileLocations().any { loc ->
-                        loc.filePath == activePath || activePath.endsWith(loc.filePath)
+                        loc.filePath == activePath || activePath.endsWith("/${loc.filePath}")
                     }
                 }
             }
