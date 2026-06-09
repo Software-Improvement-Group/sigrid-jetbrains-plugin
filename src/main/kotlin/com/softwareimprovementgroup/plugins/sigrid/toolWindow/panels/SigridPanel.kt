@@ -1,6 +1,9 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.FileEditorManagerEvent
+import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
@@ -13,12 +16,14 @@ import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.FlowLayout
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JButton
 import javax.swing.JPanel
+import javax.swing.JToggleButton
 import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
@@ -51,6 +56,7 @@ abstract class SigridPanel<T>(
 
     private var allFindings: List<T> = emptyList()
     private var displayedFindings: List<T> = emptyList()
+    private var activeFileOnly: Boolean = false
 
     private val tableModel = object : DefaultTableModel(columns, 0) {
         override fun getColumnClass(column: Int): Class<*> =
@@ -124,6 +130,15 @@ abstract class SigridPanel<T>(
         toolTipText = SigridBundle["finding.edit.button.tooltip"]
     }
 
+    private val activeFileToggle = JToggleButton(SigridBundle["panel.filter.all"]).apply {
+        toolTipText = SigridBundle["panel.filter.active.tooltip"]
+        addActionListener {
+            activeFileOnly = isSelected
+            text = if (isSelected) SigridBundle["panel.filter.active"] else SigridBundle["panel.filter.all"]
+            applyFilter()
+        }
+    }
+
     private val cardLayout = CardLayout()
     private val cards = JPanel(cardLayout)
     private val statusLabel = JBLabel().apply { horizontalAlignment = JBLabel.CENTER }
@@ -162,8 +177,12 @@ abstract class SigridPanel<T>(
 
         searchField.preferredSize = java.awt.Dimension(220, searchField.preferredSize.height)
 
+        val filterPanel = JPanel(FlowLayout(FlowLayout.LEFT, 4, 0)).apply {
+            add(activeFileToggle)
+        }
         val toolbar = JPanel(BorderLayout()).apply {
             add(editButton, BorderLayout.WEST)
+            add(filterPanel, BorderLayout.CENTER)
             add(searchField, BorderLayout.EAST)
         }
 
@@ -173,6 +192,15 @@ abstract class SigridPanel<T>(
 
         add(toolbar, BorderLayout.NORTH)
         add(cards, BorderLayout.CENTER)
+
+        project.messageBus.connect().subscribe(
+            FileEditorManagerListener.FILE_EDITOR_MANAGER,
+            object : FileEditorManagerListener {
+                override fun selectionChanged(event: FileEditorManagerEvent) {
+                    if (activeFileOnly) applyFilter()
+                }
+            }
+        )
 
         loadData()
     }
@@ -194,9 +222,26 @@ abstract class SigridPanel<T>(
         applyFilter()
     }
 
+    private fun activeFilePath(): String? {
+        val vFile = FileEditorManager.getInstance(project).selectedFiles.firstOrNull() ?: return null
+        val base = project.basePath ?: return null
+        return vFile.path.removePrefix("$base/")
+    }
+
     private fun applyFilter() {
         val query = searchField.text.trim()
-        val filtered = if (query.isEmpty()) allFindings else allFindings.filter { it.matchesSearch(query) }
+        var filtered = if (query.isEmpty()) allFindings else allFindings.filter { it.matchesSearch(query) }
+
+        if (activeFileOnly) {
+            val activePath = activeFilePath()
+            if (activePath != null) {
+                filtered = filtered.filter { finding ->
+                    finding.getFileLocations().any { loc ->
+                        loc.filePath == activePath || activePath.endsWith(loc.filePath)
+                    }
+                }
+            }
+        }
 
         val selectedIds = table.selectedRows
             .map { table.convertRowIndexToModel(it) }
