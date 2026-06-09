@@ -20,7 +20,7 @@ To run a single test class:
 
 ## Architecture
 
-The plugin targets IntelliJ IDEA 2025.2+ and is written in Kotlin 2.1.20. Package root: `com.softwareimprovementgroup.plugins.sigrid`.
+The plugin targets IntelliJ IDEA 2026.1+ and is written in Kotlin 2.3.21. Package root: `com.softwareimprovementgroup.plugins.sigrid`.
 
 **Entry points registered in `plugin.xml`:**
 - `toolWindow` → `SigridWindowFactory` — creates a bottom tool window with 3 tabs (Maintainability, Security, Open Source Health)
