@@ -6,7 +6,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTextField
+import com.intellij.ui.SearchTextField
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
@@ -41,6 +41,14 @@ abstract class SigridPanel<T>(
     protected abstract fun T.matchesSearch(query: String): Boolean
     protected abstract fun T.getFileLocations(): List<FileLocation>
 
+    protected open fun T.isEditable(): Boolean = false
+    protected open fun T.getId(): String = ""
+    protected open fun T.getDisplayLocation(): String = ""
+    protected open fun T.getEditDescription(): String = ""
+    protected open fun T.getStatusOptions(): List<Pair<String, String>> = emptyList()
+    protected open fun T.getCurrentStatus(): String = ""
+    protected open fun T.getCurrentRemark(): String = ""
+
     private var allFindings: List<T> = emptyList()
     private var displayedFindings: List<T> = emptyList()
 
@@ -68,7 +76,7 @@ abstract class SigridPanel<T>(
         }
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
-                if (e.clickCount == 2) {
+                if (e.button == MouseEvent.BUTTON1 && e.clickCount == 2) {
                     val viewRow = rowAtPoint(e.point)
                     if (viewRow < 0) return
                     val modelRow = convertRowIndexToModel(viewRow)
@@ -76,6 +84,9 @@ abstract class SigridPanel<T>(
                     navigator.navigate(finding.getFileLocations(), e)
                 }
             }
+
+            override fun mousePressed(e: MouseEvent) = editPopupHandler.maybeShow(e)
+            override fun mouseReleased(e: MouseEvent) = editPopupHandler.maybeShow(e)
         })
         addKeyListener(object : KeyAdapter() {
             override fun keyPressed(e: KeyEvent) {
@@ -90,31 +101,68 @@ abstract class SigridPanel<T>(
         })
     }
     private val navigator: FindingNavigator by lazy { FindingNavigator(project, table) }
+    private val editPopupHandler: FindingEditPopupHandler<T> by lazy {
+        FindingEditPopupHandler(
+            project = project,
+            table = table,
+            getDisplayedFindings = { displayedFindings },
+            isEditable = { it.isEditable() },
+            getId = { it.getId() },
+            getDisplayLocation = { it.getDisplayLocation() },
+            getEditDescription = { it.getEditDescription() },
+            getStatusOptions = { it.getStatusOptions() },
+            getCurrentStatus = { it.getCurrentStatus() },
+            getCurrentRemark = { it.getCurrentRemark() },
+            onReload = ::loadData,
+        )
+    }
+
+    private val editButton = JButton(SigridBundle["finding.edit.button"]).apply {
+        isEnabled = false
+        toolTipText = SigridBundle["finding.edit.button.tooltip"]
+    }
 
     private val cardLayout = CardLayout()
     private val cards = JPanel(cardLayout)
     private val statusLabel = JBLabel().apply { horizontalAlignment = JBLabel.CENTER }
 
-    private val searchField = JBTextField().apply {
-        emptyText.text = SigridBundle["panel.search.placeholder"]
+    private val searchField = SearchTextField(false).apply {
+        textEditor.emptyText.text = SigridBundle["panel.search.placeholder"]
     }
 
     // Suppresses onSearchChange during setSearchText to avoid feedback loops
     private var suppressSearchCallback = false
 
-    var onRefresh: () -> Unit = ::loadData
     var onSearchChange: (String) -> Unit = {}
 
     init {
-        searchField.document.addDocumentListener(object : DocumentListener {
+        editButton.addActionListener { editPopupHandler.triggerEditForSelectedRow() }
+        table.addKeyListener(object : KeyAdapter() {
+            override fun keyPressed(e: KeyEvent) {
+                if (e.keyCode == KeyEvent.VK_F2) editPopupHandler.triggerEditForSelectedRow()
+            }
+        })
+        table.selectionModel.addListSelectionListener { e ->
+            if (!e.valueIsAdjusting) {
+                val editable = table.selectedRows.any { viewRow ->
+                    val modelRow = table.convertRowIndexToModel(viewRow)
+                    displayedFindings.getOrNull(modelRow)?.isEditable() == true
+                }
+                editButton.isEnabled = editable
+            }
+        }
+
+        searchField.textEditor.document.addDocumentListener(object : DocumentListener {
             override fun insertUpdate(e: DocumentEvent) = onSearchFieldChanged()
             override fun removeUpdate(e: DocumentEvent) = onSearchFieldChanged()
             override fun changedUpdate(e: DocumentEvent) = onSearchFieldChanged()
         })
 
+        searchField.preferredSize = java.awt.Dimension(220, searchField.preferredSize.height)
+
         val toolbar = JPanel(BorderLayout()).apply {
-            add(searchField, BorderLayout.CENTER)
-            add(JButton(SigridBundle["panel.refresh.button"]).apply { addActionListener { onRefresh() } }, BorderLayout.EAST)
+            add(editButton, BorderLayout.WEST)
+            add(searchField, BorderLayout.EAST)
         }
 
         cards.add(JBLabel(SigridBundle["panel.loading"]).apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
@@ -147,6 +195,12 @@ abstract class SigridPanel<T>(
     private fun applyFilter() {
         val query = searchField.text.trim()
         val filtered = if (query.isEmpty()) allFindings else allFindings.filter { it.matchesSearch(query) }
+
+        val selectedIds = table.selectedRows
+            .map { table.convertRowIndexToModel(it) }
+            .mapNotNull { displayedFindings.getOrNull(it)?.getId()?.takeIf { id -> id.isNotEmpty() } }
+            .toSet()
+
         tableModel.rowCount = 0
         if (filtered.isEmpty()) {
             displayedFindings = emptyList()
@@ -159,6 +213,7 @@ abstract class SigridPanel<T>(
             displayedFindings = filtered
             filtered.forEach { tableModel.addRow(it.toRow()) }
             showCard(CARD_TABLE)
+            selectRowsById(selectedIds, filtered)
         }
     }
 
@@ -181,6 +236,24 @@ abstract class SigridPanel<T>(
             } catch (e: Exception) {
                 showError(toErrorMessage(e))
             }
+        }
+    }
+
+    private fun selectRowsById(selectedIds: Set<String>, filtered: List<T>) {
+        if (selectedIds.isEmpty()) return
+        table.clearSelection()
+        var firstSelectedViewRow = -1
+        filtered.forEachIndexed { modelRow, finding ->
+            if (finding.getId() in selectedIds) {
+                val viewRow = table.convertRowIndexToView(modelRow)
+                if (viewRow >= 0) {
+                    table.selectionModel.addSelectionInterval(viewRow, viewRow)
+                    if (firstSelectedViewRow < 0) firstSelectedViewRow = viewRow
+                }
+            }
+        }
+        if (firstSelectedViewRow >= 0) {
+            table.scrollRectToVisible(table.getCellRect(firstSelectedViewRow, 0, true))
         }
     }
 
