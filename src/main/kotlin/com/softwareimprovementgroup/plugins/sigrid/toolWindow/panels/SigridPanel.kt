@@ -1,29 +1,22 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.fileEditor.FileEditorManagerEvent
-import com.intellij.openapi.fileEditor.FileEditorManagerListener
-import com.intellij.openapi.observable.properties.PropertyGraph
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
+import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.SearchTextField
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import java.awt.BorderLayout
 import java.awt.CardLayout
-import java.awt.FlowLayout
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import com.intellij.ui.dsl.builder.SegmentedButton
-import com.intellij.ui.dsl.builder.panel
 import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.SwingConstants
@@ -58,8 +51,6 @@ abstract class SigridPanel<T>(
 
     private var allFindings: List<T> = emptyList()
     private var displayedFindings: List<T> = emptyList()
-    private var activeFileOnly: Boolean = false
-    private val propertyGraph = PropertyGraph()
 
     private val tableModel = object : DefaultTableModel(columns, 0) {
         override fun getColumnClass(column: Int): Class<*> =
@@ -133,29 +124,7 @@ abstract class SigridPanel<T>(
         toolTipText = SigridBundle["finding.edit.button.tooltip"]
     }
 
-    private enum class FileFilter { ALL, ACTIVE }
-
-    private val selectedFileFilterProperty = propertyGraph.property(FileFilter.ALL)
-
-    private lateinit var fileFilterSegmentedButton: SegmentedButton<FileFilter>
-
-    private val fileFilterButton = panel {
-        row {
-            fileFilterSegmentedButton = segmentedButton(FileFilter.entries.toList()) { value ->
-                val label = when (value) {
-                    FileFilter.ALL -> SigridBundle["panel.filter.all"]
-                    FileFilter.ACTIVE -> SigridBundle["panel.filter.active"]
-                }
-                text = if (selectedFileFilterProperty.get() == value) "● $label" else label
-                toolTipText = SigridBundle["panel.filter.active.tooltip"]
-            }.bind(selectedFileFilterProperty)
-        }
-    }
-
-    private val activeFileLabel = JBLabel("").apply {
-        isVisible = false
-        foreground = JBColor.GRAY
-    }
+    private val fileFilterPanel = FileFilterPanel(project) { applyFilter() }
 
     private val cardLayout = CardLayout()
     private val cards = JPanel(cardLayout)
@@ -167,22 +136,19 @@ abstract class SigridPanel<T>(
 
     // Suppresses onSearchChange during setSearchText to avoid feedback loops
     private var suppressSearchCallback = false
-    private var suppressFilterCallback = false
 
     var onSearchChange: (String) -> Unit = {}
     var onFileFilterChange: (Boolean) -> Unit = {}
+        set(value) { field = value; fileFilterPanel.onFileFilterChange = value }
 
     init {
-        selectedFileFilterProperty.afterChange { value ->
-            activeFileOnly = value == FileFilter.ACTIVE
-            fileFilterSegmentedButton.update(*FileFilter.entries.toTypedArray())
-            updateActiveFileLabel()
-            applyFilter()
-            if (!suppressFilterCallback) {
-                onFileFilterChange(activeFileOnly)
-            }
-        }
+        setupEditButton()
+        setupSearchField()
+        setupLayout()
+        loadData()
+    }
 
+    private fun setupEditButton() {
         editButton.addActionListener { contextMenuHandler.triggerEditForSelectedRow() }
         table.addKeyListener(object : KeyAdapter() {
             override fun keyPressed(e: KeyEvent) {
@@ -198,45 +164,28 @@ abstract class SigridPanel<T>(
                 editButton.isEnabled = editable
             }
         }
+    }
 
+    private fun setupSearchField() {
         searchField.textEditor.document.addDocumentListener(object : DocumentListener {
             override fun insertUpdate(e: DocumentEvent) = onSearchFieldChanged()
             override fun removeUpdate(e: DocumentEvent) = onSearchFieldChanged()
             override fun changedUpdate(e: DocumentEvent) = onSearchFieldChanged()
         })
-
         searchField.preferredSize = java.awt.Dimension(220, searchField.preferredSize.height)
+    }
 
-        val filterPanel = JPanel(FlowLayout(FlowLayout.LEFT, 4, 0)).apply {
-            add(fileFilterButton)
-            add(activeFileLabel)
-        }
+    private fun setupLayout() {
         val toolbar = JPanel(BorderLayout()).apply {
             add(editButton, BorderLayout.WEST)
-            add(filterPanel, BorderLayout.CENTER)
+            add(fileFilterPanel, BorderLayout.CENTER)
             add(searchField, BorderLayout.EAST)
         }
-
         cards.add(JBLabel(SigridBundle["panel.loading"]).apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
         cards.add(statusLabel, CARD_ERROR)
         cards.add(JBScrollPane(table), CARD_TABLE)
-
         add(toolbar, BorderLayout.NORTH)
         add(cards, BorderLayout.CENTER)
-
-        project.messageBus.connect().subscribe(
-            FileEditorManagerListener.FILE_EDITOR_MANAGER,
-            object : FileEditorManagerListener {
-                override fun selectionChanged(event: FileEditorManagerEvent) {
-                    if (activeFileOnly) {
-                        updateActiveFileLabel()
-                        applyFilter()
-                    }
-                }
-            }
-        )
-
-        loadData()
     }
 
     private fun onSearchFieldChanged() {
@@ -256,39 +205,13 @@ abstract class SigridPanel<T>(
         applyFilter()
     }
 
-    fun setActiveFileOnly(value: Boolean) {
-        suppressFilterCallback = true
-        try {
-            selectedFileFilterProperty.set(if (value) FileFilter.ACTIVE else FileFilter.ALL)
-        } finally {
-            suppressFilterCallback = false
-        }
-    }
-
-    private fun updateActiveFileLabel() {
-        if (activeFileOnly) {
-            val fileName = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()?.name
-            activeFileLabel.text = if (fileName != null)
-                SigridBundle["panel.filter.active.file", fileName]
-            else
-                SigridBundle["panel.filter.active.no.file"]
-            activeFileLabel.isVisible = true
-        } else {
-            activeFileLabel.isVisible = false
-        }
-    }
-
-    private fun activeFilePath(): String? {
-        val vFile = FileEditorManager.getInstance(project).selectedFiles.firstOrNull() ?: return null
-        val base = project.basePath ?: return null
-        return vFile.path.removePrefix("$base/")
-    }
+    fun setActiveFileOnly(value: Boolean) = fileFilterPanel.setActiveFileOnly(value)
 
     private fun applyFilter() {
         val query = searchField.text.trim()
 
-        val afterActiveFilter = if (activeFileOnly) {
-            val activePath = activeFilePath()
+        val afterActiveFilter = if (fileFilterPanel.activeFileOnly) {
+            val activePath = fileFilterPanel.activeFilePath()
             if (activePath != null) {
                 allFindings.filter { finding ->
                     finding.getFileLocations().any { loc ->
