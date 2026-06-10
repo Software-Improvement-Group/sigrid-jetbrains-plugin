@@ -25,6 +25,7 @@ class SigridWindowFactory : ToolWindowFactory {
         val allPanels = listOf(maintainabilityPanel, securityPanel, oshPanel)
         allPanels.forEach { panel ->
             panel.onSearchChange = { query -> allPanels.filter { it !== panel }.forEach { it.setSearchText(query) } }
+            panel.onFileFilterChange = { value -> allPanels.filter { it !== panel }.forEach { it.setActiveFileOnly(value) } }
         }
 
         val refreshAction = object : AnAction(SigridBundle["panel.refresh.button"], null, AllIcons.Actions.Refresh) {
