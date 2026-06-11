@@ -232,7 +232,7 @@ abstract class SigridPanel<T>(
         if (filtered.isEmpty()) {
             displayedFindings = emptyList()
             if (afterActiveFilter.isEmpty()) {
-                showError(emptyMessage)
+                showSuccess(emptyMessage)
             } else {
                 showError(SigridBundle["panel.no.findings.match", query])
             }
@@ -284,10 +284,16 @@ abstract class SigridPanel<T>(
         }
     }
 
-    private fun showError(message: String) {
+    private fun showSuccess(message: String) =
+        showCard(message, JBColor.GREEN)
+
+    private fun showError(message: String) =
+        showCard(message, JBColor.RED)
+
+    private fun showCard(message: String, color: JBColor) {
         ApplicationManager.getApplication().invokeLater {
             statusLabel.text = message
-            statusLabel.foreground = JBColor.RED
+            statusLabel.foreground = color
             showCard(CARD_ERROR)
         }
     }
