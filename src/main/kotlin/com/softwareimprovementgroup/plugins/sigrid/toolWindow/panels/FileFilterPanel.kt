@@ -83,7 +83,15 @@ class FileFilterPanel(
     internal fun activeFilePath(): String? {
         val vFile = FileEditorManager.getInstance(project).selectedFiles.firstOrNull() ?: return null
         val base = project.basePath ?: return null
-        return vFile.path.removePrefix("$base/")
+        return relativePath(vFile.path, base)
+    }
+
+    companion object {
+        internal fun relativePath(absolutePath: String, basePath: String): String =
+            absolutePath.removePrefix("$basePath/")
+
+        internal fun matchesActivePath(locFilePath: String, activePath: String): Boolean =
+            locFilePath == activePath || activePath.endsWith("/$locFilePath")
     }
 
     private fun updateActiveFileLabel() {
