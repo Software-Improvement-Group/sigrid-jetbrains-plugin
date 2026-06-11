@@ -18,7 +18,10 @@ import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JButton
+import javax.swing.JCheckBoxMenuItem
+import javax.swing.JMenuItem
 import javax.swing.JPanel
+import javax.swing.JPopupMenu
 import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
@@ -33,6 +36,7 @@ abstract class SigridPanel<T>(
     protected val project: Project,
     columns: Array<String>,
     centeredColumns: Set<String> = emptySet(),
+    private val columnFilters: List<ColumnFilterDef<T>> = emptyList(),
 ) : JBPanel<SigridPanel<T>>(BorderLayout()) {
 
     protected abstract val emptyMessage: String
@@ -74,6 +78,24 @@ abstract class SigridPanel<T>(
                 col.cellRenderer = FindingCellRenderer(centeredCellRenderer, riskIconRenderer)
             }
         }
+        columnFilters.forEach { def ->
+            val colIndex = columns.indexOf(def.columnName)
+            if (colIndex < 0) return@forEach
+            val col = columnModel.getColumn(colIndex)
+            val headerDelegate = DefaultTableCellRenderer().apply {
+                if (def.columnName in centeredColumns) horizontalAlignment = SwingConstants.CENTER
+            }
+            col.headerRenderer = ColumnFilterHeaderRenderer(headerDelegate) { def.isActive }
+        }
+        tableHeader.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                val viewCol = tableHeader.columnAtPoint(e.point)
+                if (viewCol < 0) return
+                val modelCol = convertColumnIndexToModel(viewCol)
+                val def = columnFilters.firstOrNull { columns.indexOf(it.columnName) == modelCol } ?: return
+                showColumnFilterPopup(def, e)
+            }
+        })
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
                 if (e.button == MouseEvent.BUTTON1 && e.clickCount == 2) {
@@ -129,6 +151,10 @@ abstract class SigridPanel<T>(
     private val cardLayout = CardLayout()
     private val cards = JPanel(cardLayout)
     private val statusLabel = JBLabel().apply { horizontalAlignment = JBLabel.CENTER }
+    private val filteredEmptyLabel = JBLabel("").apply {
+        horizontalAlignment = JBLabel.CENTER
+        isVisible = false
+    }
 
     private val searchField = SearchTextField(false).apply {
         textEditor.emptyText.text = SigridBundle["panel.search.placeholder"]
@@ -183,7 +209,11 @@ abstract class SigridPanel<T>(
         }
         cards.add(JBLabel(SigridBundle["panel.loading"]).apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
         cards.add(statusLabel, CARD_ERROR)
-        cards.add(JBScrollPane(table), CARD_TABLE)
+        val tableCard = JPanel(BorderLayout()).apply {
+            add(JBScrollPane(table), BorderLayout.CENTER)
+            add(filteredEmptyLabel, BorderLayout.SOUTH)
+        }
+        cards.add(tableCard, CARD_TABLE)
         add(toolbar, BorderLayout.NORTH)
         add(cards, BorderLayout.CENTER)
     }
@@ -207,6 +237,38 @@ abstract class SigridPanel<T>(
 
     fun setActiveFileOnly(value: Boolean) = fileFilterPanel.setActiveFileOnly(value)
 
+    private fun showColumnFilterPopup(def: ColumnFilterDef<T>, e: MouseEvent) {
+        val popup = JPopupMenu()
+
+        val clearItem = JMenuItem(SigridBundle["panel.filter.all"]).also { item ->
+            item.isEnabled = def.isActive
+            item.addActionListener {
+                def.selectedIds = emptySet()
+                table.tableHeader.repaint()
+                applyFilter()
+            }
+        }
+        popup.add(clearItem)
+        popup.addSeparator()
+
+        def.options.forEach { opt ->
+            val item = object : JCheckBoxMenuItem(opt.label, opt.id in def.selectedIds) {
+                override fun processMouseEvent(e: MouseEvent) {
+                    if (e.id == MouseEvent.MOUSE_RELEASED && contains(e.point)) {
+                        isSelected = !isSelected
+                        def.selectedIds = if (isSelected) def.selectedIds + opt.id else def.selectedIds - opt.id
+                        table.tableHeader.repaint()
+                        applyFilter()
+                        return
+                    }
+                    super.processMouseEvent(e)
+                }
+            }
+            popup.add(item)
+        }
+        popup.show(e.component, e.x, e.y)
+    }
+
     private fun applyFilter() {
         val query = searchField.text.trim()
 
@@ -221,7 +283,12 @@ abstract class SigridPanel<T>(
             } else allFindings
         } else allFindings
 
-        val filtered = if (query.isEmpty()) afterActiveFilter else afterActiveFilter.filter { it.matchesSearch(query) }
+        val afterColumnFilters = columnFilters.fold(afterActiveFilter) { acc, def ->
+            if (def.selectedIds.isEmpty()) return@fold acc
+            acc.filter { def.getOptionId(it) in def.selectedIds }
+        }
+
+        val filtered = if (query.isEmpty()) afterColumnFilters else afterColumnFilters.filter { it.matchesSearch(query) }
 
         val selectedIds = table.selectedRows
             .map { table.convertRowIndexToModel(it) }
@@ -231,12 +298,24 @@ abstract class SigridPanel<T>(
         tableModel.rowCount = 0
         if (filtered.isEmpty()) {
             displayedFindings = emptyList()
-            if (afterActiveFilter.isEmpty()) {
+            if (allFindings.isEmpty()) {
+                filteredEmptyLabel.isVisible = false
                 showSuccess(emptyMessage)
             } else {
-                showError(SigridBundle["panel.no.findings.match", query])
+                ApplicationManager.getApplication().invokeLater {
+                    filteredEmptyLabel.text = if (query.isEmpty())
+                        SigridBundle["panel.no.findings.match.filter"]
+                    else
+                        SigridBundle["panel.no.findings.match", query]
+                    filteredEmptyLabel.isVisible = true
+                    filteredEmptyLabel.foreground = JBColor.RED
+                }
+                showCard(CARD_TABLE)
             }
         } else {
+            ApplicationManager.getApplication().invokeLater {
+                filteredEmptyLabel.isVisible = false
+            }
             displayedFindings = filtered
             filtered.forEach { tableModel.addRow(it.toRow()) }
             showCard(CARD_TABLE)

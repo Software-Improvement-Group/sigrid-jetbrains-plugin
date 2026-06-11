@@ -45,7 +45,7 @@ object OpenSourceHealthMapper {
             displayName = if (!component.group.isNullOrBlank()) "${component.group}/${component.name}" else component.name,
             version = component.version,
             group = component.group,
-            dependencyType = props[DEPENDENCY_TYPE_KEY]?.let { snakeCaseToTitleCase(it) } ?: "Unknown",
+            dependencyType = DependencyType.from(props[DEPENDENCY_TYPE_KEY]),
             purl = component.purl,
             risk = overallRisk,
             licenseRisk = licenseRisk,

@@ -1,6 +1,7 @@
 package com.softwareimprovementgroup.plugins.sigrid.mappers
 
 import com.softwareimprovementgroup.plugins.sigrid.models.*
+import com.softwareimprovementgroup.plugins.sigrid.models.DependencyType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -143,17 +144,24 @@ class OpenSourceHealthMapperTest {
     }
 
     @Test
-    fun map_dependencyType_presentProperty_snakeCaseToTitleCase() {
+    fun map_dependencyType_directProperty_returnsDirect() {
         val component = makeComponent(properties = listOf(prop("sigrid:transitive", "DIRECT_DEPENDENCY")))
         val result = OpenSourceHealthMapper.map(makeResponse(listOf(component)), "")
-        assertEquals("Direct Dependency", result[0].dependencyType)
+        assertEquals(DependencyType.DIRECT, result[0].dependencyType)
+    }
+
+    @Test
+    fun map_dependencyType_transitiveProperty_returnsTransitive() {
+        val component = makeComponent(properties = listOf(prop("sigrid:transitive", "transitive")))
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component)), "")
+        assertEquals(DependencyType.TRANSITIVE, result[0].dependencyType)
     }
 
     @Test
     fun map_dependencyType_missingProperty_returnsUnknown() {
         val component = makeComponent(properties = emptyList())
         val result = OpenSourceHealthMapper.map(makeResponse(listOf(component)), "")
-        assertEquals("Unknown", result[0].dependencyType)
+        assertEquals(DependencyType.UNKNOWN, result[0].dependencyType)
     }
 
     @Test

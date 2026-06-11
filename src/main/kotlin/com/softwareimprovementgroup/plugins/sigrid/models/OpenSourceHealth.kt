@@ -51,7 +51,7 @@ data class OpenSourceHealthDependency(
     val displayName: String,
     val version: String,
     val group: String?,
-    val dependencyType: String,
+    val dependencyType: DependencyType,
     val purl: String,
     val risk: RiskSeverity,
     val licenseRisk: RiskSeverity,
