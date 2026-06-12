@@ -8,6 +8,7 @@ A JetBrains IDE plugin that lets you view and manage [Sigrid](https://www.softwa
 - **Security** — review security findings with risk levels directly in your project context.
 - **Open Source Health** — inspect third-party dependency risks flagged by Sigrid.
 - **File navigation** — double-click any finding to jump to the exact file and line in the editor; a picker appears when a finding has multiple locations.
+- **Filter by active file** — toggle the active-file filter in the panel toolbar to see only findings for the file currently open in the editor; the filter state is remembered per tab.
 - **Edit findings** — update a finding's status and remark directly from the table; supports single and batch edits (up to 25 findings at once).
 - **Search** — filter findings across all three panels with a real-time search bar.
 - **Settings** — configure your Sigrid API key, customer name, and API base URL globally (IDE-level), with per-project overrides.
@@ -53,7 +54,7 @@ Once configured, open the **Sigrid** tool window at the bottom of the IDE. The w
 | Security | Security findings with risk level and file location |
 | Open Source Health | OSH findings for your project's dependencies |
 
-Use the search bar at the top of each tab to filter findings by any text. Double-click a row to open the file at the finding's location; if the finding has multiple locations a picker lets you choose. To edit a finding's status or remark, select one or more rows and click the edit button in the toolbar, use the keyboard shortcut (**F2**), or right-click and choose **Edit…** from the context menu; batch edits are supported for up to 25 findings at a time.
+Use the search bar at the top of each tab to filter findings by any text. Use the segmented button in the toolbar to switch between **All findings** and **Active file** — the latter shows only findings for the file currently open in the editor. Double-click a row to open the file at the finding's location; if the finding has multiple locations a picker lets you choose. To edit a finding's status or remark, select one or more rows and click the edit button in the toolbar, use the keyboard shortcut (**F2**), or right-click and choose **Edit…** from the context menu; batch edits are supported for up to 25 findings at a time. Right-clicking also exposes **Navigate to location** for quick file navigation.
 
 ## Development
 

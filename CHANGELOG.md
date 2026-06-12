@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.4] - 2026-06-11
+
+### Added
+
+- **Filter by active file** — a segmented button in each panel toolbar lets you switch between showing all findings and showing only findings for the file currently open in the editor.
+- **Filter state preserved across tabs** — the active-file filter toggle is remembered independently per tab when switching between Maintainability, Security, and Open Source Health.
+- **Unit tests** — coverage for `FileFilterPanel` including path matching, toggle behavior, and edge cases for nested file paths.
+
+### Changed
+
+- **Context menu** — `FindingEditPopupHandler` refactored into `FindingContextMenuHandler`; the context menu now also exposes the **Navigate to location** action alongside **Edit…**.
+- **Blank-state messages** — empty-table messages are more specific when the active-file filter is on and no findings exist for the current file.
+
 ## [0.0.3] - 2026-06-09
 
 ### Added

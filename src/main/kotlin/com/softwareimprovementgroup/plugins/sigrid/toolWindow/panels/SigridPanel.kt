@@ -3,10 +3,10 @@ package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
+import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.SearchTextField
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
@@ -85,8 +85,8 @@ abstract class SigridPanel<T>(
                 }
             }
 
-            override fun mousePressed(e: MouseEvent) = editPopupHandler.maybeShow(e)
-            override fun mouseReleased(e: MouseEvent) = editPopupHandler.maybeShow(e)
+            override fun mousePressed(e: MouseEvent) = contextMenuHandler.handlePopupTrigger(e)
+            override fun mouseReleased(e: MouseEvent) = contextMenuHandler.handlePopupTrigger(e)
         })
         addKeyListener(object : KeyAdapter() {
             override fun keyPressed(e: KeyEvent) {
@@ -101,8 +101,8 @@ abstract class SigridPanel<T>(
         })
     }
     private val navigator: FindingNavigator by lazy { FindingNavigator(project, table) }
-    private val editPopupHandler: FindingEditPopupHandler<T> by lazy {
-        FindingEditPopupHandler(
+    private val contextMenuHandler: FindingContextMenuHandler<T> by lazy {
+        FindingContextMenuHandler(
             project = project,
             table = table,
             getDisplayedFindings = { displayedFindings },
@@ -114,6 +114,8 @@ abstract class SigridPanel<T>(
             getCurrentStatus = { it.getCurrentStatus() },
             getCurrentRemark = { it.getCurrentRemark() },
             onReload = ::loadData,
+            getFileLocations = { it.getFileLocations() },
+            navigator = navigator,
         )
     }
 
@@ -121,6 +123,8 @@ abstract class SigridPanel<T>(
         isEnabled = false
         toolTipText = SigridBundle["finding.edit.button.tooltip"]
     }
+
+    private val fileFilterPanel = FileFilterPanel(project) { applyFilter() }
 
     private val cardLayout = CardLayout()
     private val cards = JPanel(cardLayout)
@@ -134,12 +138,21 @@ abstract class SigridPanel<T>(
     private var suppressSearchCallback = false
 
     var onSearchChange: (String) -> Unit = {}
+    var onFileFilterChange: (Boolean) -> Unit = {}
+        set(value) { field = value; fileFilterPanel.onFileFilterChange = value }
 
     init {
-        editButton.addActionListener { editPopupHandler.triggerEditForSelectedRow() }
+        setupEditButton()
+        setupSearchField()
+        setupLayout()
+        loadData()
+    }
+
+    private fun setupEditButton() {
+        editButton.addActionListener { contextMenuHandler.triggerEditForSelectedRow() }
         table.addKeyListener(object : KeyAdapter() {
             override fun keyPressed(e: KeyEvent) {
-                if (e.keyCode == KeyEvent.VK_F2) editPopupHandler.triggerEditForSelectedRow()
+                if (e.keyCode == KeyEvent.VK_F2) contextMenuHandler.triggerEditForSelectedRow()
             }
         })
         table.selectionModel.addListSelectionListener { e ->
@@ -151,28 +164,28 @@ abstract class SigridPanel<T>(
                 editButton.isEnabled = editable
             }
         }
+    }
 
+    private fun setupSearchField() {
         searchField.textEditor.document.addDocumentListener(object : DocumentListener {
             override fun insertUpdate(e: DocumentEvent) = onSearchFieldChanged()
             override fun removeUpdate(e: DocumentEvent) = onSearchFieldChanged()
             override fun changedUpdate(e: DocumentEvent) = onSearchFieldChanged()
         })
-
         searchField.preferredSize = java.awt.Dimension(220, searchField.preferredSize.height)
+    }
 
+    private fun setupLayout() {
         val toolbar = JPanel(BorderLayout()).apply {
             add(editButton, BorderLayout.WEST)
+            add(fileFilterPanel, BorderLayout.CENTER)
             add(searchField, BorderLayout.EAST)
         }
-
         cards.add(JBLabel(SigridBundle["panel.loading"]).apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
         cards.add(statusLabel, CARD_ERROR)
         cards.add(JBScrollPane(table), CARD_TABLE)
-
         add(toolbar, BorderLayout.NORTH)
         add(cards, BorderLayout.CENTER)
-
-        loadData()
     }
 
     private fun onSearchFieldChanged() {
@@ -192,9 +205,23 @@ abstract class SigridPanel<T>(
         applyFilter()
     }
 
+    fun setActiveFileOnly(value: Boolean) = fileFilterPanel.setActiveFileOnly(value)
+
     private fun applyFilter() {
         val query = searchField.text.trim()
-        val filtered = if (query.isEmpty()) allFindings else allFindings.filter { it.matchesSearch(query) }
+
+        val afterActiveFilter = if (fileFilterPanel.activeFileOnly) {
+            val activePath = fileFilterPanel.activeFilePath()
+            if (activePath != null) {
+                allFindings.filter { finding ->
+                    finding.getFileLocations().any { loc ->
+                        FileFilterPanel.matchesActivePath(loc.filePath, activePath)
+                    }
+                }
+            } else allFindings
+        } else allFindings
+
+        val filtered = if (query.isEmpty()) afterActiveFilter else afterActiveFilter.filter { it.matchesSearch(query) }
 
         val selectedIds = table.selectedRows
             .map { table.convertRowIndexToModel(it) }
@@ -204,8 +231,8 @@ abstract class SigridPanel<T>(
         tableModel.rowCount = 0
         if (filtered.isEmpty()) {
             displayedFindings = emptyList()
-            if (allFindings.isEmpty()) {
-                showError(emptyMessage)
+            if (afterActiveFilter.isEmpty()) {
+                showSuccess(emptyMessage)
             } else {
                 showError(SigridBundle["panel.no.findings.match", query])
             }
@@ -257,10 +284,16 @@ abstract class SigridPanel<T>(
         }
     }
 
-    private fun showError(message: String) {
+    private fun showSuccess(message: String) =
+        showCard(message, JBColor.GREEN)
+
+    private fun showError(message: String) =
+        showCard(message, JBColor.RED)
+
+    private fun showCard(message: String, color: JBColor) {
         ApplicationManager.getApplication().invokeLater {
             statusLabel.text = message
-            statusLabel.foreground = JBColor.RED
+            statusLabel.foreground = color
             showCard(CARD_ERROR)
         }
     }

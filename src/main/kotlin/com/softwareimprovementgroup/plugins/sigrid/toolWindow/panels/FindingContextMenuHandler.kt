@@ -5,6 +5,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
+import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
@@ -12,7 +13,7 @@ import javax.swing.JMenuItem
 import javax.swing.JPopupMenu
 import javax.swing.KeyStroke
 
-class FindingEditPopupHandler<T>(
+class FindingContextMenuHandler<T>(
     private val project: Project,
     private val table: JBTable,
     private val getDisplayedFindings: () -> List<T>,
@@ -24,18 +25,32 @@ class FindingEditPopupHandler<T>(
     private val getCurrentStatus: (T) -> String,
     private val getCurrentRemark: (T) -> String,
     private val onReload: () -> Unit,
+    private val getFileLocations: (T) -> List<FileLocation>,
+    private val navigator: FindingNavigator,
 ) {
-    fun maybeShow(e: MouseEvent) {
+    fun handlePopupTrigger(e: MouseEvent) {
         if (!e.isPopupTrigger) return
         val viewRow = table.rowAtPoint(e.point)
         if (viewRow < 0) return
         if (!table.isRowSelected(viewRow)) table.setRowSelectionInterval(viewRow, viewRow)
-        if (!hasEditableFindings()) return
+
+        val navigableLocations = navigableLocationsAtPoint(e)
+        val hasEditable = hasEditableFindings()
+        if (navigableLocations == null && !hasEditable) return
+
         val popup = JPopupMenu()
-        val editItem = JMenuItem(SigridBundle["finding.edit.menu.item"])
-        editItem.accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)
-        editItem.addActionListener { triggerEditForSelectedRow() }
-        popup.add(editItem)
+        if (navigableLocations != null) {
+            val navigateItem = JMenuItem(SigridBundle["finding.navigate.menu.item"])
+            navigateItem.accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0)
+            navigateItem.addActionListener { navigator.navigate(navigableLocations, e) }
+            popup.add(navigateItem)
+        }
+        if (hasEditable) {
+            val editItem = JMenuItem(SigridBundle["finding.edit.menu.item"])
+            editItem.accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)
+            editItem.addActionListener { triggerEditForSelectedRow() }
+            popup.add(editItem)
+        }
         popup.show(e.component, e.x, e.y)
     }
 
@@ -43,6 +58,16 @@ class FindingEditPopupHandler<T>(
         val findings = selectedEditableFindings() ?: return
         if (findings.isEmpty()) return
         triggerEdit(findings)
+    }
+
+    private fun navigableLocationsAtPoint(e: MouseEvent): List<FileLocation>? {
+        val viewRow = table.rowAtPoint(e.point)
+        if (viewRow < 0) return null
+        val displayedFindings = getDisplayedFindings()
+        val modelRow = table.convertRowIndexToModel(viewRow)
+        val finding = displayedFindings.getOrNull(modelRow) ?: return null
+        val locations = FindingNavigator.filterValidLocations(getFileLocations(finding))
+        return if (locations.isNotEmpty()) locations else null
     }
 
     private fun hasEditableFindings(): Boolean {
