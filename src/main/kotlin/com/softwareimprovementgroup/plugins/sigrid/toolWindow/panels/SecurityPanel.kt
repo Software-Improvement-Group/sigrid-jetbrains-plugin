@@ -5,6 +5,7 @@ import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.mappers.SecurityFindingMapper
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.models.FindingStatus
+import com.softwareimprovementgroup.plugins.sigrid.models.RiskSeverity
 import com.softwareimprovementgroup.plugins.sigrid.models.SecurityFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.snakeCaseToTitleCase
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
@@ -12,7 +13,19 @@ import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(
     project,
     arrayOf(SigridBundle["column.risk"], SigridBundle["column.location"], SigridBundle["column.description"], SigridBundle["column.status"]),
-    setOf(SigridBundle["column.risk"], SigridBundle["column.status"])
+    centeredColumns = setOf(SigridBundle["column.risk"], SigridBundle["column.status"]),
+    columnFilters = listOf(
+        ColumnFilterDef(
+            columnName = SigridBundle["column.risk"],
+            options = RiskSeverity.entries.map { FilterOption(it.toRiskIcon().label, it.name) },
+            getOptionId = { severity.name },
+        ),
+        ColumnFilterDef(
+            columnName = SigridBundle["column.status"],
+            options = FindingStatus.entries.map { FilterOption(snakeCaseToTitleCase(it.apiValue), it.apiValue) },
+            getOptionId = { status.apiValue },
+        ),
+    ),
 ) {
     override val emptyMessage = SigridBundle["security.empty"]
 

@@ -10,6 +10,8 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.dsl.builder.SegmentedButton
 import com.intellij.ui.dsl.builder.panel
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
+import java.awt.Component
+import java.awt.Container
 import java.awt.FlowLayout
 import javax.swing.JPanel
 
@@ -69,6 +71,18 @@ class FileFilterPanel(
                 }
             }
         )
+    }
+
+    override fun setEnabled(enabled: Boolean) {
+        super.setEnabled(enabled)
+        setEnabledRecursively(this, enabled)
+    }
+
+    private fun setEnabledRecursively(component: Component, enabled: Boolean) {
+        if (component !== this) component.isEnabled = enabled
+        if (component is Container) {
+            component.components.forEach { setEnabledRecursively(it, enabled) }
+        }
     }
 
     fun setActiveFileOnly(value: Boolean) {

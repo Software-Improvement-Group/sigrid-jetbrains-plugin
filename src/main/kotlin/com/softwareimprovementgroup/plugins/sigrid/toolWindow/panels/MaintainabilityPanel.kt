@@ -5,6 +5,7 @@ import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.mappers.RefactoringCandidateMapper
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.models.MaintainabilityFindingStatus
+import com.softwareimprovementgroup.plugins.sigrid.models.MaintainabilitySeverity
 import com.softwareimprovementgroup.plugins.sigrid.models.RefactoringCandidate
 import com.softwareimprovementgroup.plugins.sigrid.models.snakeCaseToTitleCase
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
@@ -12,7 +13,19 @@ import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>(
     project,
     arrayOf(SigridBundle["column.risk"], SigridBundle["column.location"], SigridBundle["column.description"], SigridBundle["column.status"]),
-    setOf(SigridBundle["column.risk"], SigridBundle["column.status"])
+    centeredColumns = setOf(SigridBundle["column.risk"], SigridBundle["column.status"]),
+    columnFilters = listOf(
+        ColumnFilterDef(
+            columnName = SigridBundle["column.risk"],
+            options = MaintainabilitySeverity.entries.map { FilterOption(it.toRiskIcon().label, it.name) },
+            getOptionId = { severity.name },
+        ),
+        ColumnFilterDef(
+            columnName = SigridBundle["column.status"],
+            options = MaintainabilityFindingStatus.entries.map { FilterOption(snakeCaseToTitleCase(it.apiValue), it.apiValue) },
+            getOptionId = { status.apiValue },
+        ),
+    ),
 ) {
     override val emptyMessage = SigridBundle["maintainability.empty"]
 
