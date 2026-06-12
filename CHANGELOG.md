@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.5] - 2026-06-12
+
+### Added
+
+- **Column filters** — click the filter icon in any filterable column header to narrow findings by risk level, status, or dependency type; multiple values can be selected and filters on different columns combine; active filters are indicated by a highlighted filter icon.
+- **Dependency type** — the Transitive column in the Open Source Health tab now shows a typed `DependencyType` value (`Direct`, `Transitive`, or `Unknown`) instead of a raw API string, and can be filtered.
+- **"No results" inline label** — when active column filters or a search query produce no matches, the table stays visible and a red message is shown below it, keeping the toolbar accessible.
+
+### Changed
+
+- **Filter and search controls disabled when unconfigured** — the file-filter toggle and search field are now grayed out until the plugin is configured with valid credentials.
+
 ## [0.0.4] - 2026-06-11
 
 ### Added
