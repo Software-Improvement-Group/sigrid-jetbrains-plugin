@@ -329,9 +329,12 @@ abstract class SigridPanel<T>(
         ApplicationManager.getApplication().executeOnPooledThread {
             val projectConfig = SigridProjectConfiguration.getInstance(project)
             if (!projectConfig.isConfigurationValid) {
+                setFilterControlsEnabled(false)
                 showError(SigridBundle["panel.not.configured"])
                 return@executeOnPooledThread
             }
+
+            setFilterControlsEnabled(true)
 
             try {
                 val findings = fetch(projectConfig.subsystem)
@@ -342,6 +345,14 @@ abstract class SigridPanel<T>(
             } catch (e: Exception) {
                 showError(toErrorMessage(e))
             }
+        }
+    }
+
+    private fun setFilterControlsEnabled(enabled: Boolean) {
+        ApplicationManager.getApplication().invokeLater {
+            fileFilterPanel.isEnabled = enabled
+            searchField.isEnabled = enabled
+            searchField.textEditor.isEnabled = enabled
         }
     }
 
