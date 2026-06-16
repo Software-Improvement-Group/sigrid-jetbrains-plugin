@@ -1,5 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.services
 
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
 import kotlinx.coroutines.Dispatchers
@@ -35,8 +36,8 @@ class UsageStatisticsActivity : ProjectActivity {
             withContext(Dispatchers.IO) {
                 httpClient.send(request, HttpResponse.BodyHandlers.discarding())
             }
-        } catch (_: Exception) {
-            // silently ignore failures to avoid disrupting the user
+        } catch (e: Exception) {
+            thisLogger().error("Failed to send usage statistics", e)
         }
     }
 }
