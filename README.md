@@ -12,7 +12,7 @@ A JetBrains IDE plugin that lets you view and manage [Sigrid](https://www.softwa
 - **Column filters** — click the filter icon in any column header to narrow findings by risk level, status, or dependency type; active filters are highlighted and combine across columns.
 - **Edit findings** — update a finding's status and remark directly from the table; supports single and batch edits (up to 25 findings at once).
 - **Search** — filter findings across all three panels with a real-time search bar.
-- **Settings** — configure your Sigrid API key, customer name, and API base URL globally (IDE-level), with per-project overrides.
+- **Settings** — configure your Sigrid API key, portfolio name, and API base URL globally (IDE-level), with per-project overrides; the tool window refreshes automatically when settings change.
 
 ## Requirements
 
@@ -42,8 +42,8 @@ The plugin ZIP is written to `build/distributions/`. Then install it from **Sett
 ## Configuration
 
 1. Open **Settings → Tools → Sigrid**.
-2. Enter your **API Key**, **Customer** name, and optionally a custom **Sigrid API URL** (defaults to the SIG-hosted instance).
-3. For per-project overrides (e.g. a different system name or API key), open **Settings → Tools → Sigrid → Project Settings**.
+2. Enter your **API Key**, **Portfolio Name**, and optionally a custom **Sigrid API URL** (defaults to the SIG-hosted instance).
+3. For per-project overrides (e.g. a different system name or API key), click **Configure system and other per-project Sigrid settings…** at the bottom of the global settings page, or open **Settings → Tools → Sigrid → Project Settings** directly.
 
 ## Usage
 
