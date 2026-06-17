@@ -32,6 +32,7 @@ import javax.swing.table.DefaultTableModel
 
 private const val CARD_LOADING = "loading"
 private const val CARD_ERROR = "error"
+private const val CARD_NOT_CONFIGURED = "notConfigured"
 private const val CARD_TABLE = "table"
 
 abstract class SigridPanel<T>(
@@ -218,6 +219,7 @@ abstract class SigridPanel<T>(
         }
         cards.add(JBLabel(SigridBundle["panel.loading"]).apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
         cards.add(statusLabel, CARD_ERROR)
+        cards.add(buildNotConfiguredCard(project), CARD_NOT_CONFIGURED)
         val tableCard = JPanel(BorderLayout()).apply {
             add(JBScrollPane(table), BorderLayout.CENTER)
             add(filteredEmptyLabel, BorderLayout.SOUTH)
@@ -339,7 +341,7 @@ abstract class SigridPanel<T>(
             val projectConfig = SigridProjectConfiguration.getInstance(project)
             if (!projectConfig.isConfigurationValid) {
                 setFilterControlsEnabled(false)
-                showError(SigridBundle["panel.not.configured"])
+                showNotConfigured()
                 return@executeOnPooledThread
             }
 
@@ -380,6 +382,12 @@ abstract class SigridPanel<T>(
         }
         if (firstSelectedViewRow >= 0) {
             table.scrollRectToVisible(table.getCellRect(firstSelectedViewRow, 0, true))
+        }
+    }
+
+    private fun showNotConfigured() {
+        ApplicationManager.getApplication().invokeLater {
+            showCard(CARD_NOT_CONFIGURED)
         }
     }
 
