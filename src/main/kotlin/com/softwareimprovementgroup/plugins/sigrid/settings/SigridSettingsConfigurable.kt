@@ -1,10 +1,15 @@
 package com.softwareimprovementgroup.plugins.sigrid.settings
 
+import com.intellij.ide.DataManager
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.options.ex.Settings
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.*
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridConfiguration
+import java.awt.Component
+import java.awt.event.ActionEvent
 import javax.swing.JComponent
 import javax.swing.JPasswordField
 
@@ -34,6 +39,9 @@ class SigridSettingsConfigurable : Configurable {
                     textField().bindText(::sigridUrl).align(AlignX.FILL)
                         .comment(SigridBundle["settings.global.sigrid.url.comment", SigridConfiguration.SIGRID_DEFAULT_URL])
                 }
+            }
+            row {
+                link(SigridBundle["settings.project.settings.link"], ::navigateToProjectSettings)
             }
             // TODO: Uncomment when Jira integration is implemented
             /*group(SigridBundle["settings.group.jira"]) {
@@ -68,6 +76,10 @@ class SigridSettingsConfigurable : Configurable {
         config.sigridUrl = sigridUrl
         config.jiraUser = jiraUser
         config.jiraToken = String(jiraTokenField.password)
+        ApplicationManager.getApplication().invokeLater(
+            { ApplicationManager.getApplication().messageBus.syncPublisher(SigridSettingsTopic.GLOBAL).settingsChanged() },
+            com.intellij.openapi.application.ModalityState.nonModal()
+        )
     }
 
     override fun reset() {
@@ -78,6 +90,14 @@ class SigridSettingsConfigurable : Configurable {
         jiraUser = config.jiraUser
         jiraTokenField.text = config.jiraToken
         panel?.reset()
+    }
+
+    private fun navigateToProjectSettings(event: ActionEvent) {
+        val source = event.source as? Component ?: return
+        val dataContext = DataManager.getInstance().getDataContext(source)
+        val settings = Settings.KEY.getData(dataContext) ?: return
+        val configurable = settings.find(SigridProjectSettingsConfigurable::class.java) ?: return
+        settings.select(configurable)
     }
 
     override fun disposeUIResources() {

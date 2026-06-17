@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.7] - 2026-06-17
+
+### Added
+
+- **"Not configured" panel** — when Sigrid is not yet set up, each tab now shows a centered message with a clickable link that opens the Settings dialog directly, instead of a plain text label.
+- **Settings link in global settings** — the global Sigrid settings page now shows a link to the per-project settings page, making it easier to navigate to system-specific configuration.
+- **Settings change listener** — `SigridSettingsListener` reacts to credential/configuration changes and triggers a panel refresh automatically, so the tool window updates without a manual refresh after saving settings.
+
+### Changed
+
+- **"Customer" renamed to "Portfolio Name"** — the label and help text in the global settings panel now use "Portfolio Name" to match Sigrid's current terminology; the error message for a not-found system was updated accordingly.
+- **Sigrid panel visible during indexing** — `SigridWindowFactory` now implements `DumbAware`, so the tool window renders immediately when a project opens, even while the IDE is still indexing.
+
 ## [0.0.6] - 2026-06-16
 
 ### Added
