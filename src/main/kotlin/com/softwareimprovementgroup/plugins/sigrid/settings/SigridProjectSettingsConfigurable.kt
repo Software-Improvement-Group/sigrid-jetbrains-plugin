@@ -1,5 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.settings
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogPanel
@@ -98,9 +99,10 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
         config.jiraUserOverride = jiraUserOverride
         config.jiraTokenOverride = String(jiraTokenOverrideField.password)
         config.jiraProjectKey = jiraProjectKey
-        project.messageBus
-            .syncPublisher(SigridSettingsTopic.PROJECT)
-            .settingsChanged()
+        ApplicationManager.getApplication().invokeLater(
+            { project.messageBus.syncPublisher(SigridSettingsTopic.PROJECT).settingsChanged() },
+            com.intellij.openapi.application.ModalityState.nonModal()
+        )
     }
 
     override fun reset() {

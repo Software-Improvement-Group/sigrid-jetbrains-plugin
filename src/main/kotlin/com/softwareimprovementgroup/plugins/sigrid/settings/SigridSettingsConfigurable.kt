@@ -69,9 +69,10 @@ class SigridSettingsConfigurable : Configurable {
         config.sigridUrl = sigridUrl
         config.jiraUser = jiraUser
         config.jiraToken = String(jiraTokenField.password)
-        ApplicationManager.getApplication().messageBus
-            .syncPublisher(SigridSettingsTopic.GLOBAL)
-            .settingsChanged()
+        ApplicationManager.getApplication().invokeLater(
+            { ApplicationManager.getApplication().messageBus.syncPublisher(SigridSettingsTopic.GLOBAL).settingsChanged() },
+            com.intellij.openapi.application.ModalityState.nonModal()
+        )
     }
 
     override fun reset() {
