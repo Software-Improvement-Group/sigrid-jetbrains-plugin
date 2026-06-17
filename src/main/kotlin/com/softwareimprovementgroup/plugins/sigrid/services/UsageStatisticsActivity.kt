@@ -37,7 +37,7 @@ class UsageStatisticsActivity : ProjectActivity {
                 httpClient.send(request, HttpResponse.BodyHandlers.discarding())
             }
         } catch (e: Exception) {
-            thisLogger().error("Failed to send usage statistics", e)
+            thisLogger().warn("Failed to send usage statistics", e)
         }
     }
 }
