@@ -1,5 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.ui.HyperlinkLabel
@@ -20,7 +21,9 @@ internal fun buildNotConfiguredCard(project: Project): JPanel {
         foreground = JBColor.BLUE
         addHyperlinkListener { e ->
             if (e.eventType == HyperlinkEvent.EventType.ACTIVATED) {
-                ShowSettingsUtil.getInstance().showSettingsDialog(project, SigridSettingsConfigurable::class.java)
+                ApplicationManager.getApplication().invokeLater {
+                    ShowSettingsUtil.getInstance().showSettingsDialog(project, SigridSettingsConfigurable::class.java)
+                }
             }
         }
     }
