@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.6] - 2026-06-16
+
+### Added
+
+- **Usage statistics** — a startup activity (`UsageStatisticsActivity`) fires an HTTP request on project open to record anonymous plugin usage; includes unit tests covering the HTTP client logic.
+
+### Fixed
+
+- **Nullable `purl` field** — `OpenSourceHealth.purl` is now nullable to handle API responses that omit the field, preventing JSON deserialization errors.
+- **Huge `Tool Windows` menu icon** — added 16x16 and 32x32 icons to solve the issue.
+
 ## [0.0.5] - 2026-06-12
 
 ### Added

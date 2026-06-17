@@ -395,6 +395,9 @@ abstract class SigridPanel<T>(
     }
 
     private fun toErrorMessage(e: Exception): String {
+        if (e is java.io.IOException || e.cause is java.io.IOException) {
+            return SigridBundle["panel.error.network"]
+        }
         val status = e.message?.substringAfter("HTTP ")?.substringBefore(" ")?.toIntOrNull()
         return when (status) {
             401  -> SigridBundle["panel.error.unauthorized"]

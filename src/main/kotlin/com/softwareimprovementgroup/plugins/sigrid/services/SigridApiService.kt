@@ -31,6 +31,12 @@ class SigridApiService {
             .apply { if (apiKey.isNotBlank()) header("Authorization", "Bearer $apiKey") }
     }
 
+    private fun checkStatus(response: HttpResponse<*>) {
+        if (response.statusCode() !in 200..299) {
+            throw Exception("HTTP ${response.statusCode()} from ${response.uri()}")
+        }
+    }
+
     private fun joinUrl(base: String, vararg paths: String): String {
         val normalizedBase = base.trimEnd('/')
         val path = paths.joinToString("/") { it.trim('/') }
@@ -41,6 +47,7 @@ class SigridApiService {
         val projectConfig = SigridProjectConfiguration.getInstance(project)
         val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "osh-findings", projectConfig.effectiveCustomer, projectConfig.system)
         val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
+        checkStatus(response)
         return gson.fromJson(response.body(), OpenSourceHealthResponse::class.java)
     }
 
@@ -48,6 +55,7 @@ class SigridApiService {
         val projectConfig = SigridProjectConfiguration.getInstance(project)
         val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "security-findings", projectConfig.effectiveCustomer, projectConfig.system)
         val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
+        checkStatus(response)
         val type = object : TypeToken<List<SecurityFindingResponse>>() {}.type
         return gson.fromJson(response.body(), type)
     }
@@ -56,6 +64,7 @@ class SigridApiService {
         val projectConfig = SigridProjectConfiguration.getInstance(project)
         val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "refactoring-candidates", projectConfig.effectiveCustomer, projectConfig.system, category.value)
         val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
+        checkStatus(response)
         return gson.fromJson(response.body(), RefactoringCandidatesResponse::class.java)
     }
 
