@@ -98,6 +98,9 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
         config.jiraUserOverride = jiraUserOverride
         config.jiraTokenOverride = String(jiraTokenOverrideField.password)
         config.jiraProjectKey = jiraProjectKey
+        project.messageBus
+            .syncPublisher(SigridSettingsTopic.PROJECT)
+            .settingsChanged()
     }
 
     override fun reset() {

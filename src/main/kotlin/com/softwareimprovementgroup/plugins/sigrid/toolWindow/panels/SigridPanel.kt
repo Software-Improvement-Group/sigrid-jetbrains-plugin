@@ -11,6 +11,8 @@ import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
+import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsListener
+import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsTopic
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.event.KeyAdapter
@@ -171,7 +173,14 @@ abstract class SigridPanel<T>(
         setupEditButton()
         setupSearchField()
         setupLayout()
+        subscribeToSettingsChanges()
         loadData()
+    }
+
+    private fun subscribeToSettingsChanges() {
+        val listener = SigridSettingsListener { loadData() }
+        project.messageBus.connect().subscribe(SigridSettingsTopic.PROJECT, listener)
+        ApplicationManager.getApplication().messageBus.connect().subscribe(SigridSettingsTopic.GLOBAL, listener)
     }
 
     private fun setupEditButton() {

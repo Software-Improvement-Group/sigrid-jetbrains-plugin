@@ -1,5 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.settings
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.*
@@ -68,6 +69,9 @@ class SigridSettingsConfigurable : Configurable {
         config.sigridUrl = sigridUrl
         config.jiraUser = jiraUser
         config.jiraToken = String(jiraTokenField.password)
+        ApplicationManager.getApplication().messageBus
+            .syncPublisher(SigridSettingsTopic.GLOBAL)
+            .settingsChanged()
     }
 
     override fun reset() {
