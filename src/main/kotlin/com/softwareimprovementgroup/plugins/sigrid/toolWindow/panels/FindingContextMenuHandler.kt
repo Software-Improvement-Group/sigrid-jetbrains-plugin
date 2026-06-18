@@ -7,6 +7,7 @@ import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
+import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
 import javax.swing.JMenuItem
@@ -110,6 +111,10 @@ class FindingContextMenuHandler<T>(
         )
         if (dialog.showAndGet()) {
             val request = dialog.getResult() ?: return
+            if (SigridProjectConfiguration.getInstance(project).isUrlOverrideWithoutKeyOverride) {
+                Messages.showErrorDialog(table, SigridBundle["panel.error.url.override.no.key"])
+                return
+            }
             ApplicationManager.getApplication().executeOnPooledThread {
                 for (finding in findings) {
                     SigridApiService.getInstance().editFinding(project, getId(finding), request)

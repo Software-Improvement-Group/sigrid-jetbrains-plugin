@@ -31,9 +31,12 @@ class SigridApiService {
             .apply { if (apiKey.isNotBlank()) header("Authorization", "Bearer $apiKey") }
     }
 
-    private fun checkStatus(response: HttpResponse<*>) {
+    private fun checkStatus(response: HttpResponse<String>) {
         if (response.statusCode() !in 200..299) {
             throw Exception("HTTP ${response.statusCode()} from ${response.uri()}")
+        }
+        if (response.body().isNullOrBlank() || response.body() == "null") {
+            throw Exception("HTTP 404 from ${response.uri()}")
         }
     }
 

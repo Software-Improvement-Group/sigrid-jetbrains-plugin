@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogPanel
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.dsl.builder.*
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridConfiguration
@@ -15,6 +16,7 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
     private var panel: DialogPanel? = null
     private val apiKeyOverrideField = JPasswordField(1)
     private val jiraTokenOverrideField = JPasswordField(1)
+    private val effectiveHostLabel = JBLabel()
     private var customerOverride = ""
     private var sigridUrlOverride = ""
     private var system = ""
@@ -41,6 +43,9 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
                 row(SigridBundle["settings.sigrid.url.label"]) {
                     textField().bindText(::sigridUrlOverride).align(AlignX.FILL)
                         .comment(SigridBundle["settings.project.override.comment", global.sigridUrl.ifBlank { SigridConfiguration.SIGRID_DEFAULT_URL }])
+                }
+                row(SigridBundle["settings.project.effective.host.label"]) {
+                    cell(effectiveHostLabel)
                 }
             }
             group(SigridBundle["settings.project.system.group"]) {
@@ -116,6 +121,10 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
         jiraUserOverride = config.jiraUserOverride
         jiraTokenOverrideField.text = config.jiraTokenOverride
         jiraProjectKey = config.jiraProjectKey
+        val global = SigridConfiguration.getInstance()
+        effectiveHostLabel.text = config.sigridUrlOverride.trimEnd('/').ifBlank {
+            global.sigridUrl.ifBlank { SigridConfiguration.SIGRID_DEFAULT_URL }
+        }
         panel?.reset()
     }
 

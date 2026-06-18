@@ -339,6 +339,11 @@ abstract class SigridPanel<T>(
 
         ApplicationManager.getApplication().executeOnPooledThread {
             val projectConfig = SigridProjectConfiguration.getInstance(project)
+            if (projectConfig.isUrlOverrideWithoutKeyOverride) {
+                setFilterControlsEnabled(false)
+                showError(SigridBundle["panel.error.url.override.no.key"])
+                return@executeOnPooledThread
+            }
             if (!projectConfig.isConfigurationValid) {
                 setFilterControlsEnabled(false)
                 showNotConfigured()

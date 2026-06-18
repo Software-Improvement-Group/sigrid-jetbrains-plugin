@@ -11,6 +11,13 @@ import com.intellij.openapi.project.Project
 class SigridProjectConfiguration(private val project: Project) : PersistentStateComponent<SigridProjectConfiguration.State> {
     companion object {
         fun getInstance(project: Project): SigridProjectConfiguration = project.service()
+
+        internal fun computeEffectiveApiKey(urlOverride: String, projectApiKey: String, globalApiKey: String): String =
+            if (urlOverride.isNotBlank()) projectApiKey
+            else projectApiKey.ifBlank { globalApiKey }
+
+        internal fun computeIsUrlOverrideWithoutKeyOverride(urlOverride: String, projectApiKey: String): Boolean =
+            urlOverride.isNotBlank() && projectApiKey.isBlank()
     }
 
     data class State(
@@ -49,7 +56,10 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
         set(value) = apiKeyOverrideCredential.set(value)
 
     val effectiveApiKey: String
-        get() = apiKeyOverrideCredential.get().ifBlank { SigridConfiguration.getInstance().apiKey }
+        get() = computeEffectiveApiKey(_state.sigridUrlOverride, apiKeyOverrideCredential.get(), SigridConfiguration.getInstance().apiKey)
+
+    val isUrlOverrideWithoutKeyOverride: Boolean
+        get() = computeIsUrlOverrideWithoutKeyOverride(_state.sigridUrlOverride, apiKeyOverrideCredential.get())
 
     val effectiveCustomer: String
         get() = _state.customerOverride.ifBlank { SigridConfiguration.getInstance().customer }
