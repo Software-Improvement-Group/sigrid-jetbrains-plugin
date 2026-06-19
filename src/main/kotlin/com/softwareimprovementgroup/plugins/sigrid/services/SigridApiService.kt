@@ -16,6 +16,11 @@ import java.net.http.HttpResponse
 class SigridApiService {
     companion object {
         fun getInstance(): SigridApiService = service()
+
+        internal fun requireHttpsUrl(url: String) {
+            val scheme = try { URI.create(url).scheme } catch (_: Exception) { null }
+            if (scheme != "https") throw IllegalArgumentException("Sigrid URL must use HTTPS (got: $url)")
+        }
     }
 
     private val gson = Gson()
@@ -24,6 +29,7 @@ class SigridApiService {
         .build()
 
     private fun buildRequest(url: String, projectConfig: SigridProjectConfiguration): HttpRequest.Builder {
+        requireHttpsUrl(url)
         val apiKey = projectConfig.effectiveApiKey
         return HttpRequest.newBuilder()
             .uri(URI.create(url))

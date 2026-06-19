@@ -2,6 +2,7 @@ package com.softwareimprovementgroup.plugins.sigrid.settings
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.components.JBLabel
@@ -94,10 +95,14 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
 
     override fun apply() {
         panel?.apply()
+        val urlOverride = sigridUrlOverride.trim()
+        if (urlOverride.isNotBlank() && !urlOverride.startsWith("https://")) {
+            throw ConfigurationException(SigridBundle["settings.error.url.must.be.https"])
+        }
         val config = SigridProjectConfiguration.getInstance(project)
         config.apiKeyOverride = String(apiKeyOverrideField.password)
         config.customerOverride = customerOverride
-        config.sigridUrlOverride = sigridUrlOverride
+        config.sigridUrlOverride = urlOverride
         config.system = system
         config.subsystem = subsystem
         config.jiraBaseUrl = jiraBaseUrl
