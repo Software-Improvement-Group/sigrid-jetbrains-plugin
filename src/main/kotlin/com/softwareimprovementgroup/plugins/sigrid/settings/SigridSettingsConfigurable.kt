@@ -75,9 +75,13 @@ class SigridSettingsConfigurable : Configurable {
         if (url.isNotBlank() && !url.startsWith("https://")) {
             throw ConfigurationException(SigridBundle["settings.error.url.must.be.https"])
         }
+        val customerValue = customer.trim()
+        if (customerValue.isNotBlank() && !customerValue.matches(CUSTOMER_NAME_REGEX)) {
+            throw ConfigurationException(SigridBundle["settings.error.customer.invalid.format"])
+        }
         val config = SigridConfiguration.getInstance()
         config.apiKey = String(apiKeyField.password)
-        config.customer = customer
+        config.customer = customerValue
         config.sigridUrl = url
         config.jiraUser = jiraUser
         config.jiraToken = String(jiraTokenField.password)

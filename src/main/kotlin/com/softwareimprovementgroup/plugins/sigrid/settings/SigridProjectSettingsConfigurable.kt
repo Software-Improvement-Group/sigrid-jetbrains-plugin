@@ -99,12 +99,27 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
         if (urlOverride.isNotBlank() && !urlOverride.startsWith("https://")) {
             throw ConfigurationException(SigridBundle["settings.error.url.must.be.https"])
         }
+        val customerOverrideValue = customerOverride.trim()
+        if (customerOverrideValue.isNotBlank() && !customerOverrideValue.matches(CUSTOMER_NAME_REGEX)) {
+            throw ConfigurationException(SigridBundle["settings.error.customer.invalid.format"])
+        }
+        val systemValue = system.trim()
+        if (systemValue.isBlank()) {
+            throw ConfigurationException(SigridBundle["settings.error.system.required"])
+        }
+        if (!systemValue.matches(SYSTEM_NAME_REGEX)) {
+            throw ConfigurationException(SigridBundle["settings.error.system.invalid.format"])
+        }
+        val subsystemValue = subsystem.trim()
+        if (subsystemValue.isNotBlank() && !subsystemValue.matches(SUBSYSTEM_NAME_REGEX)) {
+            throw ConfigurationException(SigridBundle["settings.error.subsystem.invalid.format"])
+        }
         val config = SigridProjectConfiguration.getInstance(project)
         config.apiKeyOverride = String(apiKeyOverrideField.password)
-        config.customerOverride = customerOverride
+        config.customerOverride = customerOverrideValue
         config.sigridUrlOverride = urlOverride
-        config.system = system
-        config.subsystem = subsystem
+        config.system = systemValue
+        config.subsystem = subsystemValue
         config.jiraBaseUrl = jiraBaseUrl
         config.jiraUserOverride = jiraUserOverride
         config.jiraTokenOverride = String(jiraTokenOverrideField.password)

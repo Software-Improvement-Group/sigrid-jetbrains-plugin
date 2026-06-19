@@ -8,6 +8,7 @@ import com.intellij.openapi.project.Project
 import com.softwareimprovementgroup.plugins.sigrid.models.*
 import java.net.ProxySelector
 import java.net.URI
+import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -46,9 +47,9 @@ class SigridApiService {
         }
     }
 
-    private fun joinUrl(base: String, vararg paths: String): String {
+    internal fun joinUrl(base: String, vararg paths: String): String {
         val normalizedBase = base.trimEnd('/')
-        val path = paths.joinToString("/") { it.trim('/') }
+        val path = paths.joinToString("/") { URLEncoder.encode(it.trim('/'), "UTF-8").replace("+", "%20") }
         return "$normalizedBase/$path"
     }
 
