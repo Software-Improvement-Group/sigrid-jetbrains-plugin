@@ -8,6 +8,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FindingRequest
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.util.ui.JBUI
 import java.awt.Dimension
 import java.awt.GridBagConstraints
@@ -74,7 +75,8 @@ class EditFindingDialog(
         if (count == 1) {
             gbc.gridx = 0; gbc.gridy = nextRow++; gbc.gridwidth = 2
             gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0
-            panel.add(JBLabel("<html>${description.replace("\n", "<br>")}</html>"), gbc)
+            val safeDescription = StringUtil.escapeXmlEntities(description).replace("\n", "<br>")
+            panel.add(JBLabel("<html>$safeDescription</html>"), gbc)
             gbc.gridwidth = 1
         }
 
