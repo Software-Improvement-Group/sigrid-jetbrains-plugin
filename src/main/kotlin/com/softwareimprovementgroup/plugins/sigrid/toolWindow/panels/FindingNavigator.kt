@@ -24,8 +24,8 @@ class FindingNavigator(private val project: Project, private val anchor: JCompon
 
     private fun openFileLocation(location: FileLocation) {
         val basePath = project.basePath ?: return
-        val absolutePath = "$basePath/${location.filePath}"
-        val vFile = LocalFileSystem.getInstance().findFileByPath(absolutePath) ?: return
+        val absolutePath = resolveAndValidate(basePath, location.filePath) ?: return
+        val vFile = LocalFileSystem.getInstance().refreshAndFindFileByPath(absolutePath) ?: return
         OpenFileDescriptor(project, vFile, editorLine(location), 0).navigate(true)
     }
 
@@ -56,6 +56,11 @@ class FindingNavigator(private val project: Project, private val anchor: JCompon
     }
 
     companion object {
+        fun resolveAndValidate(basePath: String, filePath: String): String? {
+            if (filePath.split("/").any { it == ".." }) return null
+            return "$basePath/$filePath"
+        }
+
         fun filterValidLocations(locations: List<FileLocation>): List<FileLocation> =
             locations.filter { it.filePath.isNotBlank() }
 
