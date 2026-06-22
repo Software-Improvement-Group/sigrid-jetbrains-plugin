@@ -2,6 +2,7 @@ package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -103,5 +104,35 @@ class FindingNavigatorTest {
     @Test
     fun popupItemText_lineOne_appendsLineNumber() {
         assertEquals("Foo.kt:1", FindingNavigator.popupItemText(loc("src/Foo.kt", 1)))
+    }
+
+    // resolveAndValidate
+
+    @Test
+    fun resolveAndValidate_validRelativePath_returnsAbsolutePath() {
+        assertEquals("/project/src/main/Foo.kt", FindingNavigator.resolveAndValidate("/project", "src/main/Foo.kt"))
+    }
+
+    @Test
+    fun resolveAndValidate_deepRelativePath_returnsAbsolutePath() {
+        assertEquals(
+            "/project/src/app/admin/form.component.html",
+            FindingNavigator.resolveAndValidate("/project", "src/app/admin/form.component.html")
+        )
+    }
+
+    @Test
+    fun resolveAndValidate_dotDotTraversal_returnsNull() {
+        assertNull(FindingNavigator.resolveAndValidate("/project", "../../etc/passwd"))
+    }
+
+    @Test
+    fun resolveAndValidate_singleDotDot_returnsNull() {
+        assertNull(FindingNavigator.resolveAndValidate("/project", "../outside.txt"))
+    }
+
+    @Test
+    fun resolveAndValidate_dotDotInMiddle_returnsNull() {
+        assertNull(FindingNavigator.resolveAndValidate("/project", "src/../../etc/passwd"))
     }
 }

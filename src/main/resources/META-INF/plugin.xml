@@ -31,5 +31,6 @@
                 anchor="bottom"
                 icon="/icons/sigrid.png"
         />
+        <notificationGroup id="Sigrid" displayType="BALLOON" key="settings.display.name"/>
     </extensions>
 </idea-plugin>

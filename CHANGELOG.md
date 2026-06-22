@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.8] - 2026-06-22
+
+### Fixed
+
+- **HTTPS enforcement** — Sigrid URLs that use `http://` are now rejected at validation time, preventing the Bearer token from being sent over a plain-text connection.
+- **API key isolation** — the global API key is no longer forwarded when a project overrides the Sigrid URL without providing its own key; the request is blocked and an error is surfaced instead.
+- **Path traversal prevention** — file paths resolved when navigating to a finding location are now checked to stay within the project root, blocking `../` escape sequences.
+- **HTML escaping in descriptions** — finding description text is HTML-escaped before being rendered, preventing injected markup from affecting the UI.
+- **URL-encoded API path segments** — customer, system, and subsystem names in API request URLs are now percent-encoded, fixing requests that would fail or misroute for names containing special characters.
+- **Settings name validation** — customer and system names are validated against an allowlist of safe characters before use, providing a clear error message for invalid input.
+- **Edit Finding error surfacing** — HTTP errors returned by the PATCH endpoint are now detected and displayed as an inline error in the dialog; a success balloon notification is shown when the save completes.
+- **HTTP client timeouts** — the `HttpClient` now sets explicit connect and request timeouts, preventing the plugin from hanging indefinitely when the Sigrid API is unreachable.
+- **EDT visibility of credential cache** — the `loadAsync` credential cache is now safely published to the Event Dispatch Thread, eliminating a potential race where a stale `null` was observed on first use.
+
+### Changed
+
+- **Gradle wrapper checksum** — the Gradle wrapper JAR is now verified with a SHA-256 checksum, hardening the build against a compromised wrapper binary.
+
 ## [0.0.7] - 2026-06-17
 
 ### Added

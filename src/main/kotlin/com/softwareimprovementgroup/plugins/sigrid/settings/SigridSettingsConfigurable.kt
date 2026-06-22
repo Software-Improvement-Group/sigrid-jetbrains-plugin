@@ -3,6 +3,7 @@ package com.softwareimprovementgroup.plugins.sigrid.settings
 import com.intellij.ide.DataManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.options.ex.Settings
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.*
@@ -70,10 +71,18 @@ class SigridSettingsConfigurable : Configurable {
 
     override fun apply() {
         panel?.apply()
+        val url = sigridUrl.trim()
+        if (url.isNotBlank() && !url.startsWith("https://")) {
+            throw ConfigurationException(SigridBundle["settings.error.url.must.be.https"])
+        }
+        val customerValue = customer.trim()
+        if (customerValue.isNotBlank() && !customerValue.matches(CUSTOMER_NAME_REGEX)) {
+            throw ConfigurationException(SigridBundle["settings.error.customer.invalid.format"])
+        }
         val config = SigridConfiguration.getInstance()
         config.apiKey = String(apiKeyField.password)
-        config.customer = customer
-        config.sigridUrl = sigridUrl
+        config.customer = customerValue
+        config.sigridUrl = url
         config.jiraUser = jiraUser
         config.jiraToken = String(jiraTokenField.password)
         ApplicationManager.getApplication().invokeLater(

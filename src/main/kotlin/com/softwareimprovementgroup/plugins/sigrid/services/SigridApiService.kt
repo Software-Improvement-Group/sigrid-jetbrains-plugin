@@ -8,38 +8,58 @@ import com.intellij.openapi.project.Project
 import com.softwareimprovementgroup.plugins.sigrid.models.*
 import java.net.ProxySelector
 import java.net.URI
+import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.time.Duration
 
 @Service(Service.Level.APP)
 class SigridApiService {
     companion object {
         fun getInstance(): SigridApiService = service()
+
+        private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(10)
+        private val REQUEST_TIMEOUT: Duration = Duration.ofSeconds(30)
+
+        internal fun requireHttpsUrl(url: String) {
+            val scheme = try { URI.create(url).scheme } catch (_: Exception) { null }
+            if (scheme != "https") throw IllegalArgumentException("Sigrid URL must use HTTPS (got: $url)")
+        }
     }
 
     private val gson = Gson()
     private val httpClient: HttpClient = HttpClient.newBuilder()
         .proxy(ProxySelector.getDefault())
+        .connectTimeout(CONNECT_TIMEOUT)
         .build()
 
     private fun buildRequest(url: String, projectConfig: SigridProjectConfiguration): HttpRequest.Builder {
+        requireHttpsUrl(url)
         val apiKey = projectConfig.effectiveApiKey
         return HttpRequest.newBuilder()
             .uri(URI.create(url))
+            .timeout(REQUEST_TIMEOUT)
             .header("Accept", "application/json")
             .apply { if (apiKey.isNotBlank()) header("Authorization", "Bearer $apiKey") }
     }
 
-    private fun checkStatus(response: HttpResponse<*>) {
+    private fun checkStatusCode(response: HttpResponse<String>) {
         if (response.statusCode() !in 200..299) {
             throw Exception("HTTP ${response.statusCode()} from ${response.uri()}")
         }
     }
 
-    private fun joinUrl(base: String, vararg paths: String): String {
+    private fun checkStatus(response: HttpResponse<String>) {
+        checkStatusCode(response)
+        if (response.body().isNullOrBlank() || response.body() == "null") {
+            throw Exception("HTTP 404 from ${response.uri()}")
+        }
+    }
+
+    internal fun joinUrl(base: String, vararg paths: String): String {
         val normalizedBase = base.trimEnd('/')
-        val path = paths.joinToString("/") { it.trim('/') }
+        val path = paths.joinToString("/") { URLEncoder.encode(it.trim('/'), "UTF-8").replace("+", "%20") }
         return "$normalizedBase/$path"
     }
 
@@ -80,6 +100,7 @@ class SigridApiService {
             .method("PATCH", HttpRequest.BodyPublishers.ofString(body))
             .header("Content-Type", "application/json")
             .build()
-        httpClient.send(request, HttpResponse.BodyHandlers.discarding())
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        checkStatusCode(response)
     }
 }

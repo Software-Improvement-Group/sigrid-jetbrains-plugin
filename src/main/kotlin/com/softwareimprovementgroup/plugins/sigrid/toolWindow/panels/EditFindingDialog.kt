@@ -1,13 +1,18 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.project.Project
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FindingRequest
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.util.ui.JBUI
 import java.awt.Dimension
 import java.awt.GridBagConstraints
@@ -28,6 +33,7 @@ class EditFindingDialog(
     // null means remarks differ across selected findings
     currentRemark: String?,
     private val count: Int = 1,
+    private val saveAction: (FindingRequest, onSuccess: () -> Unit, onFailure: (Exception) -> Unit) -> Unit,
 ) : DialogWrapper(project, true) {
 
     private val isMixedStatus = currentStatus == null
@@ -47,6 +53,11 @@ class EditFindingDialog(
         lineWrap = true
         wrapStyleWord = true
         if (isMixedRemark) emptyText.text = SigridBundle["finding.edit.remark.mixed"]
+    }
+
+    private val errorLabel = JBLabel("").apply {
+        foreground = JBColor.RED
+        isVisible = false
     }
 
     init {
@@ -74,7 +85,8 @@ class EditFindingDialog(
         if (count == 1) {
             gbc.gridx = 0; gbc.gridy = nextRow++; gbc.gridwidth = 2
             gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0
-            panel.add(JBLabel("<html>${description.replace("\n", "<br>")}</html>"), gbc)
+            val safeDescription = StringUtil.escapeXmlEntities(description).replace("\n", "<br>")
+            panel.add(JBLabel("<html>$safeDescription</html>"), gbc)
             gbc.gridwidth = 1
         }
 
@@ -93,11 +105,38 @@ class EditFindingDialog(
         val scrollPane = JBScrollPane(remarkArea).apply { preferredSize = Dimension(400, 80) }
         panel.add(scrollPane, gbc)
 
+        nextRow++
+
+        gbc.gridx = 0; gbc.gridy = nextRow; gbc.gridwidth = 2
+        gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0; gbc.weighty = 0.0
+        panel.add(errorLabel, gbc)
+
         return panel
     }
 
-    fun getResult(): FindingRequest? {
-        if (!isOK) return null
+    override fun doOKAction() {
+        val request = buildRequest()
+        errorLabel.isVisible = false
+        setOKActionEnabled(false)
+        val modality = ModalityState.current()
+        AppExecutorUtil.getAppExecutorService().submit {
+            saveAction(
+                request,
+                { ApplicationManager.getApplication().invokeLater({ close(OK_EXIT_CODE) }, modality) },
+                { e ->
+                    ApplicationManager.getApplication().invokeLater({
+                        setOKActionEnabled(true)
+                        errorLabel.text = SigridBundle["finding.edit.error", e.message ?: ""]
+                        errorLabel.isVisible = true
+                        pack()
+                    }, modality)
+                }
+            )
+        }
+        // Do not call super — keeps dialog open until saveAction calls close()
+    }
+
+    private fun buildRequest(): FindingRequest {
         val statusApiValue = resolveStatus(isMixedStatus, statusCombo.selectedIndex, effectiveStatusOptions)
         val remarkValue = resolveRemark(isMixedRemark, remarkArea.text)
         return FindingRequest(status = statusApiValue, remark = remarkValue)
