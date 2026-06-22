@@ -12,11 +12,15 @@ import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.time.Duration
 
 @Service(Service.Level.APP)
 class SigridApiService {
     companion object {
         fun getInstance(): SigridApiService = service()
+
+        private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(10)
+        private val REQUEST_TIMEOUT: Duration = Duration.ofSeconds(30)
 
         internal fun requireHttpsUrl(url: String) {
             val scheme = try { URI.create(url).scheme } catch (_: Exception) { null }
@@ -27,6 +31,7 @@ class SigridApiService {
     private val gson = Gson()
     private val httpClient: HttpClient = HttpClient.newBuilder()
         .proxy(ProxySelector.getDefault())
+        .connectTimeout(CONNECT_TIMEOUT)
         .build()
 
     private fun buildRequest(url: String, projectConfig: SigridProjectConfiguration): HttpRequest.Builder {
@@ -34,6 +39,7 @@ class SigridApiService {
         val apiKey = projectConfig.effectiveApiKey
         return HttpRequest.newBuilder()
             .uri(URI.create(url))
+            .timeout(REQUEST_TIMEOUT)
             .header("Accept", "application/json")
             .apply { if (apiKey.isNotBlank()) header("Authorization", "Bearer $apiKey") }
     }
