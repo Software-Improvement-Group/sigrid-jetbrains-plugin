@@ -38,10 +38,14 @@ class SigridApiService {
             .apply { if (apiKey.isNotBlank()) header("Authorization", "Bearer $apiKey") }
     }
 
-    private fun checkStatus(response: HttpResponse<String>) {
+    private fun checkStatusCode(response: HttpResponse<String>) {
         if (response.statusCode() !in 200..299) {
             throw Exception("HTTP ${response.statusCode()} from ${response.uri()}")
         }
+    }
+
+    private fun checkStatus(response: HttpResponse<String>) {
+        checkStatusCode(response)
         if (response.body().isNullOrBlank() || response.body() == "null") {
             throw Exception("HTTP 404 from ${response.uri()}")
         }
@@ -90,6 +94,7 @@ class SigridApiService {
             .method("PATCH", HttpRequest.BodyPublishers.ofString(body))
             .header("Content-Type", "application/json")
             .build()
-        httpClient.send(request, HttpResponse.BodyHandlers.discarding())
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        checkStatusCode(response)
     }
 }

@@ -1,9 +1,11 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
-import com.intellij.openapi.application.ApplicationManager
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.table.JBTable
+import com.softwareimprovementgroup.plugins.sigrid.NOTIFICATION_GROUP_ID
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
@@ -100,6 +102,10 @@ class FindingContextMenuHandler<T>(
         val displayLocation = if (count == 1) getDisplayLocation(findings.first()) else ""
         val description = if (count == 1) getEditDescription(findings.first()) else ""
 
+        if (SigridProjectConfiguration.getInstance(project).isUrlOverrideWithoutKeyOverride) {
+            Messages.showErrorDialog(table, SigridBundle["panel.error.url.override.no.key"])
+            return
+        }
         val dialog = EditFindingDialog(
             project = project,
             displayLocation = displayLocation,
@@ -108,19 +114,23 @@ class FindingContextMenuHandler<T>(
             currentStatus = commonStatus,
             currentRemark = commonRemark,
             count = count,
+            saveAction = { request, onSuccess, onFailure ->
+                try {
+                    for (finding in findings) {
+                        SigridApiService.getInstance().editFinding(project, getId(finding), request)
+                    }
+                    onSuccess()
+                } catch (e: Exception) {
+                    onFailure(e)
+                }
+            },
         )
         if (dialog.showAndGet()) {
-            val request = dialog.getResult() ?: return
-            if (SigridProjectConfiguration.getInstance(project).isUrlOverrideWithoutKeyOverride) {
-                Messages.showErrorDialog(table, SigridBundle["panel.error.url.override.no.key"])
-                return
-            }
-            ApplicationManager.getApplication().executeOnPooledThread {
-                for (finding in findings) {
-                    SigridApiService.getInstance().editFinding(project, getId(finding), request)
-                }
-                ApplicationManager.getApplication().invokeLater { onReload() }
-            }
+            NotificationGroupManager.getInstance()
+                .getNotificationGroup(NOTIFICATION_GROUP_ID)
+                .createNotification(if (count == 1) SigridBundle["finding.edit.success"] else SigridBundle["finding.edit.success.plural", count], NotificationType.INFORMATION)
+                .notify(project)
+            onReload()
         }
     }
 
