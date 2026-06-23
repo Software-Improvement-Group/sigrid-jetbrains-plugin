@@ -33,6 +33,7 @@ data class RefactoringCandidateResponse(
     val startLine: Int?,
     val endLine: Int?,
     val lineRanges: List<LineRange>?,
+    val href: String?,
 )
 
 data class CandidateLocation(
@@ -41,6 +42,7 @@ data class CandidateLocation(
     val moduleId: Int,
     val startLine: Int,
     val endLine: Int,
+    val href: String?,
 )
 
 data class LineRange(
@@ -66,4 +68,5 @@ data class RefactoringCandidate(
     val description: String,
     val remark: String,
     val fileLocations: List<FileLocation>,
+    val href: String?,
 )

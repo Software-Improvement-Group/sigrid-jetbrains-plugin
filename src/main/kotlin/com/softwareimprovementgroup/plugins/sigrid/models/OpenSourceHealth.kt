@@ -23,10 +23,16 @@ data class OshDependencyResponse(
     val properties: List<Property>,
     val licenses: List<OshLicenseResponse>,
     val evidence: OshEvidenceResponse?,
+    val externalReferences: List<OshExternalReference>?,
 )
 
 data class OshLicenseResponse(
     val license: OshLicenseName,
+)
+
+data class OshExternalReference (
+    val type: String,
+    val url: String?,
 )
 
 data class OshLicenseName(
@@ -61,4 +67,5 @@ data class OpenSourceHealthDependency(
     val stabilityRisk: RiskSeverity,
     val managementRisk: RiskSeverity,
     val fileLocations: List<FileLocation>,
+    val href: String?,
 )

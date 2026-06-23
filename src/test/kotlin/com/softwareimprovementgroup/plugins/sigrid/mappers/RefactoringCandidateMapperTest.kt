@@ -21,6 +21,7 @@ class RefactoringCandidateMapperTest {
         parameters: Int? = null,
         locations: List<CandidateLocation>? = null,
         lineRanges: List<LineRange>? = null,
+        href: String? = null,
     ) = RefactoringCandidateResponse(
         id = id,
         severity = severity,
@@ -42,6 +43,7 @@ class RefactoringCandidateMapperTest {
         startLine = null,
         endLine = null,
         lineRanges = lineRanges,
+        href = href,
     )
 
     private fun makeMap(
@@ -50,8 +52,8 @@ class RefactoringCandidateMapperTest {
     ): Map<RefactoringCategory, RefactoringCandidatesResponse> =
         mapOf(category to RefactoringCandidatesResponse(candidates))
 
-    private fun loc(component: String, file: String, startLine: Int = 1, endLine: Int = 10) =
-        CandidateLocation(component = component, file = file, moduleId = 1, startLine = startLine, endLine = endLine)
+    private fun loc(component: String, file: String, startLine: Int = 1, endLine: Int = 10, href: String? = null) =
+        CandidateLocation(component = component, file = file, moduleId = 1, startLine = startLine, endLine = endLine, href = href)
 
     // Filtering
 
@@ -233,7 +235,7 @@ class RefactoringCandidateMapperTest {
 
     @Test
     fun map_fileLocations_duplication_fromLocations() {
-        val response = makeResponse(locations = listOf(CandidateLocation("svc", "svc/src/A.kt", 1, 5, 15)))
+        val response = makeResponse(locations = listOf(CandidateLocation("svc", "svc/src/A.kt", 1, 5, 15, null)))
         val result = RefactoringCandidateMapper.map(makeMap(RefactoringCategory.Duplication, listOf(response)), "svc")
         assertEquals(1, result[0].fileLocations.size)
         assertEquals("src/A.kt", result[0].fileLocations[0].filePath)
@@ -308,5 +310,53 @@ class RefactoringCandidateMapperTest {
         val response = makeResponse(component = "svc", file = "svc/Baz.kt", lineRanges = listOf(LineRange(5, 8)))
         val result = RefactoringCandidateMapper.map(makeMap(RefactoringCategory.UnitInterfacing, listOf(response)), "svc")
         assertEquals("Baz.kt", result[0].fileLocations[0].filePath)
+    }
+
+    // href
+
+    @Test
+    fun map_href_nonDuplication_usesResponseHref() {
+        val response = makeResponse(href = "https://sigrid.io/unit/1")
+        val result = RefactoringCandidateMapper.map(makeMap(RefactoringCategory.UnitSize, listOf(response)), "")
+        assertEquals("https://sigrid.io/unit/1", result[0].href)
+    }
+
+    @Test
+    fun map_href_nonDuplication_nullHref_isNull() {
+        val response = makeResponse(href = null)
+        val result = RefactoringCandidateMapper.map(makeMap(RefactoringCategory.UnitSize, listOf(response)), "")
+        assertEquals(null, result[0].href)
+    }
+
+    @Test
+    fun map_href_duplication_usesFirstLocationWithHref() {
+        val response = makeResponse(
+            locations = listOf(
+                loc("svc", "src/A.kt", href = null),
+                loc("svc", "src/B.kt", href = "https://sigrid.io/dup/2"),
+                loc("svc", "src/C.kt", href = "https://sigrid.io/dup/3"),
+            ),
+        )
+        val result = RefactoringCandidateMapper.map(makeMap(RefactoringCategory.Duplication, listOf(response)), "")
+        assertEquals("https://sigrid.io/dup/2", result[0].href)
+    }
+
+    @Test
+    fun map_href_duplication_noLocationWithHref_isNull() {
+        val response = makeResponse(
+            locations = listOf(
+                loc("svc", "src/A.kt", href = null),
+                loc("svc", "src/B.kt", href = ""),
+            ),
+        )
+        val result = RefactoringCandidateMapper.map(makeMap(RefactoringCategory.Duplication, listOf(response)), "")
+        assertEquals(null, result[0].href)
+    }
+
+    @Test
+    fun map_href_duplication_nullLocations_isNull() {
+        val response = makeResponse(locations = null)
+        val result = RefactoringCandidateMapper.map(makeMap(RefactoringCategory.Duplication, listOf(response)), "")
+        assertEquals(null, result[0].href)
     }
 }

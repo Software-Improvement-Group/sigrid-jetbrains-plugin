@@ -55,6 +55,9 @@ object OpenSourceHealthMapper {
             stabilityRisk = stabilityRisk,
             managementRisk = managementRisk,
             fileLocations = fileLocations,
+            href = component.externalReferences
+                ?.firstOrNull { it.type == "website" && !it.url.isNullOrEmpty() }
+                ?.url,
         )
     }
 

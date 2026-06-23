@@ -41,6 +41,10 @@ object RefactoringCandidateMapper {
         description = description(category, r),
         remark = "",
         fileLocations = fileLocations(category, r, subsystem),
+        href = if (category == RefactoringCategory.Duplication)
+            r.locations?.firstOrNull { !it.href.isNullOrEmpty() }?.href
+        else
+            r.href,
     )
 
     private fun displayLocation(r: RefactoringCandidateResponse, noPathPrefix: Boolean = false): String {
