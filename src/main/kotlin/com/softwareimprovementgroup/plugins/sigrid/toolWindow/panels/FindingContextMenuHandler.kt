@@ -1,5 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
+import com.intellij.ide.BrowserUtil
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.project.Project
@@ -29,6 +30,7 @@ class FindingContextMenuHandler<T>(
     private val getCurrentRemark: (T) -> String,
     private val onReload: () -> Unit,
     private val getFileLocations: (T) -> List<FileLocation>,
+    private val getHref: (T) -> String?,
     private val navigator: FindingNavigator,
 ) {
     fun handlePopupTrigger(e: MouseEvent) {
@@ -38,8 +40,9 @@ class FindingContextMenuHandler<T>(
         if (!table.isRowSelected(viewRow)) table.setRowSelectionInterval(viewRow, viewRow)
 
         val navigableLocations = navigableLocationsAtPoint(e)
+        val href = hrefAtPoint(e)
         val hasEditable = hasEditableFindings()
-        if (navigableLocations == null && !hasEditable) return
+        if (navigableLocations == null && href == null && !hasEditable) return
 
         val popup = JPopupMenu()
         if (navigableLocations != null) {
@@ -48,12 +51,20 @@ class FindingContextMenuHandler<T>(
             navigateItem.addActionListener { navigator.navigate(navigableLocations, e) }
             popup.add(navigateItem)
         }
+
         if (hasEditable) {
             val editItem = JMenuItem(SigridBundle["finding.edit.menu.item"])
             editItem.accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)
             editItem.addActionListener { triggerEditForSelectedRow() }
             popup.add(editItem)
         }
+
+        val openItem = JMenuItem(SigridBundle["finding.open.in.sigrid.menu.item"])
+        openItem.accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0)
+        openItem.isEnabled = href != null
+        openItem.addActionListener { href?.let { BrowserUtil.browse(it) } }
+        popup.add(openItem)
+        
         popup.show(e.component, e.x, e.y)
     }
 
@@ -61,6 +72,14 @@ class FindingContextMenuHandler<T>(
         val findings = selectedEditableFindings() ?: return
         if (findings.isEmpty()) return
         triggerEdit(findings)
+    }
+
+    private fun hrefAtPoint(e: MouseEvent): String? {
+        val viewRow = table.rowAtPoint(e.point)
+        if (viewRow < 0) return null
+        val modelRow = table.convertRowIndexToModel(viewRow)
+        val finding = getDisplayedFindings().getOrNull(modelRow) ?: return null
+        return getHref(finding)?.takeIf { it.isNotEmpty() }
     }
 
     private fun navigableLocationsAtPoint(e: MouseEvent): List<FileLocation>? {

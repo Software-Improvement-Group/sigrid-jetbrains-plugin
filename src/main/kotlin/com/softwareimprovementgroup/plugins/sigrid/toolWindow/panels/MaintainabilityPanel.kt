@@ -46,6 +46,7 @@ class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>
 
     override fun RefactoringCandidate.getFileLocations(): List<FileLocation> = fileLocations
 
+    override fun RefactoringCandidate.getHref() = href
     override fun RefactoringCandidate.isEditable() = true
     override fun RefactoringCandidate.getId() = id
     override fun RefactoringCandidate.getDisplayLocation() = displayLocation
