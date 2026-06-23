@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **"Open in Sigrid" button and context menu item** — each panel toolbar now has an **Open in Sigrid** button that opens the selected finding in the Sigrid web app; the same action is available via the right-click context menu (**F3**). The button is enabled only when the selected finding carries a URL from the API.
 
+### Fixed
+
+- **Focus traversal** — Tab now cycles only between the findings table and the search field; toolbar buttons (filter toggles, Edit, Open in Sigrid) are excluded from the focus cycle.
+
 ## [0.0.8] - 2026-06-22
 
 ### Fixed

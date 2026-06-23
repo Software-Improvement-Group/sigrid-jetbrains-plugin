@@ -16,12 +16,15 @@ import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsListen
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsTopic
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.Component
+import java.awt.Container
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.FocusTraversalPolicy
 import javax.swing.JButton
 import javax.swing.JCheckBoxMenuItem
 import javax.swing.JMenuItem
@@ -152,11 +155,13 @@ abstract class SigridPanel<T>(
 
     private val editButton = JButton(SigridBundle["finding.edit.button"]).apply {
         isEnabled = false
+        isFocusable = false
         toolTipText = SigridBundle["finding.edit.button.tooltip"]
     }
 
     private val openInSigridButton = JButton(SigridBundle["finding.open.in.sigrid.button"]).apply {
         isEnabled = false
+        isFocusable = false
         toolTipText = SigridBundle["finding.open.in.sigrid.button.tooltip"]
         addActionListener { openFirstSelectedFindingInBrowser() }
     }
@@ -188,6 +193,16 @@ abstract class SigridPanel<T>(
         setupLayout()
         subscribeToSettingsChanges()
         loadData()
+        focusTraversalPolicy = object : FocusTraversalPolicy() {
+            override fun getDefaultComponent(aContainer: Container) = table
+            override fun getFirstComponent(aContainer: Container) = table
+            override fun getLastComponent(aContainer: Container) = searchField.textEditor
+            override fun getComponentAfter(aContainer: Container, aComponent: Component): Component =
+                if (aComponent == table) searchField.textEditor else table
+            override fun getComponentBefore(aContainer: Container, aComponent: Component): Component =
+                if (aComponent == searchField.textEditor) table else searchField.textEditor
+        }
+        isFocusCycleRoot = true
     }
 
     private fun subscribeToSettingsChanges() {
