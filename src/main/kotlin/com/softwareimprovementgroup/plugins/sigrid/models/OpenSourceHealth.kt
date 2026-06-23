@@ -5,8 +5,8 @@ data class OpenSourceHealthResponse(
     val specVersion: String,
     val version: Int,
     val metadata: OshMetadataResponse,
-    val components: List<OshDependencyResponse>,
-    val vulnerabilities: List<Any>,
+    val components: List<OshDependencyResponse>?,
+    val vulnerabilities: List<Any>?,
 )
 
 data class OshMetadataResponse(

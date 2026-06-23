@@ -12,8 +12,9 @@ object OpenSourceHealthMapper {
     private const val MANAGEMENT_RISK_KEY = "sigrid:risk:management"
 
     fun map(response: OpenSourceHealthResponse, subsystem: String): List<OpenSourceHealthDependency> {
-        if (response.components.isEmpty()) return emptyList()
-        return response.components
+        val components = response.components.orEmpty()
+        if (components.isEmpty()) return emptyList()
+        return components
             .map { create(it, subsystem) }
             .filter { subsystem.isBlank() || it.fileLocations.any { loc -> loc.component == subsystem } }
             .sortedWith(compareByDescending<OpenSourceHealthDependency> { it.risk }.thenBy { it.displayName })
