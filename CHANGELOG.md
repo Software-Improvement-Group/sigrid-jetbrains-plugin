@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.9] - 2026-06-23
+
+### Added
+
+- **"Open in Sigrid" button and context menu item** — each panel toolbar now has an **Open in Sigrid** button that opens the selected finding in the Sigrid web app; the same action is available via the right-click context menu (**F3**). The button is enabled only when the selected finding carries a URL from the API.
+
 ## [0.0.8] - 2026-06-22
 
 ### Fixed
