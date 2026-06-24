@@ -46,7 +46,10 @@ class FileFilterPanel(
                     }
                     text = if (selectedFileFilterProperty.get() == value) "● $label" else label
                     toolTipText = SigridBundle["panel.filter.active.tooltip"]
-                }.bind(selectedFileFilterProperty)
+                }.bind(selectedFileFilterProperty).also {
+                    @Suppress("UnstableApiUsage")
+                    it.component?.isFocusable = false
+                }
             }
         }
         add(filterButton)

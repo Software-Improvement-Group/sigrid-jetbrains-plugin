@@ -46,6 +46,7 @@ class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(
 
     override fun SecurityFinding.getFileLocations(): List<FileLocation> = fileLocations
 
+    override fun SecurityFinding.getHref() = href
     override fun SecurityFinding.isEditable() = true
     override fun SecurityFinding.getId() = id
     override fun SecurityFinding.getDisplayLocation() = displayFilePath

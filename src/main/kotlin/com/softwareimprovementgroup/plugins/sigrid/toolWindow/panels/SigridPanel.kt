@@ -1,5 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
+import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
@@ -15,10 +16,15 @@ import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsListen
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsTopic
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.Component
+import java.awt.Container
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.FocusTraversalPolicy
 import javax.swing.JButton
 import javax.swing.JCheckBoxMenuItem
 import javax.swing.JMenuItem
@@ -55,6 +61,7 @@ abstract class SigridPanel<T>(
     protected open fun T.getStatusOptions(): List<Pair<String, String>> = emptyList()
     protected open fun T.getCurrentStatus(): String = ""
     protected open fun T.getCurrentRemark(): String = ""
+    protected open fun T.getHref(): String? = null
 
     private var allFindings: List<T> = emptyList()
     private var displayedFindings: List<T> = emptyList()
@@ -122,6 +129,7 @@ abstract class SigridPanel<T>(
                     val finding = displayedFindings.getOrNull(modelRow) ?: return
                     navigator.navigate(finding.getFileLocations(), null)
                 }
+                if (e.keyCode == KeyEvent.VK_F3) openFirstSelectedFindingInBrowser()
             }
         })
     }
@@ -140,13 +148,22 @@ abstract class SigridPanel<T>(
             getCurrentRemark = { it.getCurrentRemark() },
             onReload = ::loadData,
             getFileLocations = { it.getFileLocations() },
+            getHref = { it.getHref() },
             navigator = navigator,
         )
     }
 
     private val editButton = JButton(SigridBundle["finding.edit.button"]).apply {
         isEnabled = false
+        isFocusable = false
         toolTipText = SigridBundle["finding.edit.button.tooltip"]
+    }
+
+    private val openInSigridButton = JButton(SigridBundle["finding.open.in.sigrid.button"]).apply {
+        isEnabled = false
+        isFocusable = false
+        toolTipText = SigridBundle["finding.open.in.sigrid.button.tooltip"]
+        addActionListener { openFirstSelectedFindingInBrowser() }
     }
 
     private val fileFilterPanel = FileFilterPanel(project) { applyFilter() }
@@ -176,6 +193,16 @@ abstract class SigridPanel<T>(
         setupLayout()
         subscribeToSettingsChanges()
         loadData()
+        focusTraversalPolicy = object : FocusTraversalPolicy() {
+            override fun getDefaultComponent(aContainer: Container) = table
+            override fun getFirstComponent(aContainer: Container) = table
+            override fun getLastComponent(aContainer: Container) = searchField.textEditor
+            override fun getComponentAfter(aContainer: Container, aComponent: Component): Component =
+                if (aComponent == table) searchField.textEditor else table
+            override fun getComponentBefore(aContainer: Container, aComponent: Component): Component =
+                if (aComponent == searchField.textEditor) table else searchField.textEditor
+        }
+        isFocusCycleRoot = true
     }
 
     private fun subscribeToSettingsChanges() {
@@ -198,8 +225,19 @@ abstract class SigridPanel<T>(
                     displayedFindings.getOrNull(modelRow)?.isEditable() == true
                 }
                 editButton.isEnabled = editable
+                openInSigridButton.isEnabled = table.selectedRows.any { viewRow ->
+                    val modelRow = table.convertRowIndexToModel(viewRow)
+                    displayedFindings.getOrNull(modelRow)?.getHref().orEmpty().isNotEmpty()
+                }
             }
         }
+    }
+
+    private fun openFirstSelectedFindingInBrowser() {
+        val viewRow = table.selectedRows.firstOrNull() ?: return
+        val modelRow = table.convertRowIndexToModel(viewRow)
+        val href = displayedFindings.getOrNull(modelRow)?.getHref()?.takeIf { it.isNotEmpty() } ?: return
+        BrowserUtil.browse(href)
     }
 
     private fun setupSearchField() {
@@ -212,8 +250,13 @@ abstract class SigridPanel<T>(
     }
 
     private fun setupLayout() {
+        val leftButtons = JPanel(GridBagLayout()).apply {
+            val gbc = GridBagConstraints().apply { anchor = GridBagConstraints.CENTER }
+            add(editButton, gbc)
+            add(openInSigridButton, gbc)
+        }
         val toolbar = JPanel(BorderLayout()).apply {
-            add(editButton, BorderLayout.WEST)
+            add(leftButtons, BorderLayout.WEST)
             add(fileFilterPanel, BorderLayout.CENTER)
             add(searchField, BorderLayout.EAST)
         }

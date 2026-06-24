@@ -13,6 +13,7 @@ class OpenSourceHealthMapperTest {
         group: String = "",
         properties: List<Property> = emptyList(),
         occurrences: List<String?>? = listOf("svc/pom.xml"),
+        externalReferences: List<OshExternalReference>? = null,
     ) = OshDependencyResponse(
         type = "library",
         name = name,
@@ -22,6 +23,7 @@ class OpenSourceHealthMapperTest {
         properties = properties,
         licenses = emptyList(),
         evidence = occurrences?.let { locs -> OshEvidenceResponse(locs.map { OshOccurrence(it) }) },
+        externalReferences = externalReferences,
     )
 
     private fun makeResponse(components: List<OshDependencyResponse>) = OpenSourceHealthResponse(
@@ -203,5 +205,63 @@ class OpenSourceHealthMapperTest {
         )
         val result = OpenSourceHealthMapper.map(makeResponse(components), "")
         assertEquals(listOf("a-lib", "b-lib", "z-lib"), result.map { it.name })
+    }
+
+    // href
+
+    @Test
+    fun map_href_websiteReferencePresent_mapsUrl() {
+        val component = makeComponent(externalReferences = listOf(
+            OshExternalReference(type = "vcs", url = "https://github.com/example/lib"),
+            OshExternalReference(type = "website", url = "https://example.com/lib"),
+        ))
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component)), "")
+        assertEquals("https://example.com/lib", result[0].href)
+    }
+
+    @Test
+    fun map_href_firstWebsiteReferenceUsed() {
+        val component = makeComponent(externalReferences = listOf(
+            OshExternalReference(type = "website", url = "https://first.example.com"),
+            OshExternalReference(type = "website", url = "https://second.example.com"),
+        ))
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component)), "")
+        assertEquals("https://first.example.com", result[0].href)
+    }
+
+    @Test
+    fun map_href_websiteReferenceWithNullUrl_skipped() {
+        val component = makeComponent(externalReferences = listOf(
+            OshExternalReference(type = "website", url = null),
+            OshExternalReference(type = "website", url = "https://example.com/lib"),
+        ))
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component)), "")
+        assertEquals("https://example.com/lib", result[0].href)
+    }
+
+    @Test
+    fun map_href_websiteReferenceWithEmptyUrl_skipped() {
+        val component = makeComponent(externalReferences = listOf(
+            OshExternalReference(type = "website", url = ""),
+            OshExternalReference(type = "website", url = "https://example.com/lib"),
+        ))
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component)), "")
+        assertEquals("https://example.com/lib", result[0].href)
+    }
+
+    @Test
+    fun map_href_noWebsiteReference_isNull() {
+        val component = makeComponent(externalReferences = listOf(
+            OshExternalReference(type = "vcs", url = "https://github.com/example/lib"),
+        ))
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component)), "")
+        assertEquals(null, result[0].href)
+    }
+
+    @Test
+    fun map_href_nullExternalReferences_isNull() {
+        val component = makeComponent(externalReferences = null)
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component)), "")
+        assertEquals(null, result[0].href)
     }
 }

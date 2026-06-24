@@ -2,9 +2,32 @@
 <idea-plugin>
     <id>com.softwareimprovementgroup.plugins.sigrid</id>
     <name>Sigrid</name>
-    <vendor>Software Improvement Group</vendor>
+    <vendor>softwareimprovementgroup</vendor>
     <description><![CDATA[
-        <p><b>Sigrid Plugin for JetBrains IDEs</b> lets you view and manage maintainability, security and open source health findings in your JetBrains IDEs.</p>
+        <p><b>Sigrid</b> brings software quality analysis directly into your JetBrains IDE, allowing developers to review findings without switching to the Sigrid web application.</p>
+        <p>The extension helps you identify and address software quality issues earlier in your development workflow by providing access to Sigrid findings directly within your IDE.</p>
+
+        <h2>Features</h2>
+        <ul>
+            <li>View Maintainability findings</li>
+            <li>View Security findings</li>
+            <li>View Open Source Health findings</li>
+            <li>Navigate directly to affected source code</li>
+            <li>Search and filter findings</li>
+            <li>Update finding status and remarks</li>
+            <li>Open findings in Sigrid for additional context</li>
+            <li>Supports multiple JetBrains IDEs (IntelliJ IDEA, PyCharm, WebStorm, GoLand, Rider, and others)</li>
+        </ul>
+
+        <h2>Requirements</h2>
+        <p>To use this plugin you need:</p>
+        <ul>
+            <li>A Sigrid account</li>
+            <li>A Sigrid API token</li>
+            <li>Customer ID</li>
+            <li>System ID</li>
+        </ul>
+        <p>Configuration instructions are available in the <a href="https://docs.sigrid-says.com/integrations/jetbrains-extension.html">Sigrid documentation</a>.</p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>

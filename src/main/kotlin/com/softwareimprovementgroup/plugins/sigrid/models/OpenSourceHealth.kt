@@ -5,8 +5,8 @@ data class OpenSourceHealthResponse(
     val specVersion: String,
     val version: Int,
     val metadata: OshMetadataResponse,
-    val components: List<OshDependencyResponse>,
-    val vulnerabilities: List<Any>,
+    val components: List<OshDependencyResponse>?,
+    val vulnerabilities: List<Any>?,
 )
 
 data class OshMetadataResponse(
@@ -23,10 +23,16 @@ data class OshDependencyResponse(
     val properties: List<Property>,
     val licenses: List<OshLicenseResponse>,
     val evidence: OshEvidenceResponse?,
+    val externalReferences: List<OshExternalReference>?,
 )
 
 data class OshLicenseResponse(
     val license: OshLicenseName,
+)
+
+data class OshExternalReference (
+    val type: String,
+    val url: String?,
 )
 
 data class OshLicenseName(
@@ -61,4 +67,5 @@ data class OpenSourceHealthDependency(
     val stabilityRisk: RiskSeverity,
     val managementRisk: RiskSeverity,
     val fileLocations: List<FileLocation>,
+    val href: String?,
 )

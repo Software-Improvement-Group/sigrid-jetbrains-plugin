@@ -68,4 +68,5 @@ class OpenSourceHealthPanel(project: Project) : SigridPanel<OpenSourceHealthDepe
     )
 
     override fun OpenSourceHealthDependency.getFileLocations(): List<FileLocation> = fileLocations
+    override fun OpenSourceHealthDependency.getHref() = href
 }
