@@ -46,13 +46,11 @@ class FileFilterPanel(
                     }
                     text = if (selectedFileFilterProperty.get() == value) "● $label" else label
                     toolTipText = SigridBundle["panel.filter.active.tooltip"]
-                }.bind(selectedFileFilterProperty).also {
-                    @Suppress("UnstableApiUsage")
-                    it.component?.isFocusable = false
-                }
+                }.bind(selectedFileFilterProperty)
             }
         }
         add(filterButton)
+        setFocusableRecursively(filterButton, false)
         add(activeFileLabel)
 
         selectedFileFilterProperty.afterChange { value ->
@@ -85,6 +83,13 @@ class FileFilterPanel(
         if (component !== this) component.isEnabled = enabled
         if (component is Container) {
             component.components.forEach { setEnabledRecursively(it, enabled) }
+        }
+    }
+
+    private fun setFocusableRecursively(component: Component, focusable: Boolean) {
+        component.isFocusable = focusable
+        if (component is Container) {
+            component.components.forEach { setFocusableRecursively(it, focusable) }
         }
     }
 
