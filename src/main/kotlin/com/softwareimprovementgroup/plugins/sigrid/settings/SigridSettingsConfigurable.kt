@@ -44,17 +44,6 @@ class SigridSettingsConfigurable : Configurable {
             row {
                 link(SigridBundle["settings.project.settings.link"], ::navigateToProjectSettings)
             }
-            // TODO: Uncomment when Jira integration is implemented
-            /*group(SigridBundle["settings.group.jira"]) {
-                row(SigridBundle["settings.project.jira.user.label"]) {
-                    textField().bindText(::jiraUser).align(AlignX.FILL)
-                        .comment(SigridBundle["settings.jira.user.comment"])
-                }
-                row(SigridBundle["settings.project.jira.token.label"]) {
-                    cell(jiraTokenField).align(AlignX.FILL)
-                        .comment(SigridBundle["settings.jira.token.comment"])
-                }
-            }*/
         }
         return panel!!
     }

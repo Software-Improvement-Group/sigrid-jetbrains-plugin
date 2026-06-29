@@ -58,23 +58,6 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
                         .comment(SigridBundle["settings.project.subsystem.comment"])
                 }
             }
-            // TODO: Uncomment when Jira integration is implemented
-            /*group(SigridBundle["settings.group.jira"]) {
-                row(SigridBundle["settings.project.jira.base.url.label"]) {
-                    textField().bindText(::jiraBaseUrl).align(AlignX.FILL)
-                }
-                row(SigridBundle["settings.project.jira.user.label"]) {
-                    textField().bindText(::jiraUserOverride).align(AlignX.FILL)
-                        .comment(SigridBundle["settings.project.override.comment", global.jiraUser.ifBlank { SigridBundle["settings.project.not.set"] }])
-                }
-                row(SigridBundle["settings.project.jira.token.label"]) {
-                    cell(jiraTokenOverrideField).align(AlignX.FILL)
-                        .comment(SigridBundle["settings.project.jira.token.override.comment"])
-                }
-                row(SigridBundle["settings.project.jira.project.key.label"]) {
-                    textField().bindText(::jiraProjectKey).align(AlignX.FILL).enabled(false)
-                }
-            }*/
         }
         return panel!!
     }
