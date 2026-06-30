@@ -34,7 +34,7 @@ class CreateJiraIssueDialog(
     private val findings: List<JiraFinding>,
 ) : DialogWrapper(project, true) {
 
-    private val titleField = JBTextField().apply { emptyText.text = SigridBundle["jira.create.dialog.title.label"] }
+    private val titleField = JBTextField()
     private val previewPane = JEditorPane().apply {
         editorKit = HTMLEditorKitBuilder().build()
         isEditable = false
