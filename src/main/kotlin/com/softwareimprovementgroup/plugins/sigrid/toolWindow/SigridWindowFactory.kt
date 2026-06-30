@@ -42,6 +42,4 @@ class SigridWindowFactory : ToolWindowFactory, DumbAware {
 
         toolWindow.contentManager.setSelectedContent(toolWindow.contentManager.getContent(0)!!)
     }
-
-    override fun shouldBeAvailable(project: Project) = true
 }

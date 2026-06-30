@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.0.10] - 2026-06-29
+
+### Fixed
+
+- **Internal API removed from `FileFilterPanel`** — `SegmentedButton.getComponent()` (flagged by Marketplace verification as an internal API) is replaced with a `setFocusableRecursively()` helper that walks the Swing component tree using only public API, keeping the filter button out of the focus traversal cycle.
+
 ## [0.0.9] - 2026-06-23
 
 ### Added
