@@ -22,6 +22,32 @@ class JiraApiService {
             return if (trimmed.contains("://")) trimmed else "https://$trimmed"
         }
 
+        internal fun buildPreviewHtml(findings: List<JiraFinding>): String {
+            val sb = StringBuilder()
+            sb.append("<html><body>")
+            sb.append("<h3>Code selected for refactoring</h3>")
+            sb.append("<p>The following Sigrid findings have been selected for improvement:</p>")
+            sb.append("<ul>")
+            for (finding in findings) {
+                sb.append("<li><b>${finding.severityEmoji} ${escapeHtml(finding.title)}</b>")
+                if (finding.fileLocations.isNotEmpty()) {
+                    sb.append("<ul>")
+                    for (loc in finding.fileLocations) {
+                        val text = if (loc.startLine != null) "${loc.filePath}:${loc.startLine}" else loc.filePath
+                        sb.append("<li>${escapeHtml(text)}</li>")
+                    }
+                    sb.append("</ul>")
+                }
+                sb.append("</li>")
+            }
+            sb.append("</ul>")
+            sb.append("</body></html>")
+            return sb.toString()
+        }
+
+        private fun escapeHtml(text: String): String =
+            text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
         private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(10)
         private val REQUEST_TIMEOUT: Duration = Duration.ofSeconds(30)
     }

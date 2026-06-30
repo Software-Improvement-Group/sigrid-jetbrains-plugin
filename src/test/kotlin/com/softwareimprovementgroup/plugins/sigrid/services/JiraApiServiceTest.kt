@@ -241,6 +241,75 @@ class JiraApiServiceTest {
 
     // endregion
 
+    // region buildPreviewHtml
+
+    @Test
+    fun buildPreviewHtml_emptyFindings_containsHeadingAndIntroOnly() {
+        val html = JiraApiService.buildPreviewHtml(emptyList())
+        assertTrue(html.contains("<h3>Code selected for refactoring</h3>"))
+        assertTrue(html.contains("The following Sigrid findings have been selected for improvement:"))
+        assertFalse(html.contains("<li>"), "No list items expected for empty findings")
+    }
+
+    @Test
+    fun buildPreviewHtml_singleFinding_titleBoldWithEmoji() {
+        val finding = JiraFinding("SQL Injection", "🔴", emptyList())
+        val html = JiraApiService.buildPreviewHtml(listOf(finding))
+        assertTrue(html.contains("<b>🔴 SQL Injection</b>"))
+    }
+
+    @Test
+    fun buildPreviewHtml_fileLocationWithLine_formattedWithColon() {
+        val loc = FileLocation(component = "svc", filePath = "src/Foo.kt", startLine = 42)
+        val finding = JiraFinding("Issue", "🟠", listOf(loc))
+        val html = JiraApiService.buildPreviewHtml(listOf(finding))
+        assertTrue(html.contains("<li>src/Foo.kt:42</li>"))
+    }
+
+    @Test
+    fun buildPreviewHtml_fileLocationWithoutLine_noColon() {
+        val loc = FileLocation(component = "svc", filePath = "src/Bar.kt", startLine = null)
+        val finding = JiraFinding("Issue", "🟠", listOf(loc))
+        val html = JiraApiService.buildPreviewHtml(listOf(finding))
+        assertTrue(html.contains("<li>src/Bar.kt</li>"))
+        assertFalse(html.contains("<li>src/Bar.kt:"), "Location without line should not have colon")
+    }
+
+    @Test
+    fun buildPreviewHtml_multipleFindings_allTitlesAppear() {
+        val findings = listOf(
+            JiraFinding("Finding A", "🔴", emptyList()),
+            JiraFinding("Finding B", "🟡", emptyList()),
+        )
+        val html = JiraApiService.buildPreviewHtml(findings)
+        assertTrue(html.contains("Finding A") && html.contains("Finding B"))
+    }
+
+    @Test
+    fun buildPreviewHtml_findingWithNoLocations_noNestedList() {
+        val finding = JiraFinding("Issue", "🟠", emptyList())
+        val html = JiraApiService.buildPreviewHtml(listOf(finding))
+        assertFalse(html.contains("<ul><ul>"), "No nested list expected for finding with no locations")
+    }
+
+    @Test
+    fun buildPreviewHtml_specialCharsInTitle_escaped() {
+        val finding = JiraFinding("A < B & C > D", "🔴", emptyList())
+        val html = JiraApiService.buildPreviewHtml(listOf(finding))
+        assertTrue(html.contains("A &lt; B &amp; C &gt; D"), "Special HTML chars should be escaped")
+        assertFalse(html.contains("A < B"), "Raw < should not appear in output")
+    }
+
+    @Test
+    fun buildPreviewHtml_specialCharsInPath_escaped() {
+        val loc = FileLocation(component = "svc", filePath = "src/A&B.kt", startLine = null)
+        val finding = JiraFinding("Issue", "🟠", listOf(loc))
+        val html = JiraApiService.buildPreviewHtml(listOf(finding))
+        assertTrue(html.contains("src/A&amp;B.kt"))
+    }
+
+    // endregion
+
     // region parseIssueKey
 
     @Test

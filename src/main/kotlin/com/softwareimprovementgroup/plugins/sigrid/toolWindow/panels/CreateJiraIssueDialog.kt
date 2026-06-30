@@ -10,7 +10,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
+import com.intellij.util.ui.HTMLEditorKitBuilder
+import javax.swing.JEditorPane
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
@@ -32,6 +35,13 @@ class CreateJiraIssueDialog(
 ) : DialogWrapper(project, true) {
 
     private val titleField = JBTextField().apply { emptyText.text = SigridBundle["jira.create.dialog.title.label"] }
+    private val previewPane = JEditorPane().apply {
+        editorKit = HTMLEditorKitBuilder().build()
+        isEditable = false
+        text = JiraApiService.buildPreviewHtml(findings)
+        caretPosition = 0
+        background = null
+    }
     private val errorLabel = JBLabel("").apply {
         foreground = JBColor.RED
         isVisible = false
@@ -61,7 +71,15 @@ class CreateJiraIssueDialog(
         titleField.preferredSize = java.awt.Dimension(400, titleField.preferredSize.height)
         panel.add(titleField, gbc)
 
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.HORIZONTAL
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2
+        gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weightx = 1.0; gbc.weighty = 0.0
+        panel.add(JBLabel(SigridBundle["jira.create.dialog.preview.label"]), gbc)
+
+        gbc.gridy = 3; gbc.fill = GridBagConstraints.BOTH; gbc.weighty = 1.0
+        val scrollPane = JBScrollPane(previewPane).apply { preferredSize = java.awt.Dimension(400, 160) }
+        panel.add(scrollPane, gbc)
+
+        gbc.gridy = 4; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weighty = 0.0
         panel.add(errorLabel, gbc)
 
         titleField.document.addDocumentListener(object : DocumentListener {
