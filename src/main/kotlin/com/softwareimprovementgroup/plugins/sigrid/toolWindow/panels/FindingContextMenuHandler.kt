@@ -32,6 +32,7 @@ class FindingContextMenuHandler<T>(
     private val getFileLocations: (T) -> List<FileLocation>,
     private val getHref: (T) -> String?,
     private val navigator: FindingNavigator,
+    private val openCreateJiraIssue: () -> Unit,
 ) {
     fun handlePopupTrigger(e: MouseEvent) {
         if (!e.isPopupTrigger) return
@@ -42,7 +43,8 @@ class FindingContextMenuHandler<T>(
         val navigableLocations = navigableLocationsAtPoint(e)
         val href = hrefAtPoint(e)
         val hasEditable = hasEditableFindings()
-        if (navigableLocations == null && href == null && !hasEditable) return
+        val isJiraConfigured = SigridProjectConfiguration.getInstance(project).isJiraConfigured
+        if (navigableLocations == null && href == null && !hasEditable && !isJiraConfigured) return
 
         val popup = JPopupMenu()
         if (navigableLocations != null) {
@@ -64,7 +66,13 @@ class FindingContextMenuHandler<T>(
         openItem.isEnabled = href != null
         openItem.addActionListener { href?.let { BrowserUtil.browse(it) } }
         popup.add(openItem)
-        
+
+        if (isJiraConfigured) {
+            val jiraItem = JMenuItem(SigridBundle["jira.create.menu.item"])
+            jiraItem.addActionListener { openCreateJiraIssue() }
+            popup.add(jiraItem)
+        }
+
         popup.show(e.component, e.x, e.y)
     }
 
