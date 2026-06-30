@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Jira integration** — create Jira issues directly from selected findings in any of the three panels (Maintainability, Security, Open Source Health). A toolbar button and context menu item appear when Jira is configured; a dialog lets you review and edit the pre-filled summary and description before submitting.
+- **Jira integration** — create Jira issues directly from selected findings in any of the three panels (Maintainability, Security, Open Source Health). A toolbar button and context menu item appear when Jira is configured; a dialog lets you edit the issue title and preview the auto-generated description (listing each finding's title, severity, and file locations) before submitting.
 - **Jira settings page** — a new **Settings → Tools → Sigrid → Jira** project-level settings page consolidates Jira credentials (base URL, project key, username, API token) in one place.
 - **Settings shortcut in tool window** — a gear icon in the Sigrid tool window title bar opens the project-scoped Sigrid settings dialog directly, avoiding the need to navigate through **Settings → Tools** manually.
 
