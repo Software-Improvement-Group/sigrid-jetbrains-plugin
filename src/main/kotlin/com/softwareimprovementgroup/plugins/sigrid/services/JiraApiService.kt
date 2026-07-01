@@ -1,5 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.services
 
+import com.google.common.html.HtmlEscapers
 import com.google.gson.Gson
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -27,14 +28,15 @@ class JiraApiService {
             sb.append("<html><body>")
             sb.append("<h3>Code selected for refactoring</h3>")
             sb.append("<p>The following Sigrid findings have been selected for improvement:</p>")
+            val htmlEscaper = HtmlEscapers.htmlEscaper()
             sb.append("<ul>")
             for (finding in findings) {
-                sb.append("<li><b>${finding.severityEmoji} ${escapeHtml(finding.title)}</b>")
+                sb.append("<li><b>${finding.severityEmoji} ${htmlEscaper.escape(finding.title)}</b>")
                 if (finding.fileLocations.isNotEmpty()) {
                     sb.append("<ul>")
                     for (loc in finding.fileLocations) {
                         val text = if (loc.startLine != null) "${loc.filePath}:${loc.startLine}" else loc.filePath
-                        sb.append("<li>${escapeHtml(text)}</li>")
+                        sb.append("<li>${htmlEscaper.escape(text)}</li>")
                     }
                     sb.append("</ul>")
                 }
@@ -44,9 +46,6 @@ class JiraApiService {
             sb.append("</body></html>")
             return sb.toString()
         }
-
-        private fun escapeHtml(text: String): String =
-            text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
         private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(10)
         private val REQUEST_TIMEOUT: Duration = Duration.ofSeconds(30)
@@ -127,7 +126,7 @@ class JiraApiService {
                 )
             }
 
-            val itemContent = mutableListOf<Map<String, Any>>(mapOf(
+            val itemContent = mutableListOf(mapOf(
                 "type" to "paragraph",
                 "content" to listOf(mapOf(
                     "type" to "text",
