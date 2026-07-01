@@ -11,6 +11,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
+import com.softwareimprovementgroup.plugins.sigrid.models.JiraFinding
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsListener
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsTopic
@@ -53,6 +54,7 @@ abstract class SigridPanel<T>(
     protected abstract fun T.toRow(): Array<Any>
     protected abstract fun T.matchesSearch(query: String): Boolean
     protected abstract fun T.getFileLocations(): List<FileLocation>
+    protected abstract fun T.toJiraFinding(): JiraFinding
 
     protected open fun T.isEditable(): Boolean = false
     protected open fun T.getId(): String = ""
@@ -134,6 +136,9 @@ abstract class SigridPanel<T>(
         })
     }
     private val navigator: FindingNavigator by lazy { FindingNavigator(project, table) }
+    private val jiraHandler: JiraIntegrationHandler<T> by lazy {
+        JiraIntegrationHandler(project, table, { displayedFindings }) { it.toJiraFinding() }
+    }
     private val contextMenuHandler: FindingContextMenuHandler<T> by lazy {
         FindingContextMenuHandler(
             project = project,
@@ -150,6 +155,7 @@ abstract class SigridPanel<T>(
             getFileLocations = { it.getFileLocations() },
             getHref = { it.getHref() },
             navigator = navigator,
+            openCreateJiraIssue = { jiraHandler.openCreateJiraIssueDialog() },
         )
     }
 
@@ -206,7 +212,10 @@ abstract class SigridPanel<T>(
     }
 
     private fun subscribeToSettingsChanges() {
-        val listener = SigridSettingsListener { loadData() }
+        val listener = SigridSettingsListener {
+            loadData()
+            jiraHandler.updateButtonState()
+        }
         project.messageBus.connect().subscribe(SigridSettingsTopic.PROJECT, listener)
         ApplicationManager.getApplication().messageBus.connect().subscribe(SigridSettingsTopic.GLOBAL, listener)
     }
@@ -229,6 +238,7 @@ abstract class SigridPanel<T>(
                     val modelRow = table.convertRowIndexToModel(viewRow)
                     displayedFindings.getOrNull(modelRow)?.getHref().orEmpty().isNotEmpty()
                 }
+                jiraHandler.updateButtonState()
             }
         }
     }
@@ -254,6 +264,7 @@ abstract class SigridPanel<T>(
             val gbc = GridBagConstraints().apply { anchor = GridBagConstraints.CENTER }
             add(editButton, gbc)
             add(openInSigridButton, gbc)
+            add(jiraHandler.button, gbc)
         }
         val toolbar = JPanel(BorderLayout()).apply {
             add(leftButtons, BorderLayout.WEST)

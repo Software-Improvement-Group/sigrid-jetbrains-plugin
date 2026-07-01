@@ -17,10 +17,8 @@ import javax.swing.JPasswordField
 class SigridSettingsConfigurable : Configurable {
     private var panel: DialogPanel? = null
     private val apiKeyField = JPasswordField(1)
-    private val jiraTokenField = JPasswordField(1)
     private var customer = ""
     private var sigridUrl = ""
-    private var jiraUser = ""
 
     override fun getDisplayName() = SigridBundle["settings.display.name"]
 
@@ -44,17 +42,6 @@ class SigridSettingsConfigurable : Configurable {
             row {
                 link(SigridBundle["settings.project.settings.link"], ::navigateToProjectSettings)
             }
-            // TODO: Uncomment when Jira integration is implemented
-            /*group(SigridBundle["settings.group.jira"]) {
-                row(SigridBundle["settings.project.jira.user.label"]) {
-                    textField().bindText(::jiraUser).align(AlignX.FILL)
-                        .comment(SigridBundle["settings.jira.user.comment"])
-                }
-                row(SigridBundle["settings.project.jira.token.label"]) {
-                    cell(jiraTokenField).align(AlignX.FILL)
-                        .comment(SigridBundle["settings.jira.token.comment"])
-                }
-            }*/
         }
         return panel!!
     }
@@ -64,9 +51,7 @@ class SigridSettingsConfigurable : Configurable {
         val config = SigridConfiguration.getInstance()
         return String(apiKeyField.password) != config.apiKey ||
                 customer != config.customer ||
-                sigridUrl != config.sigridUrl ||
-                jiraUser != config.jiraUser ||
-                String(jiraTokenField.password) != config.jiraToken
+                sigridUrl != config.sigridUrl
     }
 
     override fun apply() {
@@ -83,8 +68,6 @@ class SigridSettingsConfigurable : Configurable {
         config.apiKey = String(apiKeyField.password)
         config.customer = customerValue
         config.sigridUrl = url
-        config.jiraUser = jiraUser
-        config.jiraToken = String(jiraTokenField.password)
         ApplicationManager.getApplication().invokeLater(
             { ApplicationManager.getApplication().messageBus.syncPublisher(SigridSettingsTopic.GLOBAL).settingsChanged() },
             com.intellij.openapi.application.ModalityState.nonModal()
@@ -96,8 +79,6 @@ class SigridSettingsConfigurable : Configurable {
         apiKeyField.text = config.apiKey
         customer = config.customer
         sigridUrl = config.sigridUrl
-        jiraUser = config.jiraUser
-        jiraTokenField.text = config.jiraToken
         panel?.reset()
     }
 

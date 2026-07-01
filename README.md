@@ -12,8 +12,9 @@ A JetBrains IDE plugin that lets you view and manage [Sigrid](https://www.softwa
 - **Column filters** — click the filter icon in any column header to narrow findings by risk level, status, or dependency type; active filters are highlighted and combine across columns.
 - **Open in Sigrid** — click the **Open in Sigrid** button in the toolbar (or press **F3**, or use the right-click context menu) to open a finding directly in the Sigrid web app.
 - **Edit findings** — update a finding's status and remark directly from the table; supports single and batch edits (up to 25 findings at once).
+- **Jira integration** — create a Jira issue from any selected finding via the toolbar button or right-click context menu; a dialog lets you edit the issue title and view the auto-generated description before submitting.
 - **Search** — filter findings across all three panels with a real-time search bar.
-- **Settings** — configure your Sigrid API key, portfolio name, and API base URL globally (IDE-level), with per-project overrides; the tool window refreshes automatically when settings change.
+- **Settings** — configure your Sigrid API key, portfolio name, and API base URL globally (IDE-level), with per-project overrides; the tool window refreshes automatically when settings change. A gear icon in the tool window title bar opens project settings directly.
 
 ## Requirements
 
@@ -44,7 +45,8 @@ The plugin ZIP is written to `build/distributions/`. Then install it from **Sett
 
 1. Open **Settings → Tools → Sigrid**.
 2. Enter your **API Key**, **Portfolio Name**, and optionally a custom **Sigrid API URL** (defaults to the SIG-hosted instance).
-3. For per-project overrides (e.g. a different system name or API key), click **Configure system and other per-project Sigrid settings…** at the bottom of the global settings page, or open **Settings → Tools → Sigrid → Project Settings** directly.
+3. For per-project overrides (e.g. a different system name or API key), click **Configure system and other per-project Sigrid settings…** at the bottom of the global settings page, or open **Settings → Tools → Sigrid → Project Settings** directly. You can also reach project settings via the gear icon in the Sigrid tool window title bar.
+4. To enable Jira integration, open **Settings → Tools → Sigrid → Jira** and enter your Jira base URL, project key, username, and API token.
 
 ## Usage
 
@@ -56,7 +58,7 @@ Once configured, open the **Sigrid** tool window at the bottom of the IDE. The w
 | Security | Security findings with risk level and file location |
 | Open Source Health | OSH findings for your project's dependencies |
 
-Use the search bar at the top of each tab to filter findings by any text. Use the segmented button in the toolbar to switch between **All findings** and **Active file** — the latter shows only findings for the file currently open in the editor. Click the filter icon in a column header to open a dropdown and select one or more values to filter by (risk level, status, or dependency type); active filters are highlighted and stack across columns. Double-click a row to open the file at the finding's location; if the finding has multiple locations a picker lets you choose. To edit a finding's status or remark, select one or more rows and click the edit button in the toolbar, use the keyboard shortcut (**F2**), or right-click and choose **Edit…** from the context menu; batch edits are supported for up to 25 findings at a time. To open a finding in the Sigrid web app, select a row and click **Open in Sigrid** in the toolbar, press **F3**, or choose **Open in Sigrid** from the right-click context menu. Right-clicking also exposes **Navigate to location** for quick file navigation.
+Use the search bar at the top of each tab to filter findings by any text. Use the segmented button in the toolbar to switch between **All findings** and **Active file** — the latter shows only findings for the file currently open in the editor. Click the filter icon in a column header to open a dropdown and select one or more values to filter by (risk level, status, or dependency type); active filters are highlighted and stack across columns. Double-click a row to open the file at the finding's location; if the finding has multiple locations a picker lets you choose. To edit a finding's status or remark, select one or more rows and click the edit button in the toolbar, use the keyboard shortcut (**F2**), or right-click and choose **Edit…** from the context menu; batch edits are supported for up to 25 findings at a time. To open a finding in the Sigrid web app, select a row and click **Open in Sigrid** in the toolbar, press **F3**, or choose **Open in Sigrid** from the right-click context menu. Right-clicking also exposes **Navigate to location** for quick file navigation. When Jira is configured, a **Create Jira Issue** button appears in the toolbar and in the right-click context menu; clicking it opens a dialog where you can edit the issue title and preview the auto-generated description before submitting.
 
 ## Development
 

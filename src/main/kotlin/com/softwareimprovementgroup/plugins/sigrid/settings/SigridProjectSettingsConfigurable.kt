@@ -16,15 +16,11 @@ import javax.swing.JPasswordField
 class SigridProjectSettingsConfigurable(private val project: Project) : Configurable {
     private var panel: DialogPanel? = null
     private val apiKeyOverrideField = JPasswordField(1)
-    private val jiraTokenOverrideField = JPasswordField(1)
     private val effectiveHostLabel = JBLabel()
     private var customerOverride = ""
     private var sigridUrlOverride = ""
     private var system = ""
     private var subsystem = ""
-    private var jiraBaseUrl = ""
-    private var jiraUserOverride = ""
-    private var jiraProjectKey = ""
 
     override fun getDisplayName() = SigridBundle["settings.project.display.name"]
 
@@ -58,23 +54,6 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
                         .comment(SigridBundle["settings.project.subsystem.comment"])
                 }
             }
-            // TODO: Uncomment when Jira integration is implemented
-            /*group(SigridBundle["settings.group.jira"]) {
-                row(SigridBundle["settings.project.jira.base.url.label"]) {
-                    textField().bindText(::jiraBaseUrl).align(AlignX.FILL)
-                }
-                row(SigridBundle["settings.project.jira.user.label"]) {
-                    textField().bindText(::jiraUserOverride).align(AlignX.FILL)
-                        .comment(SigridBundle["settings.project.override.comment", global.jiraUser.ifBlank { SigridBundle["settings.project.not.set"] }])
-                }
-                row(SigridBundle["settings.project.jira.token.label"]) {
-                    cell(jiraTokenOverrideField).align(AlignX.FILL)
-                        .comment(SigridBundle["settings.project.jira.token.override.comment"])
-                }
-                row(SigridBundle["settings.project.jira.project.key.label"]) {
-                    textField().bindText(::jiraProjectKey).align(AlignX.FILL).enabled(false)
-                }
-            }*/
         }
         return panel!!
     }
@@ -86,11 +65,7 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
                 customerOverride != config.customerOverride ||
                 sigridUrlOverride != config.sigridUrlOverride ||
                 system != config.system ||
-                subsystem != config.subsystem ||
-                jiraBaseUrl != config.jiraBaseUrl ||
-                jiraUserOverride != config.jiraUserOverride ||
-                String(jiraTokenOverrideField.password) != config.jiraTokenOverride ||
-                jiraProjectKey != config.jiraProjectKey
+                subsystem != config.subsystem
     }
 
     override fun apply() {
@@ -120,10 +95,6 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
         config.sigridUrlOverride = urlOverride
         config.system = systemValue
         config.subsystem = subsystemValue
-        config.jiraBaseUrl = jiraBaseUrl
-        config.jiraUserOverride = jiraUserOverride
-        config.jiraTokenOverride = String(jiraTokenOverrideField.password)
-        config.jiraProjectKey = jiraProjectKey
         ApplicationManager.getApplication().invokeLater(
             { project.messageBus.syncPublisher(SigridSettingsTopic.PROJECT).settingsChanged() },
             com.intellij.openapi.application.ModalityState.nonModal()
@@ -137,10 +108,6 @@ class SigridProjectSettingsConfigurable(private val project: Project) : Configur
         sigridUrlOverride = config.sigridUrlOverride
         system = config.system
         subsystem = config.subsystem
-        jiraBaseUrl = config.jiraBaseUrl
-        jiraUserOverride = config.jiraUserOverride
-        jiraTokenOverrideField.text = config.jiraTokenOverride
-        jiraProjectKey = config.jiraProjectKey
         val global = SigridConfiguration.getInstance()
         effectiveHostLabel.text = config.sigridUrlOverride.trimEnd('/').ifBlank {
             global.sigridUrl.ifBlank { SigridConfiguration.SIGRID_DEFAULT_URL }
