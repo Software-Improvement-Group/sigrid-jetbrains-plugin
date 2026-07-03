@@ -33,7 +33,7 @@ A JetBrains IDE plugin that lets you view and manage [Sigrid](https://www.softwa
 
 ## Installation
 
-Build from source:
+Install from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/32479-sigrid) (search for **Sigrid**), or build from source::
 
 ```bash
 ./gradlew buildPlugin
@@ -72,3 +72,7 @@ Use the search bar at the top of each tab to filter findings by any text. Use th
 ## License
 
 [Apache License 2.0](./LICENSE)
+
+## References
+* [Plugin documentation](https://docs.sigrid-says.com/integrations/jetbrains-extension.html)
+* [Plugin page on JetBrains Marketplace](https://plugins.jetbrains.com/plugin/32479-sigrid)
