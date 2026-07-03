@@ -56,6 +56,7 @@ abstract class SigridPanel<T>(
     protected abstract fun T.getFileLocations(): List<FileLocation>
     protected abstract fun T.toJiraFinding(): JiraFinding
 
+    protected open fun onFindingsLoaded(findings: List<T>) {}
     protected open fun T.isEditable(): Boolean = false
     protected open fun T.getId(): String = ""
     protected open fun T.getDisplayLocation(): String = ""
@@ -411,6 +412,7 @@ abstract class SigridPanel<T>(
                 ApplicationManager.getApplication().invokeLater {
                     allFindings = findings
                     applyFilter()
+                    onFindingsLoaded(findings)
                 }
             } catch (e: Exception) {
                 showError(toErrorMessage(e))

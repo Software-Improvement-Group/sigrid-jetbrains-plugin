@@ -31,6 +31,12 @@ class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>
 ) {
     override val emptyMessage = SigridBundle["maintainability.empty"]
 
+    private val highlighter = RefactoringCandidateHighlighter(project)
+
+    override fun onFindingsLoaded(findings: List<RefactoringCandidate>) {
+        highlighter.updateFindings(findings)
+    }
+
     override fun fetch(subsystem: String): List<RefactoringCandidate> =
         RefactoringCandidateMapper.map(SigridApiService.getInstance().getAllRefactoringCandidates(project), subsystem)
 
