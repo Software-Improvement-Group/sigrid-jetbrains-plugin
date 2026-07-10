@@ -17,7 +17,7 @@ import javax.swing.JEditorPane
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
-import com.softwareimprovementgroup.plugins.sigrid.models.JiraFinding
+import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import com.softwareimprovementgroup.plugins.sigrid.services.JiraApiService
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import java.awt.GridBagConstraints
@@ -31,7 +31,7 @@ private const val NOTIFICATION_GROUP_ID = "Sigrid"
 
 class CreateJiraIssueDialog(
     private val project: Project,
-    private val findings: List<JiraFinding>,
+    private val findings: List<IssueFinding>,
 ) : DialogWrapper(project, true) {
 
     private val titleField = JBTextField()
@@ -49,7 +49,7 @@ class CreateJiraIssueDialog(
 
     init {
         title = SigridBundle["jira.create.dialog.title"]
-        setOKActionEnabled(false)
+        isOKActionEnabled = false
         init()
     }
 

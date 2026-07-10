@@ -65,3 +65,16 @@ The plugin targets IntelliJ IDEA 2026.1+ and is written in Kotlin 2.3.21. Packag
 - `gradle.properties` — plugin version, group ID, GitHub repo URL
 - `src/main/resources/META-INF/plugin.xml` — plugin ID (`com.softwareimprovementgroup.plugins.sigrid`), extension registrations, dependencies
 - Gradle configuration cache and build cache are enabled; avoid imperative Gradle scripts that break caching
+
+## Coding Standards
+
+### 1. Method Length and Complexity
+* **Rule**: Keep functions and methods short and focused.
+* **Metric**: Maximum 25 lines of code per method (excluding comments and whitespace).
+* **Action**: If a method exceeds this limit, refactor it by extracting smaller helper functions.
+* **Principle**: Single Responsibility Principle (SRP) — each function must do only one thing.
+
+### 2. Code Duplication
+* **Rule**: Strictly adhere to the DRY (Don't Repeat Yourself) principle.
+* **Action**: If the same logic is used two or more times, abstract it into a reusable function, utility class, or hook.
+* **Review**: Scan the existing codebase or context before generating new helper functions to check for existing solutions.

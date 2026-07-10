@@ -4,12 +4,12 @@ import com.intellij.openapi.project.Project
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.mappers.RefactoringCandidateMapper
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
-import com.softwareimprovementgroup.plugins.sigrid.models.JiraFinding
+import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.MaintainabilityFindingStatus
 import com.softwareimprovementgroup.plugins.sigrid.models.MaintainabilitySeverity
 import com.softwareimprovementgroup.plugins.sigrid.models.RefactoringCandidate
 import com.softwareimprovementgroup.plugins.sigrid.models.snakeCaseToTitleCase
-import com.softwareimprovementgroup.plugins.sigrid.models.toJiraEmoji
+import com.softwareimprovementgroup.plugins.sigrid.models.toSeverityEmoji
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
 class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>(
@@ -48,9 +48,9 @@ class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>
 
     override fun RefactoringCandidate.getFileLocations(): List<FileLocation> = fileLocations
 
-    override fun RefactoringCandidate.toJiraFinding() = JiraFinding(
+    override fun RefactoringCandidate.toIssueFinding() = IssueFinding(
         title = description,
-        severityEmoji = severity.toJiraEmoji(),
+        severityEmoji = severity.toSeverityEmoji(),
         fileLocations = fileLocations,
     )
 

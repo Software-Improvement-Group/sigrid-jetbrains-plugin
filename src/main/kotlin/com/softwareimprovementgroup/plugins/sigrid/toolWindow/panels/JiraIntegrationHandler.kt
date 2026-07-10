@@ -4,7 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
-import com.softwareimprovementgroup.plugins.sigrid.models.JiraFinding
+import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import javax.swing.JButton
 
@@ -12,7 +12,7 @@ class JiraIntegrationHandler<T>(
     private val project: Project,
     private val table: JBTable,
     private val getDisplayedFindings: () -> List<T>,
-    private val toJiraFinding: (T) -> JiraFinding,
+    private val toIssueFinding: (T) -> IssueFinding,
 ) {
     val button = JButton(SigridBundle["jira.create.button"]).apply {
         isEnabled = false
@@ -34,7 +34,7 @@ class JiraIntegrationHandler<T>(
     fun openCreateJiraIssueDialog() {
         val jiraFindings = table.selectedRows
             .map { table.convertRowIndexToModel(it) }
-            .mapNotNull { getDisplayedFindings().getOrNull(it)?.let { finding -> toJiraFinding(finding) } }
+            .mapNotNull { getDisplayedFindings().getOrNull(it)?.let { finding -> toIssueFinding(finding) } }
         if (jiraFindings.isEmpty()) return
         CreateJiraIssueDialog(project, jiraFindings).show()
     }

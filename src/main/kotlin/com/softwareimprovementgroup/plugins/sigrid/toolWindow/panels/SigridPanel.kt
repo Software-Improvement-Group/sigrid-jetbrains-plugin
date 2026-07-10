@@ -11,7 +11,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
-import com.softwareimprovementgroup.plugins.sigrid.models.JiraFinding
+import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsListener
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsTopic
@@ -54,7 +54,7 @@ abstract class SigridPanel<T>(
     protected abstract fun T.toRow(): Array<Any>
     protected abstract fun T.matchesSearch(query: String): Boolean
     protected abstract fun T.getFileLocations(): List<FileLocation>
-    protected abstract fun T.toJiraFinding(): JiraFinding
+    protected abstract fun T.toIssueFinding(): IssueFinding
 
     protected open fun T.isEditable(): Boolean = false
     protected open fun T.getId(): String = ""
@@ -137,7 +137,10 @@ abstract class SigridPanel<T>(
     }
     private val navigator: FindingNavigator by lazy { FindingNavigator(project, table) }
     private val jiraHandler: JiraIntegrationHandler<T> by lazy {
-        JiraIntegrationHandler(project, table, { displayedFindings }) { it.toJiraFinding() }
+        JiraIntegrationHandler(project, table, { displayedFindings }) { it.toIssueFinding() }
+    }
+    private val azureDevOpsHandler: AzureDevOpsIntegrationHandler<T> by lazy {
+        AzureDevOpsIntegrationHandler(project, table, { displayedFindings }) { it.toIssueFinding() }
     }
     private val contextMenuHandler: FindingContextMenuHandler<T> by lazy {
         FindingContextMenuHandler(
@@ -156,6 +159,7 @@ abstract class SigridPanel<T>(
             getHref = { it.getHref() },
             navigator = navigator,
             openCreateJiraIssue = { jiraHandler.openCreateJiraIssueDialog() },
+            openCreateAzureDevOpsWorkItem = { azureDevOpsHandler.openCreateAzureDevOpsWorkItemDialog() },
         )
     }
 
@@ -215,6 +219,7 @@ abstract class SigridPanel<T>(
         val listener = SigridSettingsListener {
             loadData()
             jiraHandler.updateButtonState()
+            azureDevOpsHandler.updateButtonState()
         }
         project.messageBus.connect().subscribe(SigridSettingsTopic.PROJECT, listener)
         ApplicationManager.getApplication().messageBus.connect().subscribe(SigridSettingsTopic.GLOBAL, listener)
@@ -239,6 +244,7 @@ abstract class SigridPanel<T>(
                     displayedFindings.getOrNull(modelRow)?.getHref().orEmpty().isNotEmpty()
                 }
                 jiraHandler.updateButtonState()
+                azureDevOpsHandler.updateButtonState()
             }
         }
     }
@@ -265,6 +271,7 @@ abstract class SigridPanel<T>(
             add(editButton, gbc)
             add(openInSigridButton, gbc)
             add(jiraHandler.button, gbc)
+            add(azureDevOpsHandler.button, gbc)
         }
         val toolbar = JPanel(BorderLayout()).apply {
             add(leftButtons, BorderLayout.WEST)
