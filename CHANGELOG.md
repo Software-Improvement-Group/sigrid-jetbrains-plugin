@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.0] - 2026-07-13
+
+### Added
+
+- **Azure DevOps integration** — create Azure DevOps work items directly from selected findings in any of the three panels (Maintainability, Security, Open Source Health). A dialog lets you choose the work item type (loaded dynamically from your project), edit the title, and preview the auto-generated description (listing each finding's title, severity, and file locations) before submitting. A success notification includes the work item number and an **Open in Browser** link.
+- **Unified "Create Issue" split button** — the separate Jira and Azure DevOps toolbar buttons are consolidated into a single **Create Issue** split button. The primary action targets the first configured tracker; the dropdown arrow exposes all configured trackers plus an **Issue Tracker Settings** shortcut.
+- **Azure DevOps settings pages** — a new **Settings → Tools → Sigrid → Issue Trackers → Azure DevOps** global settings page for organization URL, personal access token, and project name; a corresponding per-project override page for URL and PAT.
+- **Issue Trackers settings group** — Jira and Azure DevOps settings are now grouped under **Settings → Tools → Sigrid → Issue Trackers** for clearer organization.
+
 ## [0.0.11] - 2026-06-30
 
 ### Added

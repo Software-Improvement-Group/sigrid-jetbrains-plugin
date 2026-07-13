@@ -16,15 +16,29 @@ import java.awt.event.ActionEvent
 import javax.swing.AbstractAction
 import javax.swing.Action
 
-private const val TRACKER_JIRA = "jira"
-private const val TRACKER_AZURE = "azuredevops"
-
 class CreateIssueButton<T>(
     private val project: Project,
     private val jiraHandler: JiraIntegrationHandler<T>,
     private val azureDevOpsHandler: AzureDevOpsIntegrationHandler<T>,
     private val table: JBTable,
 ) {
+    companion object {
+        private const val TRACKER_JIRA = "jira"
+        private const val TRACKER_AZURE = "azuredevops"
+
+        internal fun resolveActiveTracker(
+            lastAction: String,
+            isJiraConfigured: Boolean,
+            isAzureDevOpsConfigured: Boolean,
+        ): String? = when {
+            lastAction == TRACKER_JIRA && isJiraConfigured -> TRACKER_JIRA
+            lastAction == TRACKER_AZURE && isAzureDevOpsConfigured -> TRACKER_AZURE
+            isJiraConfigured -> TRACKER_JIRA
+            isAzureDevOpsConfigured -> TRACKER_AZURE
+            else -> null
+        }
+    }
+
     private val jiraOption = createTrackerOption(SigridBundle["jira.create.button"], TRACKER_JIRA) {
         jiraHandler.openCreateJiraIssueDialog()
     }
@@ -51,7 +65,7 @@ class CreateIssueButton<T>(
             val config = SigridProjectConfiguration.getInstance(project)
             val hasSelection = table.selectedRows.isNotEmpty()
             button.isEnabled = hasSelection && resolveActiveTracker(config) != null
-            button.toolTipText = buildTooltip(config, hasSelection)
+            button.toolTipText = SigridBundle["create.issue.button.tooltip"]
         }
     }
 
@@ -81,25 +95,7 @@ class CreateIssueButton<T>(
             }
         }
 
-    private fun resolveActiveTracker(config: SigridProjectConfiguration): String? {
-        val last = config.lastIssueCreationAction
-        return when {
-            last == TRACKER_JIRA && config.isJiraConfigured -> TRACKER_JIRA
-            last == TRACKER_AZURE && config.isAzureDevOpsConfigured -> TRACKER_AZURE
-            config.isJiraConfigured -> TRACKER_JIRA
-            config.isAzureDevOpsConfigured -> TRACKER_AZURE
-            else -> null
-        }
-    }
+    private fun resolveActiveTracker(config: SigridProjectConfiguration): String? =
+        resolveActiveTracker(config.lastIssueCreationAction, config.isJiraConfigured, config.isAzureDevOpsConfigured)
 
-    private fun buildTooltip(config: SigridProjectConfiguration, hasSelection: Boolean): String? {
-        if (!hasSelection) return null
-        return when {
-            config.isAzureDevOpsUrlOverrideWithoutPatOverride ->
-                SigridBundle["azuredevops.create.button.tooltip.url.override.no.pat"]
-            resolveActiveTracker(config) == null ->
-                SigridBundle["jira.create.button.tooltip.not.configured"]
-            else -> SigridBundle["create.issue.button.tooltip"]
-        }
-    }
 }
