@@ -31,6 +31,7 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
         var azureDevOpsProjectName: String = "",
         var azureDevOpsOrganizationUrlOverride: String = "",
         var azureDevOpsLastWorkItemType: String = "",
+        var lastIssueCreationAction: String = "",
     )
 
     private var _state = State()
@@ -159,4 +160,8 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
     var azureDevOpsLastWorkItemType: String
         get() = _state.azureDevOpsLastWorkItemType
         set(value) { _state.azureDevOpsLastWorkItemType = value }
+
+    var lastIssueCreationAction: String
+        get() = _state.lastIssueCreationAction
+        set(value) { _state.lastIssueCreationAction = value }
 }

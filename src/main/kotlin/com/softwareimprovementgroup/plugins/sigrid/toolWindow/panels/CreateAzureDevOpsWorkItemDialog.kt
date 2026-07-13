@@ -94,7 +94,7 @@ class CreateAzureDevOpsWorkItemDialog(
         panel.add(JBLabel(SigridBundle["azuredevops.create.dialog.preview.label"]), gbc)
 
         gbc.gridy = 4; gbc.fill = GridBagConstraints.BOTH; gbc.weighty = 1.0
-        val scrollPane = JBScrollPane(previewPane).apply { preferredSize = java.awt.Dimension(400, 160) }
+        val scrollPane = JBScrollPane(previewPane).apply { preferredSize = java.awt.Dimension(400, 260) }
         panel.add(scrollPane, gbc)
 
         gbc.gridy = 5; gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weighty = 0.0

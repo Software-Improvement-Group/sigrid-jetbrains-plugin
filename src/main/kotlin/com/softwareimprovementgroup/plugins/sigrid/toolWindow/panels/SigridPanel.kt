@@ -142,6 +142,9 @@ abstract class SigridPanel<T>(
     private val azureDevOpsHandler: AzureDevOpsIntegrationHandler<T> by lazy {
         AzureDevOpsIntegrationHandler(project, table, { displayedFindings }) { it.toIssueFinding() }
     }
+    private val createIssueButton: CreateIssueButton<T> by lazy {
+        CreateIssueButton(project, jiraHandler, azureDevOpsHandler, table)
+    }
     private val contextMenuHandler: FindingContextMenuHandler<T> by lazy {
         FindingContextMenuHandler(
             project = project,
@@ -218,8 +221,7 @@ abstract class SigridPanel<T>(
     private fun subscribeToSettingsChanges() {
         val listener = SigridSettingsListener {
             loadData()
-            jiraHandler.updateButtonState()
-            azureDevOpsHandler.updateButtonState()
+            createIssueButton.updateButtonState()
         }
         project.messageBus.connect().subscribe(SigridSettingsTopic.PROJECT, listener)
         ApplicationManager.getApplication().messageBus.connect().subscribe(SigridSettingsTopic.GLOBAL, listener)
@@ -243,8 +245,7 @@ abstract class SigridPanel<T>(
                     val modelRow = table.convertRowIndexToModel(viewRow)
                     displayedFindings.getOrNull(modelRow)?.getHref().orEmpty().isNotEmpty()
                 }
-                jiraHandler.updateButtonState()
-                azureDevOpsHandler.updateButtonState()
+                createIssueButton.updateButtonState()
             }
         }
     }
@@ -270,8 +271,7 @@ abstract class SigridPanel<T>(
             val gbc = GridBagConstraints().apply { anchor = GridBagConstraints.CENTER }
             add(editButton, gbc)
             add(openInSigridButton, gbc)
-            add(jiraHandler.button, gbc)
-            add(azureDevOpsHandler.button, gbc)
+            add(createIssueButton.button, gbc)
         }
         val toolbar = JPanel(BorderLayout()).apply {
             add(leftButtons, BorderLayout.WEST)
