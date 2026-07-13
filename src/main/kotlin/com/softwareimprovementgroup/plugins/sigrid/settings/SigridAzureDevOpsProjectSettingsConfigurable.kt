@@ -53,10 +53,14 @@ class SigridAzureDevOpsProjectSettingsConfigurable(private val project: Project)
         if (urlOverride.isNotBlank() && !urlOverride.startsWith("https://")) {
             throw ConfigurationException(SigridBundle["settings.azure.devops.url.https.only"])
         }
+        val patOverride = String(patOverrideField.password)
+        if (urlOverride.isNotBlank() && patOverride.isBlank()) {
+            throw ConfigurationException(SigridBundle["settings.azure.devops.url.override.requires.pat"])
+        }
         val config = SigridProjectConfiguration.getInstance(project)
         config.azureDevOpsProjectName = projectName.trim()
         config.azureDevOpsOrganizationUrlOverride = urlOverride
-        config.azureDevOpsPatOverride = String(patOverrideField.password)
+        config.azureDevOpsPatOverride = patOverride
         ApplicationManager.getApplication().invokeLater(
             { project.messageBus.syncPublisher(SigridSettingsTopic.PROJECT).settingsChanged() },
             ModalityState.nonModal()
