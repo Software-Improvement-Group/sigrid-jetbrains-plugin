@@ -5,10 +5,10 @@ import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.mappers.OpenSourceHealthMapper
 import com.softwareimprovementgroup.plugins.sigrid.models.DependencyType
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
-import com.softwareimprovementgroup.plugins.sigrid.models.JiraFinding
+import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.OpenSourceHealthDependency
 import com.softwareimprovementgroup.plugins.sigrid.models.RiskSeverity
-import com.softwareimprovementgroup.plugins.sigrid.models.toJiraEmoji
+import com.softwareimprovementgroup.plugins.sigrid.models.toSeverityEmoji
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
 class OpenSourceHealthPanel(project: Project) : SigridPanel<OpenSourceHealthDependency>(
@@ -72,9 +72,9 @@ class OpenSourceHealthPanel(project: Project) : SigridPanel<OpenSourceHealthDepe
     override fun OpenSourceHealthDependency.getFileLocations(): List<FileLocation> = fileLocations
     override fun OpenSourceHealthDependency.getHref() = href
 
-    override fun OpenSourceHealthDependency.toJiraFinding() = JiraFinding(
+    override fun OpenSourceHealthDependency.toIssueFinding() = IssueFinding(
         title = displayName,
-        severityEmoji = risk.toJiraEmoji(),
+        severityEmoji = risk.toSeverityEmoji(),
         fileLocations = fileLocations,
     )
 }

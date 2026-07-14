@@ -1,61 +1,32 @@
 package com.softwareimprovementgroup.plugins.sigrid.services
 
-import com.google.common.html.HtmlEscapers
 import com.google.gson.Gson
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
-import com.softwareimprovementgroup.plugins.sigrid.models.JiraFinding
-import java.net.ProxySelector
-import java.net.URI
+import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import java.net.http.HttpClient
-import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.time.Duration
-import java.util.Base64
 
 @Service(Service.Level.APP)
 class JiraApiService {
     companion object {
         fun getInstance(): JiraApiService = service()
 
-        internal fun normalizeUrl(url: String): String {
-            val trimmed = url.trim().trimEnd('/')
-            return if (trimmed.contains("://")) trimmed else "https://$trimmed"
-        }
+        internal fun normalizeUrl(url: String): String = normalizeIssueTrackerUrl(url)
 
-        internal fun buildPreviewHtml(findings: List<JiraFinding>): String {
+        internal fun buildPreviewHtml(findings: List<IssueFinding>): String {
             val sb = StringBuilder()
             sb.append("<html><body>")
             sb.append("<h3>Code selected for refactoring</h3>")
             sb.append("<p>The following Sigrid findings have been selected for improvement:</p>")
-            val htmlEscaper = HtmlEscapers.htmlEscaper()
-            sb.append("<ul>")
-            for (finding in findings) {
-                sb.append("<li><b>${finding.severityEmoji} ${htmlEscaper.escape(finding.title)}</b>")
-                if (finding.fileLocations.isNotEmpty()) {
-                    sb.append("<ul>")
-                    for (loc in finding.fileLocations) {
-                        val text = if (loc.startLine != null) "${loc.filePath}:${loc.startLine}" else loc.filePath
-                        sb.append("<li>${htmlEscaper.escape(text)}</li>")
-                    }
-                    sb.append("</ul>")
-                }
-                sb.append("</li>")
-            }
-            sb.append("</ul>")
+            sb.append(buildFindingListHtml(findings) { emoji, title -> "<b>$emoji $title</b>" })
             sb.append("</body></html>")
             return sb.toString()
         }
-
-        private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(10)
-        private val REQUEST_TIMEOUT: Duration = Duration.ofSeconds(30)
     }
 
     private val gson = Gson()
-    private val httpClient: HttpClient = HttpClient.newBuilder()
-        .proxy(ProxySelector.getDefault())
-        .connectTimeout(CONNECT_TIMEOUT)
-        .build()
+    private val httpClient: HttpClient = buildIssueTrackerHttpClient()
 
     fun createIssue(
         jiraBaseUrl: String,
@@ -63,14 +34,13 @@ class JiraApiService {
         jiraToken: String,
         jiraProjectKey: String,
         summary: String,
-        findings: List<JiraFinding>,
+        findings: List<IssueFinding>,
     ): String {
         val baseUrl = normalizeUrl(jiraBaseUrl)
         if (!baseUrl.startsWith("https://")) {
             throw IllegalArgumentException("Jira Base URL must use the https:// protocol")
         }
-        val credentials = Base64.getEncoder().encodeToString("$jiraUser:$jiraToken".toByteArray())
-        val authHeader = "Basic $credentials"
+        val authHeader = buildBasicAuthHeader("$jiraUser:$jiraToken")
 
         val v3Body = gson.toJson(buildV3RequestBody(jiraProjectKey, summary, findings))
         val v3Response = sendPost("$baseUrl/rest/api/3/issue", v3Body, authHeader)
@@ -86,16 +56,8 @@ class JiraApiService {
         return parseIssueKey(v3Response.body())
     }
 
-    private fun sendPost(url: String, body: String, authHeader: String): HttpResponse<String> {
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .timeout(REQUEST_TIMEOUT)
-            .header("Content-Type", "application/json")
-            .header("Authorization", authHeader)
-            .POST(HttpRequest.BodyPublishers.ofString(body))
-            .build()
-        return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-    }
+    private fun sendPost(url: String, body: String, authHeader: String): HttpResponse<String> =
+        httpClient.sendPost(url, body, authHeader, "application/json")
 
     private fun checkResponse(response: HttpResponse<String>) {
         if (response.statusCode() !in 200..299) {
@@ -112,7 +74,7 @@ class JiraApiService {
     internal fun buildV3RequestBody(
         projectKey: String,
         summary: String,
-        findings: List<JiraFinding>,
+        findings: List<IssueFinding>,
     ): Map<String, Any> {
         val bulletItems = findings.map { finding ->
             val locationItems = finding.fileLocations.map { loc ->
@@ -171,7 +133,7 @@ class JiraApiService {
     internal fun buildV2RequestBody(
         projectKey: String,
         summary: String,
-        findings: List<JiraFinding>,
+        findings: List<IssueFinding>,
     ): Map<String, Any> {
         val sb = StringBuilder()
         sb.appendLine("h2. Code selected for refactoring")

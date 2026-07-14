@@ -33,6 +33,7 @@ class FindingContextMenuHandler<T>(
     private val getHref: (T) -> String?,
     private val navigator: FindingNavigator,
     private val openCreateJiraIssue: () -> Unit,
+    private val openCreateAzureDevOpsWorkItem: () -> Unit,
 ) {
     fun handlePopupTrigger(e: MouseEvent) {
         if (!e.isPopupTrigger) return
@@ -43,8 +44,10 @@ class FindingContextMenuHandler<T>(
         val navigableLocations = navigableLocationsAtPoint(e)
         val href = hrefAtPoint(e)
         val hasEditable = hasEditableFindings()
-        val isJiraConfigured = SigridProjectConfiguration.getInstance(project).isJiraConfigured
-        if (navigableLocations == null && href == null && !hasEditable && !isJiraConfigured) return
+        val projectConfig = SigridProjectConfiguration.getInstance(project)
+        val isJiraConfigured = projectConfig.isJiraConfigured
+        val isAzureDevOpsConfigured = projectConfig.isAzureDevOpsConfigured
+        if (navigableLocations == null && href == null && !hasEditable && !isJiraConfigured && !isAzureDevOpsConfigured) return
 
         val popup = JPopupMenu()
         if (navigableLocations != null) {
@@ -71,6 +74,12 @@ class FindingContextMenuHandler<T>(
             val jiraItem = JMenuItem(SigridBundle["jira.create.menu.item"])
             jiraItem.addActionListener { openCreateJiraIssue() }
             popup.add(jiraItem)
+        }
+
+        if (isAzureDevOpsConfigured) {
+            val adoItem = JMenuItem(SigridBundle["azuredevops.create.menu.item"])
+            adoItem.addActionListener { openCreateAzureDevOpsWorkItem() }
+            popup.add(adoItem)
         }
 
         popup.show(e.component, e.x, e.y)

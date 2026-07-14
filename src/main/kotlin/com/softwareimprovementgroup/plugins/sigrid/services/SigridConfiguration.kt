@@ -18,13 +18,16 @@ class SigridConfiguration : PersistentStateComponent<SigridConfiguration.State> 
     data class State(
         var sigridUrl: String = SIGRID_DEFAULT_URL,
         var customer: String = "",
+        var azureDevOpsOrganizationUrl: String = "",
     )
 
     private var _state = State()
     private val apiKeyCredential = PasswordSafeCredential("com.softwareimprovementgroup.plugins.sigrid/apiKey")
+    private val azureDevOpsPatCredential = PasswordSafeCredential("com.softwareimprovementgroup.plugins.sigrid/azureDevOpsPat")
 
     init {
         apiKeyCredential.loadAsync()
+        azureDevOpsPatCredential.loadAsync()
     }
 
     override fun getState(): State = _state
@@ -32,6 +35,7 @@ class SigridConfiguration : PersistentStateComponent<SigridConfiguration.State> 
     override fun loadState(state: State) {
         _state = state
         apiKeyCredential.loadAsync()
+        azureDevOpsPatCredential.loadAsync()
     }
 
     var sigridUrl: String
@@ -45,6 +49,14 @@ class SigridConfiguration : PersistentStateComponent<SigridConfiguration.State> 
     var apiKey: String
         get() = apiKeyCredential.get()
         set(value) = apiKeyCredential.set(value)
+
+    var azureDevOpsOrganizationUrl: String
+        get() = _state.azureDevOpsOrganizationUrl
+        set(value) { _state.azureDevOpsOrganizationUrl = value }
+
+    var azureDevOpsPat: String
+        get() = azureDevOpsPatCredential.get()
+        set(value) = azureDevOpsPatCredential.set(value)
 
     fun getSigridApiBaseUrl(): String {
         val base = _state.sigridUrl.trimEnd('/').ifBlank { SIGRID_DEFAULT_URL }

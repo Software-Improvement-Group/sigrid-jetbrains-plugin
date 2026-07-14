@@ -5,11 +5,11 @@ import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.mappers.SecurityFindingMapper
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.models.FindingStatus
-import com.softwareimprovementgroup.plugins.sigrid.models.JiraFinding
+import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.RiskSeverity
 import com.softwareimprovementgroup.plugins.sigrid.models.SecurityFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.snakeCaseToTitleCase
-import com.softwareimprovementgroup.plugins.sigrid.models.toJiraEmoji
+import com.softwareimprovementgroup.plugins.sigrid.models.toSeverityEmoji
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
 class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(
@@ -48,9 +48,9 @@ class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(
 
     override fun SecurityFinding.getFileLocations(): List<FileLocation> = fileLocations
 
-    override fun SecurityFinding.toJiraFinding() = JiraFinding(
+    override fun SecurityFinding.toIssueFinding() = IssueFinding(
         title = type,
-        severityEmoji = severity.toJiraEmoji(),
+        severityEmoji = severity.toSeverityEmoji(),
         fileLocations = fileLocations,
     )
 

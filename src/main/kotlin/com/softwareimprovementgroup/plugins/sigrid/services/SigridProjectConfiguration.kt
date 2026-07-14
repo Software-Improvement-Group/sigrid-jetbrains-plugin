@@ -28,6 +28,10 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
         var jiraBaseUrl: String = "",
         var jiraUser: String = "",
         var jiraProjectKey: String = "",
+        var azureDevOpsProjectName: String = "",
+        var azureDevOpsOrganizationUrlOverride: String = "",
+        var azureDevOpsLastWorkItemType: String = "",
+        var lastIssueCreationAction: String = "",
     )
 
     private var _state = State()
@@ -37,10 +41,14 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
     private val jiraTokenCredential by lazy {
         PasswordSafeCredential("com.softwareimprovementgroup.plugins.sigrid/jiraToken/${project.locationHash}")
     }
+    private val azureDevOpsPatOverrideCredential by lazy {
+        PasswordSafeCredential("com.softwareimprovementgroup.plugins.sigrid/azureDevOpsPatOverride/${project.locationHash}")
+    }
 
     init {
         apiKeyOverrideCredential.loadAsync()
         jiraTokenCredential.loadAsync()
+        azureDevOpsPatOverrideCredential.loadAsync()
     }
 
     override fun getState(): State = _state
@@ -49,6 +57,7 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
         _state = state
         apiKeyOverrideCredential.loadAsync()
         jiraTokenCredential.loadAsync()
+        azureDevOpsPatOverrideCredential.loadAsync()
     }
 
     var apiKeyOverride: String
@@ -63,6 +72,9 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
 
     val effectiveCustomer: String
         get() = _state.customerOverride.ifBlank { SigridConfiguration.getInstance().customer }
+
+    val effectiveSigridUrl: String
+        get() = _state.sigridUrlOverride.trimEnd('/').ifBlank { SigridConfiguration.getInstance().sigridUrl }
 
     val effectiveSigridApiBaseUrl: String
         get() {
@@ -79,6 +91,27 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
     val isJiraConfigured: Boolean
         get() = _state.jiraBaseUrl.isNotBlank() && _state.jiraUser.isNotBlank() &&
                 jiraTokenCredential.get().isNotBlank() && _state.jiraProjectKey.isNotBlank()
+
+    val effectiveAzureDevOpsOrganizationUrl: String
+        get() = _state.azureDevOpsOrganizationUrlOverride.ifBlank { SigridConfiguration.getInstance().azureDevOpsOrganizationUrl }
+
+    val effectiveAzureDevOpsPat: String
+        get() = computeEffectiveApiKey(
+            _state.azureDevOpsOrganizationUrlOverride,
+            azureDevOpsPatOverrideCredential.get(),
+            SigridConfiguration.getInstance().azureDevOpsPat,
+        )
+
+    val isAzureDevOpsUrlOverrideWithoutPatOverride: Boolean
+        get() = computeIsUrlOverrideWithoutKeyOverride(
+            _state.azureDevOpsOrganizationUrlOverride,
+            azureDevOpsPatOverrideCredential.get(),
+        )
+
+    val isAzureDevOpsConfigured: Boolean
+        get() = effectiveAzureDevOpsOrganizationUrl.isNotBlank() &&
+                effectiveAzureDevOpsPat.isNotBlank() &&
+                _state.azureDevOpsProjectName.isNotBlank()
 
     var system: String
         get() = _state.system
@@ -111,4 +144,24 @@ class SigridProjectConfiguration(private val project: Project) : PersistentState
     var jiraProjectKey: String
         get() = _state.jiraProjectKey
         set(value) { _state.jiraProjectKey = value }
+
+    var azureDevOpsProjectName: String
+        get() = _state.azureDevOpsProjectName
+        set(value) { _state.azureDevOpsProjectName = value }
+
+    var azureDevOpsOrganizationUrlOverride: String
+        get() = _state.azureDevOpsOrganizationUrlOverride
+        set(value) { _state.azureDevOpsOrganizationUrlOverride = value }
+
+    var azureDevOpsPatOverride: String
+        get() = azureDevOpsPatOverrideCredential.get()
+        set(value) = azureDevOpsPatOverrideCredential.set(value)
+
+    var azureDevOpsLastWorkItemType: String
+        get() = _state.azureDevOpsLastWorkItemType
+        set(value) { _state.azureDevOpsLastWorkItemType = value }
+
+    var lastIssueCreationAction: String
+        get() = _state.lastIssueCreationAction
+        set(value) { _state.lastIssueCreationAction = value }
 }

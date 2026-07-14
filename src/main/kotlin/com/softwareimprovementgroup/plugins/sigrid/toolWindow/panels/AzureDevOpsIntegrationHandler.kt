@@ -4,17 +4,17 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 
-class JiraIntegrationHandler<T>(
+class AzureDevOpsIntegrationHandler<T>(
     private val project: Project,
     private val table: JBTable,
     private val getDisplayedFindings: () -> List<T>,
     private val toIssueFinding: (T) -> IssueFinding,
 ) {
-    fun openCreateJiraIssueDialog() {
-        val jiraFindings = table.selectedRows
+    fun openCreateAzureDevOpsWorkItemDialog() {
+        val findings = table.selectedRows
             .map { table.convertRowIndexToModel(it) }
             .mapNotNull { getDisplayedFindings().getOrNull(it)?.let { finding -> toIssueFinding(finding) } }
-        if (jiraFindings.isEmpty()) return
-        CreateJiraIssueDialog(project, jiraFindings).show()
+        if (findings.isEmpty()) return
+        CreateAzureDevOpsWorkItemDialog(project, findings).show()
     }
 }

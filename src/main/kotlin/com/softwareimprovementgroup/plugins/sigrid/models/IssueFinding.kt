@@ -1,12 +1,12 @@
 package com.softwareimprovementgroup.plugins.sigrid.models
 
-data class JiraFinding(
+data class IssueFinding(
     val title: String,
     val severityEmoji: String,
     val fileLocations: List<FileLocation>,
 )
 
-fun MaintainabilitySeverity.toJiraEmoji(): String = when (this) {
+fun MaintainabilitySeverity.toSeverityEmoji(): String = when (this) {
     MaintainabilitySeverity.VeryHigh -> "🔴"
     MaintainabilitySeverity.High     -> "🔴"
     MaintainabilitySeverity.Moderate -> "🟠"
@@ -15,7 +15,7 @@ fun MaintainabilitySeverity.toJiraEmoji(): String = when (this) {
     MaintainabilitySeverity.Unknown  -> "⚪"
 }
 
-fun RiskSeverity.toJiraEmoji(): String = when (this) {
+fun RiskSeverity.toSeverityEmoji(): String = when (this) {
     RiskSeverity.Critical    -> "🔴"
     RiskSeverity.High        -> "🔴"
     RiskSeverity.Medium      -> "🟠"
