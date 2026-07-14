@@ -64,7 +64,7 @@ class CreateIssueButton<T>(
         ApplicationManager.getApplication().invokeLater {
             val config = SigridProjectConfiguration.getInstance(project)
             val hasSelection = table.selectedRows.isNotEmpty()
-            button.isEnabled = hasSelection && resolveActiveTracker(config) != null
+            button.isEnabled = hasSelection
             button.toolTipText = when {
                 config.isAzureDevOpsUrlOverrideWithoutPatOverride ->
                     SigridBundle["azuredevops.create.button.tooltip.url.override.no.pat"]
@@ -75,10 +75,12 @@ class CreateIssueButton<T>(
 
     private fun createMainAction(): Action = object : AbstractAction(SigridBundle["create.issue.button"]) {
         override fun actionPerformed(e: ActionEvent) {
+            if (table.selectedRows.isEmpty()) return
             val config = SigridProjectConfiguration.getInstance(project)
             when (resolveActiveTracker(config)) {
                 TRACKER_JIRA -> jiraHandler.openCreateJiraIssueDialog()
                 TRACKER_AZURE -> azureDevOpsHandler.openCreateAzureDevOpsWorkItemDialog()
+                else -> ShowSettingsUtil.getInstance().showSettingsDialog(project, SigridIssueTrackersConfigurable::class.java)
             }
         }
     }
