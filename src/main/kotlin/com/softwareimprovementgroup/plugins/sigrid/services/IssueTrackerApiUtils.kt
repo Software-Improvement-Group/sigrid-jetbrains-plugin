@@ -4,6 +4,7 @@ import com.google.common.html.HtmlEscapers
 import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import java.net.ProxySelector
 import java.net.URI
+import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -26,6 +27,9 @@ internal fun normalizeIssueTrackerUrl(url: String): String {
 internal fun buildBasicAuthHeader(credentials: String): String =
     "Basic " + Base64.getEncoder().encodeToString(credentials.toByteArray())
 
+internal fun encodeUrlPathSegment(value: String): String =
+    URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+
 internal fun buildFindingListHtml(
     findings: List<IssueFinding>,
     renderTitle: (emoji: String, escapedTitle: String) -> String,
@@ -34,7 +38,7 @@ internal fun buildFindingListHtml(
     val sb = StringBuilder()
     sb.append("<ul>")
     for (finding in findings) {
-        sb.append("<li>${renderTitle(finding.severityEmoji, escaper.escape(finding.title))}")
+        sb.append("<li>${renderTitle(escaper.escape(finding.severityEmoji), escaper.escape(finding.title))}")
         if (finding.fileLocations.isNotEmpty()) {
             sb.append("<ul>")
             for (loc in finding.fileLocations) {

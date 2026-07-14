@@ -167,7 +167,7 @@ class AzureDevOpsApiServiceTest {
 
     // endregion
 
-    // region HTTPS enforcement in createWorkItem
+    // region HTTPS enforcement in createWorkItem and getWorkItemTypes
 
     @Test
     fun createWorkItem_httpUrl_throwsIllegalArgumentException() {
@@ -180,6 +180,17 @@ class AzureDevOpsApiServiceTest {
                 title = "Fix this",
                 findings = emptyList(),
                 sigridUrl = "https://sigrid-says.com",
+            )
+        }
+    }
+
+    @Test
+    fun getWorkItemTypes_httpUrl_throwsIllegalArgumentException() {
+        assertThrows(IllegalArgumentException::class.java) {
+            service.getWorkItemTypes(
+                organizationUrl = "http://dev.azure.com/myorg",
+                projectName = "MyProject",
+                pat = "token",
             )
         }
     }

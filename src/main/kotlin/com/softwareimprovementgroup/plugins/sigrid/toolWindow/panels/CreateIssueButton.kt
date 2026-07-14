@@ -65,7 +65,11 @@ class CreateIssueButton<T>(
             val config = SigridProjectConfiguration.getInstance(project)
             val hasSelection = table.selectedRows.isNotEmpty()
             button.isEnabled = hasSelection && resolveActiveTracker(config) != null
-            button.toolTipText = SigridBundle["create.issue.button.tooltip"]
+            button.toolTipText = when {
+                config.isAzureDevOpsUrlOverrideWithoutPatOverride ->
+                    SigridBundle["azuredevops.create.button.tooltip.url.override.no.pat"]
+                else -> SigridBundle["create.issue.button.tooltip"]
+            }
         }
     }
 

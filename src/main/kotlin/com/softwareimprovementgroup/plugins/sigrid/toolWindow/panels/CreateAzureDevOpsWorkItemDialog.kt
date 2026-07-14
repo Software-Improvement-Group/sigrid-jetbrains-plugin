@@ -19,6 +19,7 @@ import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import com.softwareimprovementgroup.plugins.sigrid.services.AzureDevOpsApiService
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
+import com.softwareimprovementgroup.plugins.sigrid.services.encodeUrlPathSegment
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import com.intellij.openapi.ui.ComboBox
@@ -36,7 +37,7 @@ class CreateAzureDevOpsWorkItemDialog(
 ) : DialogWrapper(project, true) {
 
     private val config = SigridProjectConfiguration.getInstance(project)
-    private val sigridUrl = "${config.effectiveSigridUrl}/${config.effectiveCustomer}/${config.system}"
+    private val sigridUrl = "${config.effectiveSigridUrl}/${encodeUrlPathSegment(config.effectiveCustomer)}/${encodeUrlPathSegment(config.system)}"
 
     private val titleField = JBTextField()
     private val typeStatusLabel = JBLabel(SigridBundle["azuredevops.create.dialog.type.loading"]).apply {
@@ -131,6 +132,10 @@ class CreateAzureDevOpsWorkItemDialog(
 
     private fun populateWorkItemTypes(types: List<String>) {
         typeStatusLabel.isVisible = false
+        if (types.isEmpty()) {
+            showTypeLoadError(SigridBundle["azuredevops.create.dialog.type.error.empty"])
+            return
+        }
         types.forEach { typeCombo.addItem(it) }
         val lastType = config.azureDevOpsLastWorkItemType
         val typeToSelect = types.firstOrNull { it == lastType } ?: types.firstOrNull()
