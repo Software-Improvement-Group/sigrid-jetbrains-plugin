@@ -8,7 +8,6 @@ import com.intellij.openapi.project.Project
 import com.softwareimprovementgroup.plugins.sigrid.NOTIFICATION_GROUP_ID
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FixPrompt
-import org.jetbrains.plugins.terminal.ShellTerminalWidget
 import org.jetbrains.plugins.terminal.TerminalToolWindowManager
 import java.nio.file.Files
 import java.nio.file.Path
@@ -31,27 +30,27 @@ object ClaudeCodeTerminalLauncher {
         }
     }
 
-    // TODO: Replace createShellWidget with a non-deprecated alternative.
-    // createShellWidget is soft-deprecated (plain @Deprecated, not scheduled for removal), but every
-    // non-deprecated alternative that returns a TerminalWidget is marked @ApiStatus.Internal or
-    // @ApiStatus.Experimental, which the JetBrains Marketplace verifier rejects. A soft-deprecation
-    // warning is only advisory and does not fail verification, so this is the safest public option.
+    // TODO: Replace createShellWidget with a stable non-deprecated alternative.
+    // createShellWidget returns the engine-agnostic com.intellij.terminal.ui.TerminalWidget and is only
+    // soft-deprecated (plain @Deprecated, not scheduled for removal); every non-deprecated creator that
+    // returns a TerminalWidget is @ApiStatus.Internal, which the Marketplace verifier flags, so this stays
+    // the safest public option.
     private fun openTerminalAndRun(project: Project, prompt: FixPrompt) {
         // The prompt goes into a file rather than onto the command line: it is multi-line and
         // contains finding text from the Sigrid API, which must never be interpreted by a shell.
         // The command line only ever holds text we control plus quoted paths.
         val promptFile = writePromptFile(prompt.text)
-        // createShellWidget + executeCommand (rather than the internal shellCommand-at-launch
-        // overload) is the only public way to open a tab and feed it a command; executeCommand
-        // queues the command until the shell is actually ready, so it doesn't race with
-        // startup-file sourcing.
         val widget = TerminalToolWindowManager.getInstance(project).createShellWidget(
             /* workingDirectory = */ project.basePath,
             /* tabName = */ SigridBundle["finding.fixit.terminal.tab.title"],
             /* requestFocus = */ true,
             /* deferSessionStartUntilUiShown = */ true,
         )
-        ShellTerminalWidget.toShellJediTermWidgetOrThrow(widget).executeCommand(buildCommand(prompt.lead, promptFile))
+        // sendCommandToExecute is defined on the engine-agnostic TerminalWidget interface, so it works with
+        // both the classic (JediTerm) and the Reworked terminal, which is the default engine in 2026.1. The
+        // old ShellTerminalWidget.toShellJediTermWidgetOrThrow(...) unwrap throws on the Reworked terminal.
+        // The command is buffered until the shell is ready, so it doesn't race with startup-file sourcing.
+        widget.sendCommandToExecute(buildCommand(prompt.lead, promptFile))
     }
 
     private fun writePromptFile(text: String): Path {
