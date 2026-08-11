@@ -4,12 +4,14 @@ import com.intellij.openapi.project.Project
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.mappers.RefactoringCandidateMapper
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
+import com.softwareimprovementgroup.plugins.sigrid.models.FixItContext
 import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.MaintainabilityFindingStatus
 import com.softwareimprovementgroup.plugins.sigrid.models.MaintainabilitySeverity
 import com.softwareimprovementgroup.plugins.sigrid.models.RefactoringCandidate
 import com.softwareimprovementgroup.plugins.sigrid.models.snakeCaseToTitleCase
 import com.softwareimprovementgroup.plugins.sigrid.models.toSeverityEmoji
+import com.softwareimprovementgroup.plugins.sigrid.promptBuilders.FindingCategory
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
 class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>(
@@ -52,6 +54,14 @@ class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>
         title = description,
         severityEmoji = severity.toSeverityEmoji(),
         fileLocations = fileLocations,
+    )
+
+    override fun RefactoringCandidate.toFixItContext() = FixItContext(
+        category = FindingCategory.MAINTAINABILITY,
+        severity = severity.toRiskIcon().label,
+        title = "$displayLocation: $description",
+        fileLocations = fileLocations,
+        href = href,
     )
 
     override fun RefactoringCandidate.getHref() = href

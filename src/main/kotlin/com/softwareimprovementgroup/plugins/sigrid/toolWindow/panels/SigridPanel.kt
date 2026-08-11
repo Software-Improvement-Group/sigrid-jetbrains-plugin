@@ -11,8 +11,10 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
+import com.softwareimprovementgroup.plugins.sigrid.models.FixItContext
 import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
+import com.softwareimprovementgroup.plugins.sigrid.services.aiAgents.AiAgentRegistry
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsListener
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsTopic
 import java.awt.BorderLayout
@@ -55,6 +57,7 @@ abstract class SigridPanel<T>(
     protected abstract fun T.matchesSearch(query: String): Boolean
     protected abstract fun T.getFileLocations(): List<FileLocation>
     protected abstract fun T.toIssueFinding(): IssueFinding
+    protected abstract fun T.toFixItContext(): FixItContext
 
     protected open fun T.isEditable(): Boolean = false
     protected open fun T.getId(): String = ""
@@ -145,6 +148,9 @@ abstract class SigridPanel<T>(
     private val createIssueButton: CreateIssueButton<T> by lazy {
         CreateIssueButton(project, jiraHandler, azureDevOpsHandler, table)
     }
+    private val fixItHandler: FixItHandler<T> by lazy {
+        FixItHandler(project) { it.toFixItContext() }
+    }
     private val contextMenuHandler: FindingContextMenuHandler<T> by lazy {
         FindingContextMenuHandler(
             project = project,
@@ -163,6 +169,8 @@ abstract class SigridPanel<T>(
             navigator = navigator,
             openCreateJiraIssue = { jiraHandler.openCreateJiraIssueDialog() },
             openCreateAzureDevOpsWorkItem = { azureDevOpsHandler.openCreateAzureDevOpsWorkItemDialog() },
+            isFixItAvailable = { AiAgentRegistry.agents.any { agent -> agent.isAvailable() } },
+            openFixIt = { fixItHandler.openFixIt(it) },
         )
     }
 

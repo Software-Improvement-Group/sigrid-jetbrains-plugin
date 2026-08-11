@@ -34,6 +34,8 @@ class FindingContextMenuHandler<T>(
     private val navigator: FindingNavigator,
     private val openCreateJiraIssue: () -> Unit,
     private val openCreateAzureDevOpsWorkItem: () -> Unit,
+    private val isFixItAvailable: () -> Boolean,
+    private val openFixIt: (List<T>) -> Unit,
 ) {
     fun handlePopupTrigger(e: MouseEvent) {
         if (!e.isPopupTrigger) return
@@ -47,7 +49,8 @@ class FindingContextMenuHandler<T>(
         val projectConfig = SigridProjectConfiguration.getInstance(project)
         val isJiraConfigured = projectConfig.isJiraConfigured
         val isAzureDevOpsConfigured = projectConfig.isAzureDevOpsConfigured
-        if (navigableLocations == null && href == null && !hasEditable && !isJiraConfigured && !isAzureDevOpsConfigured) return
+        val fixItAvailable = isFixItAvailable()
+        if (navigableLocations == null && href == null && !hasEditable && !isJiraConfigured && !isAzureDevOpsConfigured && !fixItAvailable) return
 
         val popup = JPopupMenu()
         if (navigableLocations != null) {
@@ -82,6 +85,12 @@ class FindingContextMenuHandler<T>(
             popup.add(adoItem)
         }
 
+        if (fixItAvailable) {
+            val fixItItem = JMenuItem(SigridBundle["finding.fixit.menu.item"])
+            fixItItem.addActionListener { openFixIt(selectedFindings()) }
+            popup.add(fixItItem)
+        }
+
         popup.show(e.component, e.x, e.y)
     }
 
@@ -109,20 +118,17 @@ class FindingContextMenuHandler<T>(
         return if (locations.isNotEmpty()) locations else null
     }
 
-    private fun hasEditableFindings(): Boolean {
+    private fun selectedFindings(): List<T> {
         val displayedFindings = getDisplayedFindings()
         return table.selectedRows
             .map { table.convertRowIndexToModel(it) }
             .mapNotNull { displayedFindings.getOrNull(it) }
-            .any { isEditable(it) }
     }
 
+    private fun hasEditableFindings(): Boolean = selectedFindings().any { isEditable(it) }
+
     private fun selectedEditableFindings(): List<T>? {
-        val displayedFindings = getDisplayedFindings()
-        val findings = table.selectedRows
-            .map { table.convertRowIndexToModel(it) }
-            .mapNotNull { displayedFindings.getOrNull(it) }
-            .filter { isEditable(it) }
+        val findings = selectedFindings().filter { isEditable(it) }
         if (findings.size > MAX_EDIT_ITEMS_SIZE) {
             Messages.showErrorDialog(table, SigridBundle["finding.edit.too.many", MAX_EDIT_ITEMS_SIZE])
             return null

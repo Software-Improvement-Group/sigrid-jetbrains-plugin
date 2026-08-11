@@ -5,11 +5,13 @@ import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.mappers.SecurityFindingMapper
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.models.FindingStatus
+import com.softwareimprovementgroup.plugins.sigrid.models.FixItContext
 import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.RiskSeverity
 import com.softwareimprovementgroup.plugins.sigrid.models.SecurityFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.snakeCaseToTitleCase
 import com.softwareimprovementgroup.plugins.sigrid.models.toSeverityEmoji
+import com.softwareimprovementgroup.plugins.sigrid.promptBuilders.FindingCategory
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
 class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(
@@ -52,6 +54,14 @@ class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(
         title = type,
         severityEmoji = severity.toSeverityEmoji(),
         fileLocations = fileLocations,
+    )
+
+    override fun SecurityFinding.toFixItContext() = FixItContext(
+        category = FindingCategory.SECURITY,
+        severity = severity.toRiskIcon().label,
+        title = "$displayFilePath: $type",
+        fileLocations = fileLocations,
+        href = href,
     )
 
     override fun SecurityFinding.getHref() = href
