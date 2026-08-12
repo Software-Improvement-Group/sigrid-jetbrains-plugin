@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.1] - 2026-08-12
+
+### Added
+
+- **"Fix with AI" (Claude Code) integration** — a **Fix with AI** toolbar button and a **Fix it with Claude Code** right-click context menu item are available on all three panels (Maintainability, Security, Open Source Health) whenever Claude Code is detected. Selecting one or more findings and triggering the action builds a natural-language prompt — including a Customer/System context line, a numbered list of findings with severities and file locations, and per-category Sigrid slash commands (`/sigrid:sigrid-improve`, `/sigrid:fix-osh-risk`) when the Sigrid MCP plugin is detected — then hands it off to the `claude` CLI in a terminal, mirroring the Sigrid VS Code extension.
+- **Sigrid MCP detection** — the plugin checks `~/.claude/settings.json` to confirm the Sigrid MCP plugin is installed and enabled; when it isn't, the generated prompt falls back to plain instructions and a once-per-session notification offers an **Install Sigrid Plugin** link.
+- **AI agent abstraction** (`AiAgentProvider` / `AiAgentRegistry` / `ClaudeCodeProvider`) — a pluggable registry for AI coding agents so additional agents can be added alongside Claude Code in the future.
+- **Injection-safe terminal handoff** — the prompt is written to a temporary Markdown file and referenced via `claude "... Read that file first." --add-dir <dir>`, keeping Sigrid-sourced finding text off the shell command line.
+
 ## [1.0.0] - 2026-07-13
 
 ### Added
