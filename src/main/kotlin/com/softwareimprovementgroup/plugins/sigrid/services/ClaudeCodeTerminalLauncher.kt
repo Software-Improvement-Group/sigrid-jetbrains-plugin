@@ -1,13 +1,12 @@
 package com.softwareimprovementgroup.plugins.sigrid.services
 
-import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
-import com.softwareimprovementgroup.plugins.sigrid.NOTIFICATION_GROUP_ID
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FixPrompt
+import com.softwareimprovementgroup.plugins.sigrid.notifySigrid
 import org.jetbrains.plugins.terminal.TerminalToolWindowManager
 import java.nio.file.Files
 import java.nio.file.Path
@@ -19,23 +18,29 @@ private const val PROMPT_DIR_NAME = "sigrid-fix-prompts"
 object ClaudeCodeTerminalLauncher {
     private val promptCounter = AtomicInteger(0)
 
-    fun launch(project: Project, prompt: FixPrompt) {
-        ApplicationManager.getApplication().invokeLater {
+    fun launch(project: Project, prompt: FixPrompt, claudeCli: String = CLAUDE_CLI) {
+        ApplicationManager.getApplication().executeOnPooledThread {
             try {
-                openTerminalAndRun(project, prompt)
+                // The prompt goes into a file rather than onto the command line: it is multi-line and
+                // contains finding text from the Sigrid API, which must never be interpreted by a shell.
+                // The command line only ever holds text we control plus quoted paths.
+                val promptFile = writePromptFile(prompt.text)
+                ApplicationManager.getApplication().invokeLater {
+                    try {
+                        openTerminalAndRun(project, prompt, promptFile, claudeCli)
+                    } catch (e: Throwable) {
+                        thisLogger().warn("Failed to open terminal for Claude Code", e)
+                        notifyLaunchFailed(project)
+                    }
+                }
             } catch (e: Throwable) {
-                thisLogger().warn("Failed to open terminal for Claude Code", e)
-                notifyLaunchFailed(project)
+                thisLogger().warn("Failed to write Claude Code prompt file", e)
+                ApplicationManager.getApplication().invokeLater { notifyLaunchFailed(project) }
             }
         }
     }
 
-    private fun openTerminalAndRun(project: Project, prompt: FixPrompt) {
-        // The prompt goes into a file rather than onto the command line: it is multi-line and
-        // contains finding text from the Sigrid API, which must never be interpreted by a shell.
-        // The command line only ever holds text we control plus quoted paths.
-        val promptFile = writePromptFile(prompt.text)
-
+    private fun openTerminalAndRun(project: Project, prompt: FixPrompt, promptFile: Path, claudeCli: String) {
         // TODO: Replace createShellWidget with a stable non-deprecated alternative.
         // createShellWidget returns the engine-agnostic com.intellij.terminal.ui.TerminalWidget and is only
         // soft-deprecated (plain @Deprecated, not scheduled for removal); every non-deprecated creator that
@@ -47,7 +52,7 @@ object ClaudeCodeTerminalLauncher {
             true,
             true,
         )
-        widget.sendCommandToExecute(buildCommand(prompt.lead, promptFile))
+        widget.sendCommandToExecute(buildCommand(prompt.lead, promptFile, claudeCli))
     }
 
     private fun writePromptFile(text: String): Path {
@@ -59,19 +64,16 @@ object ClaudeCodeTerminalLauncher {
     }
 
     private fun notifyLaunchFailed(project: Project) {
-        NotificationGroupManager.getInstance()
-            .getNotificationGroup(NOTIFICATION_GROUP_ID)
-            .createNotification(SigridBundle["finding.fixit.terminal.error"], NotificationType.ERROR)
-            .notify(project)
+        notifySigrid(project, SigridBundle["finding.fixit.terminal.error"], NotificationType.ERROR)
     }
 
     /**
      * `claude [options] [prompt]` accepts the prompt positionally, but `--add-dir` is variadic and
      * would swallow it, so every option has to come after the prompt.
      */
-    internal fun buildCommand(lead: String, promptFile: Path): String {
+    internal fun buildCommand(lead: String, promptFile: Path, claudeCli: String = CLAUDE_CLI): String {
         val message = "${sanitizeForCommandLine(lead)} The findings to fix are described in $promptFile. Read that file first."
-        return "$CLAUDE_CLI ${quote(message)} --add-dir ${quote(promptFile.parent.toString())}"
+        return "$claudeCli ${quote(message)} --add-dir ${quote(promptFile.parent.toString())}"
     }
 
     internal fun quote(value: String): String = "\"${value.replace("\"", "\\\"")}\""

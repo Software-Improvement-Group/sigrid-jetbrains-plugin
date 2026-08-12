@@ -1,5 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.promptBuilders
 
+import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.models.FixItContext
 import com.softwareimprovementgroup.plugins.sigrid.models.FixPrompt
@@ -31,23 +32,22 @@ data class FixPromptOptions(
  * `fix-prompt-builder.ts` so both integrations speak to the agent identically.
  */
 object FixItPromptBuilder {
+    // Slash commands are protocol strings the agent parses literally, not language for a human -
+    // they must stay exactly as written and are never localized.
     private val SLASH_COMMANDS = mapOf(
         FindingCategory.MAINTAINABILITY to "/sigrid:sigrid-improve autonomous",
         FindingCategory.OPEN_SOURCE_HEALTH to "/sigrid:fix-osh-risk",
     )
 
     private val PLAIN_INSTRUCTIONS = mapOf(
-        FindingCategory.MAINTAINABILITY to "Fix the following Sigrid maintainability findings.",
-        FindingCategory.SECURITY to "Fix the following Sigrid security findings.",
-        FindingCategory.OPEN_SOURCE_HEALTH to "Remediate the following Sigrid open source health risks.",
+        FindingCategory.MAINTAINABILITY to SigridBundle["finding.fixit.prompt.maintainability"],
+        FindingCategory.SECURITY to SigridBundle["finding.fixit.prompt.security"],
+        FindingCategory.OPEN_SOURCE_HEALTH to SigridBundle["finding.fixit.prompt.opensourcehealth"],
     )
 
-    private const val MIXED_INSTRUCTION = "Fix the following Sigrid findings."
+    private val MIXED_INSTRUCTION = SigridBundle["finding.fixit.prompt.mixed"]
 
-    private val MCP_HINT =
-        "Note: the Sigrid MCP server and Sigrid skills were not detected in this environment. " +
-            "For the best experience, install the Sigrid plugin: ${SigridMcpDetection.SIGRID_MCP_INSTALL_URL}. " +
-            "The findings below are self-contained, so you can work from them directly in the meantime."
+    private val MCP_HINT = SigridBundle["finding.fixit.prompt.mcphint", SigridMcpDetection.SIGRID_MCP_INSTALL_URL]
 
     /** The Sigrid MCP tools worth naming per category. Read-only on purpose. */
     private val MCP_TOOLS = mapOf(

@@ -21,8 +21,14 @@ class ClaudeCodeProvider : AiAgentProvider {
 
     override fun hasSigridMcp(): Boolean = SigridMcpDetection.hasSigridClaudePlugin()
 
-    override fun handoff(project: Project, prompt: FixPrompt) =
-        ClaudeCodeTerminalLauncher.launch(project, prompt)
+    override fun handoff(project: Project, prompt: FixPrompt) {
+        val resolvedPath = ClaudeCodeDetector.getInstance().resolvedPathCached()
+        if (resolvedPath != null) {
+            ClaudeCodeTerminalLauncher.launch(project, prompt, resolvedPath)
+        } else {
+            ClaudeCodeTerminalLauncher.launch(project, prompt)
+        }
+    }
 
     override fun getMcpInstallHint(): McpInstallHint = McpInstallHint(
         message = SigridBundle["finding.fixit.mcp.notdetected.message"],

@@ -47,4 +47,14 @@ class ClaudeCodeTerminalLauncherTest {
     fun quote_escapesDoubleQuotes() {
         assertTrue(ClaudeCodeTerminalLauncher.quote("say \"hi\"") == "\"say \\\"hi\\\"\"")
     }
+
+    @Test
+    fun buildCommand_usesResolvedClaudeCliWhenProvided() {
+        val command = ClaudeCodeTerminalLauncher.buildCommand(
+            "Fix the following Sigrid findings.",
+            promptFile,
+            claudeCli = "/opt/homebrew/bin/claude",
+        )
+        assertTrue(command.startsWith("/opt/homebrew/bin/claude \""))
+    }
 }

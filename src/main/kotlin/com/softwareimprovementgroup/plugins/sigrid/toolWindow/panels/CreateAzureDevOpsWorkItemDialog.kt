@@ -1,8 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
 import com.intellij.ide.BrowserUtil
-import com.intellij.notification.NotificationAction
-import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -17,6 +15,7 @@ import com.intellij.util.ui.HTMLEditorKitBuilder
 import com.intellij.util.ui.JBUI
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
+import com.softwareimprovementgroup.plugins.sigrid.notifySigrid
 import com.softwareimprovementgroup.plugins.sigrid.services.AzureDevOpsApiService
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import com.softwareimprovementgroup.plugins.sigrid.services.encodeUrlPathSegment
@@ -28,8 +27,6 @@ import javax.swing.JEditorPane
 import javax.swing.JPanel
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
-
-private const val NOTIFICATION_GROUP_ID = "Sigrid"
 
 class CreateAzureDevOpsWorkItemDialog(
     private val project: Project,
@@ -186,15 +183,13 @@ class CreateAzureDevOpsWorkItemDialog(
     }
 
     private fun showSuccessNotification(result: com.softwareimprovementgroup.plugins.sigrid.services.AzureDevOpsWorkItemResult) {
-        val notification = NotificationGroupManager.getInstance()
-            .getNotificationGroup(NOTIFICATION_GROUP_ID)
-            .createNotification(SigridBundle["azuredevops.create.success", result.id], NotificationType.INFORMATION)
         val browserUrl = result.browserUrl
-        if (browserUrl != null) {
-            notification.addAction(NotificationAction.createSimple(SigridBundle["azuredevops.create.open"]) {
-                BrowserUtil.browse(browserUrl)
-            })
-        }
-        notification.notify(project)
+        notifySigrid(
+            project,
+            SigridBundle["azuredevops.create.success", result.id],
+            NotificationType.INFORMATION,
+            actionLabel = if (browserUrl != null) SigridBundle["azuredevops.create.open"] else null,
+            onAction = if (browserUrl != null) ({ BrowserUtil.browse(browserUrl) }) else null,
+        )
     }
 }

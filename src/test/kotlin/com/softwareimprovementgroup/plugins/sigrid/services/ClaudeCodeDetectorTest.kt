@@ -39,6 +39,25 @@ class ClaudeCodeDetectorTest {
     }
 
     @Test
+    fun resolvedPathCached_beforeDetection_returnsNull() {
+        assertNull(ClaudeCodeDetector().resolvedPathCached())
+    }
+
+    @Test
+    fun detect_pathFound_cachesResolvedPath() {
+        val detector = ClaudeCodeDetector()
+        detector.detect(resolvePath = { "/opt/homebrew/bin/claude" }, runVersionCheck = { true })
+        assertEquals("/opt/homebrew/bin/claude", detector.resolvedPathCached())
+    }
+
+    @Test
+    fun detect_pathNotFound_leavesResolvedPathCacheUntouched() {
+        val detector = ClaudeCodeDetector()
+        detector.detect(resolvePath = { null }, runVersionCheck = { true })
+        assertNull(detector.resolvedPathCached())
+    }
+
+    @Test
     fun findInWellKnownDirectories_returnsHomebrewPathWhenPresent() {
         val found = findInWellKnownDirectories(home = "/Users/tester") { it.path == "/opt/homebrew/bin/claude" }
         assertEquals("/opt/homebrew/bin/claude", found)

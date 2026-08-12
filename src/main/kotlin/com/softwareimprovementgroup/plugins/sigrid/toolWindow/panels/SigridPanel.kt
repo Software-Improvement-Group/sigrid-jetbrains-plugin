@@ -14,6 +14,8 @@ import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.models.FixItContext
 import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
+import com.softwareimprovementgroup.plugins.sigrid.services.aiAgents.AiAgentAvailabilityListener
+import com.softwareimprovementgroup.plugins.sigrid.services.aiAgents.AiAgentAvailabilityTopic
 import com.softwareimprovementgroup.plugins.sigrid.services.aiAgents.AiAgentRegistry
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsListener
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsTopic
@@ -240,6 +242,15 @@ abstract class SigridPanel<T>(
         }
         project.messageBus.connect().subscribe(SigridSettingsTopic.PROJECT, listener)
         ApplicationManager.getApplication().messageBus.connect().subscribe(SigridSettingsTopic.GLOBAL, listener)
+        ApplicationManager.getApplication().messageBus.connect().subscribe(
+            AiAgentAvailabilityTopic.TOPIC,
+            AiAgentAvailabilityListener { ApplicationManager.getApplication().invokeLater { updateFixWithAiButtonState() } },
+        )
+    }
+
+    private fun updateFixWithAiButtonState() {
+        fixWithAiButton.isEnabled = table.selectedRows.isNotEmpty() &&
+            AiAgentRegistry.agents.any { it.isAvailable() }
     }
 
     private fun setupEditButton() {
@@ -260,8 +271,7 @@ abstract class SigridPanel<T>(
                     val modelRow = table.convertRowIndexToModel(viewRow)
                     displayedFindings.getOrNull(modelRow)?.getHref().orEmpty().isNotEmpty()
                 }
-                fixWithAiButton.isEnabled = table.selectedRows.isNotEmpty() &&
-                    AiAgentRegistry.agents.any { it.isAvailable() }
+                updateFixWithAiButtonState()
                 createIssueButton.updateButtonState()
             }
         }
