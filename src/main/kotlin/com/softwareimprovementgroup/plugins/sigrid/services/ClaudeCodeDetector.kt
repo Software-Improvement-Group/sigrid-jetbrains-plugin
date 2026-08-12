@@ -54,9 +54,8 @@ class ClaudeCodeDetector {
         fun getInstance(): ClaudeCodeDetector =
             ApplicationManager.getApplication().getService(ClaudeCodeDetector::class.java)
 
-        @Suppress("DEPRECATION")
         fun isTerminalPluginEnabled(): Boolean =
-            PluginManagerCore.getPlugin(PluginId.getId(TERMINAL_PLUGIN_ID))?.isEnabled == true
+            !PluginManagerCore.isDisabled(PluginId.getId(TERMINAL_PLUGIN_ID))
     }
 }
 
