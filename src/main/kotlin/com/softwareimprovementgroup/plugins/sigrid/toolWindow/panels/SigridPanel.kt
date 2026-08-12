@@ -187,6 +187,13 @@ abstract class SigridPanel<T>(
         addActionListener { openFirstSelectedFindingInBrowser() }
     }
 
+    private val fixWithAiButton = JButton(SigridBundle["finding.fixit.button"]).apply {
+        isEnabled = false
+        isFocusable = false
+        toolTipText = SigridBundle["finding.fixit.button.tooltip"]
+        addActionListener { fixItHandler.openFixIt(contextMenuHandler.selectedFindings()) }
+    }
+
     private val fileFilterPanel = FileFilterPanel(project) { applyFilter() }
 
     private val cardLayout = CardLayout()
@@ -253,6 +260,8 @@ abstract class SigridPanel<T>(
                     val modelRow = table.convertRowIndexToModel(viewRow)
                     displayedFindings.getOrNull(modelRow)?.getHref().orEmpty().isNotEmpty()
                 }
+                fixWithAiButton.isEnabled = table.selectedRows.isNotEmpty() &&
+                    AiAgentRegistry.agents.any { it.isAvailable() }
                 createIssueButton.updateButtonState()
             }
         }
@@ -280,6 +289,7 @@ abstract class SigridPanel<T>(
             add(editButton, gbc)
             add(openInSigridButton, gbc)
             add(createIssueButton.button, gbc)
+            add(fixWithAiButton, gbc)
         }
         val toolbar = JPanel(BorderLayout()).apply {
             add(leftButtons, BorderLayout.WEST)

@@ -118,7 +118,7 @@ class FindingContextMenuHandler<T>(
         return if (locations.isNotEmpty()) locations else null
     }
 
-    private fun selectedFindings(): List<T> {
+    internal fun selectedFindings(): List<T> {
         val displayedFindings = getDisplayedFindings()
         return table.selectedRows
             .map { table.convertRowIndexToModel(it) }
