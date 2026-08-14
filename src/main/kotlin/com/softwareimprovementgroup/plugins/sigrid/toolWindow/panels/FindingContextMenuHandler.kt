@@ -1,14 +1,13 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
 import com.intellij.ide.BrowserUtil
-import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.table.JBTable
-import com.softwareimprovementgroup.plugins.sigrid.NOTIFICATION_GROUP_ID
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
+import com.softwareimprovementgroup.plugins.sigrid.notifySigrid
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import java.awt.event.KeyEvent
@@ -34,6 +33,8 @@ class FindingContextMenuHandler<T>(
     private val navigator: FindingNavigator,
     private val openCreateJiraIssue: () -> Unit,
     private val openCreateAzureDevOpsWorkItem: () -> Unit,
+    private val isFixItAvailable: () -> Boolean,
+    private val openFixIt: (List<T>) -> Unit,
 ) {
     fun handlePopupTrigger(e: MouseEvent) {
         if (!e.isPopupTrigger) return
@@ -47,21 +48,28 @@ class FindingContextMenuHandler<T>(
         val projectConfig = SigridProjectConfiguration.getInstance(project)
         val isJiraConfigured = projectConfig.isJiraConfigured
         val isAzureDevOpsConfigured = projectConfig.isAzureDevOpsConfigured
-        if (navigableLocations == null && href == null && !hasEditable && !isJiraConfigured && !isAzureDevOpsConfigured) return
+        val fixItAvailable = isFixItAvailable()
+        if (navigableLocations == null && href == null && !hasEditable && !isJiraConfigured && !isAzureDevOpsConfigured && !fixItAvailable) return
 
+        val popup = buildContextMenu(e, navigableLocations, href, hasEditable, isJiraConfigured, isAzureDevOpsConfigured, fixItAvailable)
+        popup.show(e.component, e.x, e.y)
+    }
+
+    private fun buildContextMenu(
+        e: MouseEvent,
+        navigableLocations: List<FileLocation>?,
+        href: String?,
+        hasEditable: Boolean,
+        isJiraConfigured: Boolean,
+        isAzureDevOpsConfigured: Boolean,
+        fixItAvailable: Boolean,
+    ): JPopupMenu {
         val popup = JPopupMenu()
-        if (navigableLocations != null) {
-            val navigateItem = JMenuItem(SigridBundle["finding.navigate.menu.item"])
-            navigateItem.accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0)
-            navigateItem.addActionListener { navigator.navigate(navigableLocations, e) }
-            popup.add(navigateItem)
+        popup.addIfAvailable(navigableLocations != null, "finding.navigate.menu.item", KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0)) {
+            navigator.navigate(navigableLocations!!, e)
         }
-
-        if (hasEditable) {
-            val editItem = JMenuItem(SigridBundle["finding.edit.menu.item"])
-            editItem.accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)
-            editItem.addActionListener { triggerEditForSelectedRow() }
-            popup.add(editItem)
+        popup.addIfAvailable(hasEditable, "finding.edit.menu.item", KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)) {
+            triggerEditForSelectedRow()
         }
 
         val openItem = JMenuItem(SigridBundle["finding.open.in.sigrid.menu.item"])
@@ -70,19 +78,18 @@ class FindingContextMenuHandler<T>(
         openItem.addActionListener { href?.let { BrowserUtil.browse(it) } }
         popup.add(openItem)
 
-        if (isJiraConfigured) {
-            val jiraItem = JMenuItem(SigridBundle["jira.create.menu.item"])
-            jiraItem.addActionListener { openCreateJiraIssue() }
-            popup.add(jiraItem)
-        }
+        popup.addIfAvailable(isJiraConfigured, "jira.create.menu.item") { openCreateJiraIssue() }
+        popup.addIfAvailable(isAzureDevOpsConfigured, "azuredevops.create.menu.item") { openCreateAzureDevOpsWorkItem() }
+        popup.addIfAvailable(fixItAvailable, "finding.fixit.menu.item") { openFixIt(selectedFindings()) }
+        return popup
+    }
 
-        if (isAzureDevOpsConfigured) {
-            val adoItem = JMenuItem(SigridBundle["azuredevops.create.menu.item"])
-            adoItem.addActionListener { openCreateAzureDevOpsWorkItem() }
-            popup.add(adoItem)
-        }
-
-        popup.show(e.component, e.x, e.y)
+    private fun JPopupMenu.addIfAvailable(available: Boolean, textKey: String, accelerator: KeyStroke? = null, action: () -> Unit) {
+        if (!available) return
+        val item = JMenuItem(SigridBundle[textKey])
+        accelerator?.let { item.accelerator = it }
+        item.addActionListener { action() }
+        add(item)
     }
 
     fun triggerEditForSelectedRow() {
@@ -109,20 +116,17 @@ class FindingContextMenuHandler<T>(
         return if (locations.isNotEmpty()) locations else null
     }
 
-    private fun hasEditableFindings(): Boolean {
+    internal fun selectedFindings(): List<T> {
         val displayedFindings = getDisplayedFindings()
         return table.selectedRows
             .map { table.convertRowIndexToModel(it) }
             .mapNotNull { displayedFindings.getOrNull(it) }
-            .any { isEditable(it) }
     }
 
+    private fun hasEditableFindings(): Boolean = selectedFindings().any { isEditable(it) }
+
     private fun selectedEditableFindings(): List<T>? {
-        val displayedFindings = getDisplayedFindings()
-        val findings = table.selectedRows
-            .map { table.convertRowIndexToModel(it) }
-            .mapNotNull { displayedFindings.getOrNull(it) }
-            .filter { isEditable(it) }
+        val findings = selectedFindings().filter { isEditable(it) }
         if (findings.size > MAX_EDIT_ITEMS_SIZE) {
             Messages.showErrorDialog(table, SigridBundle["finding.edit.too.many", MAX_EDIT_ITEMS_SIZE])
             return null
@@ -162,10 +166,8 @@ class FindingContextMenuHandler<T>(
             },
         )
         if (dialog.showAndGet()) {
-            NotificationGroupManager.getInstance()
-                .getNotificationGroup(NOTIFICATION_GROUP_ID)
-                .createNotification(if (count == 1) SigridBundle["finding.edit.success"] else SigridBundle["finding.edit.success.plural", count], NotificationType.INFORMATION)
-                .notify(project)
+            val message = if (count == 1) SigridBundle["finding.edit.success"] else SigridBundle["finding.edit.success.plural", count]
+            notifySigrid(project, message, NotificationType.INFORMATION)
             onReload()
         }
     }

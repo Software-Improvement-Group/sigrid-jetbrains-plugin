@@ -11,8 +11,12 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
+import com.softwareimprovementgroup.plugins.sigrid.models.FixItContext
 import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
+import com.softwareimprovementgroup.plugins.sigrid.services.aiAgents.AiAgentAvailabilityListener
+import com.softwareimprovementgroup.plugins.sigrid.services.aiAgents.AiAgentAvailabilityTopic
+import com.softwareimprovementgroup.plugins.sigrid.services.aiAgents.AiAgentRegistry
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsListener
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsTopic
 import java.awt.BorderLayout
@@ -55,6 +59,7 @@ abstract class SigridPanel<T>(
     protected abstract fun T.matchesSearch(query: String): Boolean
     protected abstract fun T.getFileLocations(): List<FileLocation>
     protected abstract fun T.toIssueFinding(): IssueFinding
+    protected abstract fun T.toFixItContext(): FixItContext
 
     protected open fun T.isEditable(): Boolean = false
     protected open fun T.getId(): String = ""
@@ -145,6 +150,9 @@ abstract class SigridPanel<T>(
     private val createIssueButton: CreateIssueButton<T> by lazy {
         CreateIssueButton(project, jiraHandler, azureDevOpsHandler, table)
     }
+    private val fixItHandler: FixItHandler<T> by lazy {
+        FixItHandler(project) { it.toFixItContext() }
+    }
     private val contextMenuHandler: FindingContextMenuHandler<T> by lazy {
         FindingContextMenuHandler(
             project = project,
@@ -163,6 +171,8 @@ abstract class SigridPanel<T>(
             navigator = navigator,
             openCreateJiraIssue = { jiraHandler.openCreateJiraIssueDialog() },
             openCreateAzureDevOpsWorkItem = { azureDevOpsHandler.openCreateAzureDevOpsWorkItemDialog() },
+            isFixItAvailable = { AiAgentRegistry.agents.any { agent -> agent.isAvailable() } },
+            openFixIt = { fixItHandler.openFixIt(it) },
         )
     }
 
@@ -177,6 +187,13 @@ abstract class SigridPanel<T>(
         isFocusable = false
         toolTipText = SigridBundle["finding.open.in.sigrid.button.tooltip"]
         addActionListener { openFirstSelectedFindingInBrowser() }
+    }
+
+    private val fixWithAiButton = JButton(SigridBundle["finding.fixit.button"]).apply {
+        isEnabled = false
+        isFocusable = false
+        toolTipText = SigridBundle["finding.fixit.button.tooltip"]
+        addActionListener { fixItHandler.openFixIt(contextMenuHandler.selectedFindings()) }
     }
 
     private val fileFilterPanel = FileFilterPanel(project) { applyFilter() }
@@ -225,6 +242,15 @@ abstract class SigridPanel<T>(
         }
         project.messageBus.connect().subscribe(SigridSettingsTopic.PROJECT, listener)
         ApplicationManager.getApplication().messageBus.connect().subscribe(SigridSettingsTopic.GLOBAL, listener)
+        ApplicationManager.getApplication().messageBus.connect().subscribe(
+            AiAgentAvailabilityTopic.TOPIC,
+            AiAgentAvailabilityListener { ApplicationManager.getApplication().invokeLater { updateFixWithAiButtonState() } },
+        )
+    }
+
+    private fun updateFixWithAiButtonState() {
+        fixWithAiButton.isEnabled = table.selectedRows.isNotEmpty() &&
+            AiAgentRegistry.agents.any { it.isAvailable() }
     }
 
     private fun setupEditButton() {
@@ -245,6 +271,7 @@ abstract class SigridPanel<T>(
                     val modelRow = table.convertRowIndexToModel(viewRow)
                     displayedFindings.getOrNull(modelRow)?.getHref().orEmpty().isNotEmpty()
                 }
+                updateFixWithAiButtonState()
                 createIssueButton.updateButtonState()
             }
         }
@@ -272,6 +299,7 @@ abstract class SigridPanel<T>(
             add(editButton, gbc)
             add(openInSigridButton, gbc)
             add(createIssueButton.button, gbc)
+            add(fixWithAiButton, gbc)
         }
         val toolbar = JPanel(BorderLayout()).apply {
             add(leftButtons, BorderLayout.WEST)

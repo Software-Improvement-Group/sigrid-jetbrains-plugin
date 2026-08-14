@@ -1,8 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
 import com.intellij.ide.BrowserUtil
-import com.intellij.notification.NotificationAction
-import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -18,6 +16,7 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
+import com.softwareimprovementgroup.plugins.sigrid.notifySigrid
 import com.softwareimprovementgroup.plugins.sigrid.services.JiraApiService
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import java.awt.GridBagConstraints
@@ -26,8 +25,6 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
-
-private const val NOTIFICATION_GROUP_ID = "Sigrid"
 
 class CreateJiraIssueDialog(
     private val project: Project,
@@ -116,13 +113,9 @@ class CreateJiraIssueDialog(
                 ApplicationManager.getApplication().invokeLater({
                     close(OK_EXIT_CODE)
                     val issueUrl = "${config.jiraBaseUrl}/browse/$issueKey"
-                    NotificationGroupManager.getInstance()
-                        .getNotificationGroup(NOTIFICATION_GROUP_ID)
-                        .createNotification(SigridBundle["jira.create.success", issueKey], NotificationType.INFORMATION)
-                        .addAction(NotificationAction.createSimple(SigridBundle["jira.create.open"]) {
-                            BrowserUtil.browse(issueUrl)
-                        })
-                        .notify(project)
+                    notifySigrid(project, SigridBundle["jira.create.success", issueKey], NotificationType.INFORMATION, SigridBundle["jira.create.open"]) {
+                        BrowserUtil.browse(issueUrl)
+                    }
                 }, modality)
             } catch (e: Exception) {
                 ApplicationManager.getApplication().invokeLater({

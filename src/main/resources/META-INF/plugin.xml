@@ -31,12 +31,15 @@
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends optional="true" config-file="withTerminal.xml">org.jetbrains.plugins.terminal</depends>
 
     <resource-bundle>messages.Sigrid</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
         <postStartupActivity
                 implementation="com.softwareimprovementgroup.plugins.sigrid.services.UsageStatisticsActivity"/>
+        <postStartupActivity
+                implementation="com.softwareimprovementgroup.plugins.sigrid.services.ClaudeCodeWarmupActivity"/>
         <applicationConfigurable
                 instance="com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsConfigurable"
                 id="com.softwareimprovementgroup.plugins.sigrid.settings"
