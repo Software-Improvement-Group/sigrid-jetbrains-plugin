@@ -61,7 +61,7 @@ object RefactoringCandidateMapper {
     private fun description(category: RefactoringCategory, r: RefactoringCandidateResponse): String {
         val name = r.name?.replace(",", ", ")
         return when (category) {
-            RefactoringCategory.Duplication     -> SigridBundle["mapper.description.duplication", r.weight, displayLocation(r, noPathPrefix = true)]
+            RefactoringCategory.Duplication     -> SigridBundle["mapper.description.duplication", r.loc ?: 0, displayLocation(r, noPathPrefix = true)]
             RefactoringCategory.UnitSize        -> SigridBundle["mapper.description.unit.size", name ?: "", r.weight]
             RefactoringCategory.UnitComplexity  -> SigridBundle["mapper.description.unit.complexity", name ?: "", r.mcCabe ?: 0]
             RefactoringCategory.UnitInterfacing -> SigridBundle["mapper.description.unit.interfacing", name ?: "", r.parameters ?: 0]
