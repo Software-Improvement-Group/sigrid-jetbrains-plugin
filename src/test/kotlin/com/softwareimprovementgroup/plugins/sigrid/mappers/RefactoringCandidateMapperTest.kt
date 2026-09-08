@@ -175,7 +175,7 @@ class RefactoringCandidateMapperTest {
     @Test
     fun map_description_duplication_twoLocations() {
         // noPathPrefix=true uses prefix="" so toDisplayFilePath("src/A.kt", "") returns "A.kt" (no ".../" prefix)
-        val response = makeResponse(weight = 30, locations = listOf(loc("svc", "src/A.kt"), loc("svc", "src/B.kt")))
+        val response = makeResponse(loc = 30, locations = listOf(loc("svc", "src/A.kt"), loc("svc", "src/B.kt")))
         val result = RefactoringCandidateMapper.map(makeMap(RefactoringCategory.Duplication, listOf(response)), "")
         assertEquals("30 lines of code are duplicated between A.kt and B.kt.", result[0].description)
     }
@@ -183,7 +183,7 @@ class RefactoringCandidateMapperTest {
     @Test
     fun map_description_duplication_fileWithNoDir_noPathPrefix() {
         // noPathPrefix=true means files without a directory get no prefix added
-        val response = makeResponse(weight = 10, locations = listOf(loc("svc", "Foo.kt")))
+        val response = makeResponse(loc = 10, locations = listOf(loc("svc", "Foo.kt")))
         val result = RefactoringCandidateMapper.map(makeMap(RefactoringCategory.Duplication, listOf(response)), "")
         assertEquals("10 lines of code are duplicated between Foo.kt.", result[0].description)
     }
