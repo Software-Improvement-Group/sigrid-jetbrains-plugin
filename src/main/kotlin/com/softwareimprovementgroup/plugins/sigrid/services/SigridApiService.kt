@@ -34,6 +34,18 @@ class SigridApiService {
         .connectTimeout(CONNECT_TIMEOUT)
         .build()
 
+    // Several tabs (Maintainability/Security/OSH, and the merged Prioritized tab) fetch the same
+    // data per refresh cycle; this cache avoids re-issuing identical HTTP requests for each tab.
+    // Cleared via invalidateCache(), called by the manual refresh action.
+    private val responseCache = java.util.concurrent.ConcurrentHashMap<String, Any>()
+
+    fun invalidateCache() = responseCache.clear()
+
+    private fun <T : Any> cached(key: String, load: () -> T): T {
+        @Suppress("UNCHECKED_CAST")
+        return responseCache.computeIfAbsent(key) { load() } as T
+    }
+
     private fun buildRequest(url: String, projectConfig: SigridProjectConfiguration): HttpRequest.Builder {
         requireHttpsUrl(url)
         val apiKey = projectConfig.effectiveApiKey
@@ -65,27 +77,36 @@ class SigridApiService {
 
     fun getOpenSourceHealthFindings(project: Project): OpenSourceHealthResponse {
         val projectConfig = SigridProjectConfiguration.getInstance(project)
-        val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "osh-findings", projectConfig.effectiveCustomer, projectConfig.system)
-        val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
-        checkStatus(response)
-        return gson.fromJson(response.body(), OpenSourceHealthResponse::class.java)
+        val cacheKey = "osh-findings:${projectConfig.effectiveCustomer}:${projectConfig.system}"
+        return cached(cacheKey) {
+            val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "osh-findings", projectConfig.effectiveCustomer, projectConfig.system)
+            val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
+            checkStatus(response)
+            gson.fromJson(response.body(), OpenSourceHealthResponse::class.java)
+        }
     }
 
     fun getSecurityFindings(project: Project): List<SecurityFindingResponse> {
         val projectConfig = SigridProjectConfiguration.getInstance(project)
-        val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "security-findings", projectConfig.effectiveCustomer, projectConfig.system)
-        val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
-        checkStatus(response)
-        val type = object : TypeToken<List<SecurityFindingResponse>>() {}.type
-        return gson.fromJson(response.body(), type)
+        val cacheKey = "security-findings:${projectConfig.effectiveCustomer}:${projectConfig.system}"
+        return cached(cacheKey) {
+            val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "security-findings", projectConfig.effectiveCustomer, projectConfig.system)
+            val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
+            checkStatus(response)
+            val type = object : TypeToken<List<SecurityFindingResponse>>() {}.type
+            gson.fromJson<List<SecurityFindingResponse>>(response.body(), type)
+        }
     }
 
     fun getRefactoringCandidates(project: Project, category: RefactoringCategory): RefactoringCandidatesResponse {
         val projectConfig = SigridProjectConfiguration.getInstance(project)
-        val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "refactoring-candidates", projectConfig.effectiveCustomer, projectConfig.system, category.value)
-        val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
-        checkStatus(response)
-        return gson.fromJson(response.body(), RefactoringCandidatesResponse::class.java)
+        val cacheKey = "refactoring-candidates:${projectConfig.effectiveCustomer}:${projectConfig.system}:${category.value}"
+        return cached(cacheKey) {
+            val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "refactoring-candidates", projectConfig.effectiveCustomer, projectConfig.system, category.value)
+            val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
+            checkStatus(response)
+            gson.fromJson(response.body(), RefactoringCandidatesResponse::class.java)
+        }
     }
 
     fun getAllRefactoringCandidates(project: Project): Map<RefactoringCategory, RefactoringCandidatesResponse> {

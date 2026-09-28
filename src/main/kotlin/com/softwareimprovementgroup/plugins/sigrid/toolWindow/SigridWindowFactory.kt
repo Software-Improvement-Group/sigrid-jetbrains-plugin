@@ -11,8 +11,10 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.ContentFactory
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridProjectSettingsConfigurable
+import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.MaintainabilityPanel
 import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.OpenSourceHealthPanel
+import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.PrioritizedPanel
 import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.SecurityPanel
 
 
@@ -21,11 +23,12 @@ class SigridWindowFactory : ToolWindowFactory, DumbAware {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val contentFactory = ContentFactory.getInstance()
 
+        val prioritizedPanel = PrioritizedPanel(project)
         val maintainabilityPanel = MaintainabilityPanel(project)
         val securityPanel = SecurityPanel(project)
         val oshPanel = OpenSourceHealthPanel(project)
 
-        val allPanels = listOf(maintainabilityPanel, securityPanel, oshPanel)
+        val allPanels = listOf(prioritizedPanel, maintainabilityPanel, securityPanel, oshPanel)
         allPanels.forEach { panel ->
             panel.onSearchChange = { query -> allPanels.filter { it !== panel }.forEach { it.setSearchText(query) } }
             panel.onFileFilterChange = { value -> allPanels.filter { it !== panel }.forEach { it.setActiveFileOnly(value) } }
@@ -33,6 +36,7 @@ class SigridWindowFactory : ToolWindowFactory, DumbAware {
 
         val refreshAction = object : AnAction(SigridBundle["panel.refresh.button"], null, AllIcons.Actions.Refresh) {
             override fun actionPerformed(e: AnActionEvent) {
+                SigridApiService.getInstance().invalidateCache()
                 allPanels.forEach { it.loadData() }
             }
         }
@@ -43,6 +47,7 @@ class SigridWindowFactory : ToolWindowFactory, DumbAware {
         }
         toolWindow.setTitleActions(listOf(refreshAction, settingsAction))
 
+        toolWindow.contentManager.addContent(contentFactory.createContent(prioritizedPanel, SigridBundle["prioritized.tab"], false))
         toolWindow.contentManager.addContent(contentFactory.createContent(maintainabilityPanel, SigridBundle["maintainability.tab"], false))
         toolWindow.contentManager.addContent(contentFactory.createContent(securityPanel, SigridBundle["security.tab"], false))
         toolWindow.contentManager.addContent(contentFactory.createContent(oshPanel, SigridBundle["osh.tab"], false))

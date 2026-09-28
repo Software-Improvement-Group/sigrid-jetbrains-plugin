@@ -60,6 +60,11 @@ The plugin targets IntelliJ IDEA 2026.1+ and is written in Kotlin 2.3.21. Packag
 
 **Icons:** `src/main/resources/icons/` — `sigrid.png` (light) and `sigrid_dark.png` (dark); the platform selects the dark variant automatically.
 
+**Services (`services/` package):** beyond the core Sigrid API/config classes above, this package also holds several unrelated concerns — worth knowing before adding to it:
+- *Issue-tracker write-back* — `IssueTrackerApiUtils` (shared internal helpers: HTTP client builder, URL normalization, Basic-auth header, path encoding), `JiraApiService`, `AzureDevOpsApiService` — both `@Service(APP)`, create work items in the respective tracker from an `IssueFinding`
+- *AI-agent integration* — `ClaudeCodeDetector` (`@Service(APP)`, detects/caches whether the `claude` CLI is available), `ClaudeCodeWarmupActivity` (`ProjectActivity` that warms up detection on project open), `ClaudeCodeTerminalLauncher` (writes fix-prompt files and opens them in the IDE terminal running `claude`), `SigridMcpDetection`/`SigridToolNames` (models Sigrid's MCP server tool names; deliberately excludes `update_finding_status` since the agent must stay read-only), and the `aiAgents/` subpackage (`AiAgentProvider`/`AiAgentRegistry`/`AiAgentAvailabilityTopic`/`ClaudeCodeProvider` — a small pluggable registry for AI agent integrations)
+- *Telemetry* — `UsageStatisticsActivity` (`ProjectActivity` pinging a Matomo analytics endpoint with the customer name on project open)
+
 ## Key Configuration
 
 - `gradle.properties` — plugin version, group ID, GitHub repo URL

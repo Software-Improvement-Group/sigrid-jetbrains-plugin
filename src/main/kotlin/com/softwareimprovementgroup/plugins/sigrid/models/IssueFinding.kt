@@ -24,3 +24,11 @@ fun RiskSeverity.toSeverityEmoji(): String = when (this) {
     RiskSeverity.None        -> "🟢"
     RiskSeverity.Unknown     -> "⚪"
 }
+
+fun PriorityRank.toSeverityEmoji(): String = when (this) {
+    PriorityRank.Critical -> "🔴"
+    PriorityRank.High     -> "🔴"
+    PriorityRank.Medium   -> "🟠"
+    PriorityRank.Low      -> "🟡"
+    PriorityRank.Unknown  -> "⚪"
+}
