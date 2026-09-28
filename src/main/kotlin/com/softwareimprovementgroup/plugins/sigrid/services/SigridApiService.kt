@@ -98,6 +98,17 @@ class SigridApiService {
         }
     }
 
+    fun getReliabilityFindings(project: Project): List<SecurityFindingResponse> {
+        val projectConfig = SigridProjectConfiguration.getInstance(project)
+        val cacheKey = "reliability-findings:${projectConfig.effectiveCustomer}:${projectConfig.system}"
+        return cached(cacheKey) {
+            val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "reliability-findings", projectConfig.effectiveCustomer, projectConfig.system)
+            val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
+            val type = object : TypeToken<List<SecurityFindingResponse>>() {}.type
+            gson.fromJson<List<SecurityFindingResponse>>(response.body(), type)
+        }
+    }
+
     fun getRefactoringCandidates(project: Project, category: RefactoringCategory): RefactoringCandidatesResponse {
         val projectConfig = SigridProjectConfiguration.getInstance(project)
         val cacheKey = "refactoring-candidates:${projectConfig.effectiveCustomer}:${projectConfig.system}:${category.value}"

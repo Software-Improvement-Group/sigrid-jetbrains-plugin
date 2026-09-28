@@ -38,6 +38,7 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
         val api = SigridApiService.getInstance()
         val maintainability = RefactoringCandidateMapper.map(api.getAllRefactoringCandidates(project), subsystem)
         val security = SecurityFindingMapper.map(api.getSecurityFindings(project), subsystem)
+        val reliability = SecurityFindingMapper.map(api.getReliabilityFindings(project), subsystem)
         val openSourceHealth = OpenSourceHealthMapper.map(api.getOpenSourceHealthFindings(project), subsystem)
         return PrioritizedFindingMapper.map(maintainability, security, openSourceHealth)
     }
