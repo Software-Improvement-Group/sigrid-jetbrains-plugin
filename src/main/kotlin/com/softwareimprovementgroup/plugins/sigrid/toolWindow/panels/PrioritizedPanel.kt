@@ -40,7 +40,9 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
         val security = SecurityFindingMapper.map(api.getSecurityFindings(project), subsystem)
         val reliability = SecurityFindingMapper.map(api.getReliabilityFindings(project), subsystem)
         val openSourceHealth = OpenSourceHealthMapper.map(api.getOpenSourceHealthFindings(project), subsystem)
-        return PrioritizedFindingMapper.map(maintainability, security, openSourceHealth)
+        // .testCodeFindings is intentionally unused here - test code is laned out of the main list per
+        // Epic 432 section 3, but no dedicated view for that lane exists in the UI yet.
+        return PrioritizedFindingMapper.map(maintainability, security, reliability, openSourceHealth).findings
     }
 
     override fun PrioritizedFinding.matchesSearch(query: String) =

@@ -5,8 +5,17 @@ import com.softwareimprovementgroup.plugins.sigrid.promptBuilders.FindingCategor
 enum class PriorityCapability(val label: String) {
     Maintainability(FindingCategory.MAINTAINABILITY),
     Security(FindingCategory.SECURITY),
+    Reliability(FindingCategory.RELIABILITY),
     OpenSourceHealth(FindingCategory.OPEN_SOURCE_HEALTH),
 }
+
+// `findings` is the main ranked list; `testCodeFindings` is the same shape but laned out separately
+// (per Epic 432 section 3: test code is excluded from the main list, not hidden entirely). No UI surfaces
+// testCodeFindings yet - PrioritizedPanel currently only renders `findings`.
+data class PrioritizedFindingResult(
+    val findings: List<PrioritizedFinding>,
+    val testCodeFindings: List<PrioritizedFinding>,
+)
 
 data class PrioritizedFinding(
     val id: String,
@@ -38,9 +47,12 @@ fun RefactoringCandidate.toPrioritizedFinding() = PrioritizedFinding(
     currentStatusValue = status.apiValue,
 )
 
-fun SecurityFinding.toPrioritizedFinding() = PrioritizedFinding(
+// Reliability findings share this exact response/domain shape with Security (both come from
+// SecurityFindingMapper.map() - see SigridApiService.getReliabilityFindings()), so the capability is
+// passed in rather than hardcoded, letting the same finding type serve both tabs.
+fun SecurityFinding.toPrioritizedFinding(capability: PriorityCapability = PriorityCapability.Security) = PrioritizedFinding(
     id = id,
-    capability = PriorityCapability.Security,
+    capability = capability,
     priorityRank = severity.toPriorityRank(),
     displayLocation = displayFilePath,
     description = type,

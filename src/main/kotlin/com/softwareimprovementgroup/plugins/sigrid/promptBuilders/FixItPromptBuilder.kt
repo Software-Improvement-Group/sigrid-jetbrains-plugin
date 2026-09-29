@@ -15,6 +15,7 @@ import com.softwareimprovementgroup.plugins.sigrid.services.SigridToolNames
 object FindingCategory {
     const val MAINTAINABILITY = "Maintainability"
     const val SECURITY = "Security"
+    const val RELIABILITY = "Reliability"
     const val OPEN_SOURCE_HEALTH = "Open Source Health"
 }
 
