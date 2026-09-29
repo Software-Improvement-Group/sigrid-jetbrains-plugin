@@ -87,4 +87,20 @@ class SigridApiServiceTest {
             service.joinUrl("https://example.com/api/", "findings", "../other", "sys")
         )
     }
+
+    @Test
+    fun withDateRangeQuery_appendsStartAndEndDate() {
+        assertEquals(
+            "https://example.com/api/objectives-evaluation/cust?startDate=2026-01-01&endDate=2026-06-01",
+            service.withDateRangeQuery("https://example.com/api/objectives-evaluation/cust", "2026-01-01", "2026-06-01")
+        )
+    }
+
+    @Test
+    fun withDateRangeQuery_specialCharacterInDate_encoded() {
+        assertEquals(
+            "https://example.com/api?startDate=2026%2F01%2F01&endDate=2026-06-01",
+            service.withDateRangeQuery("https://example.com/api", "2026/01/01", "2026-06-01")
+        )
+    }
 }

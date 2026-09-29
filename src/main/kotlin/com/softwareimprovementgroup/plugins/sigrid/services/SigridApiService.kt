@@ -75,6 +75,9 @@ class SigridApiService {
         return "$normalizedBase/$path"
     }
 
+    internal fun withDateRangeQuery(url: String, startDate: String, endDate: String): String =
+        "$url?startDate=${URLEncoder.encode(startDate, "UTF-8")}&endDate=${URLEncoder.encode(endDate, "UTF-8")}"
+
     fun getOpenSourceHealthFindings(project: Project): OpenSourceHealthResponse {
         val projectConfig = SigridProjectConfiguration.getInstance(project)
         val cacheKey = "osh-findings:${projectConfig.effectiveCustomer}:${projectConfig.system}"
@@ -104,6 +107,7 @@ class SigridApiService {
         return cached(cacheKey) {
             val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "reliability-findings", projectConfig.effectiveCustomer, projectConfig.system)
             val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
+            checkStatus(response)
             val type = object : TypeToken<List<SecurityFindingResponse>>() {}.type
             gson.fromJson<List<SecurityFindingResponse>>(response.body(), type)
         }
@@ -134,6 +138,32 @@ class SigridApiService {
             val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
             checkStatus(response)
             gson.fromJson(response.body(), ArchitectureQualityRawResponse::class.java)
+        }
+    }
+
+    // This end point is portfolio-wide (no {system} path segment), so the raw response is filtered down to
+    // the current project's system here, once, rather than making every caller repeat that filter.
+    fun getObjectivesEvaluation(project: Project, startDate: String, endDate: String): List<ObjectiveEvaluationResponse> {
+        val projectConfig = SigridProjectConfiguration.getInstance(project)
+        val cacheKey = "objectives-evaluation:${projectConfig.effectiveCustomer}:${projectConfig.system}:$startDate:$endDate"
+        return cached(cacheKey) {
+            val base = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "objectives-evaluation", projectConfig.effectiveCustomer)
+            val url = withDateRangeQuery(base, startDate, endDate)
+            val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
+            checkStatus(response)
+            val evaluation = gson.fromJson(response.body(), ObjectivesEvaluationResponse::class.java)
+            evaluation.systems.firstOrNull { it.systemName == projectConfig.system }?.objectives ?: emptyList()
+        }
+    }
+
+    fun getSystemMetadata(project: Project): SystemMetadataResponse {
+        val projectConfig = SigridProjectConfiguration.getInstance(project)
+        val cacheKey = "system-metadata:${projectConfig.effectiveCustomer}:${projectConfig.system}"
+        return cached(cacheKey) {
+            val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "system-metadata", projectConfig.effectiveCustomer, projectConfig.system)
+            val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
+            checkStatus(response)
+            gson.fromJson(response.body(), SystemMetadataResponse::class.java)
         }
     }
 
