@@ -14,6 +14,7 @@ class OpenSourceHealthMapperTest {
         properties: List<Property> = emptyList(),
         occurrences: List<String?>? = listOf("svc/pom.xml"),
         externalReferences: List<OshExternalReference>? = null,
+        bomRef: String? = null,
     ) = OshDependencyResponse(
         type = "library",
         name = name,
@@ -24,15 +25,29 @@ class OpenSourceHealthMapperTest {
         licenses = emptyList(),
         evidence = occurrences?.let { locs -> OshEvidenceResponse(locs.map { OshOccurrence(it) }) },
         externalReferences = externalReferences,
+        bomRef = bomRef,
     )
 
-    private fun makeResponse(components: List<OshDependencyResponse>) = OpenSourceHealthResponse(
+    private fun makeResponse(
+        components: List<OshDependencyResponse>,
+        vulnerabilities: List<OshVulnerabilityResponse> = emptyList(),
+    ) = OpenSourceHealthResponse(
         bomFormat = "CycloneDX",
         specVersion = "1.4",
         version = 1,
         metadata = OshMetadataResponse(timestamp = "", properties = emptyList()),
         components = components,
-        vulnerabilities = emptyList(),
+        vulnerabilities = vulnerabilities,
+    )
+
+    private fun makeVulnerability(
+        id: String = "CVE-2021-0000",
+        refs: List<String>,
+        ratings: List<OshVulnerabilityRatingResponse>? = listOf(OshVulnerabilityRatingResponse(score = 5.0, severity = "medium", method = "CVSSv3")),
+    ) = OshVulnerabilityResponse(
+        id = id,
+        ratings = ratings,
+        affects = refs.map { OshVulnerabilityAffectsResponse(it) },
     )
 
     private fun prop(name: String, value: String) = Property(name, value)
@@ -263,5 +278,74 @@ class OpenSourceHealthMapperTest {
         val component = makeComponent(externalReferences = null)
         val result = OpenSourceHealthMapper.map(makeResponse(listOf(component)), "")
         assertEquals(null, result[0].href)
+    }
+
+    // vulnerabilities
+
+    @Test
+    fun map_vulnerabilities_matchedByBomRef_attachesToComponent() {
+        val component = makeComponent(name = "lib", bomRef = "pkg:maven/lib@1.0")
+        val vulnerability = makeVulnerability(id = "CVE-2021-1111", refs = listOf("pkg:maven/lib@1.0"))
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component), listOf(vulnerability)), "")
+        assertEquals(listOf("CVE-2021-1111"), result[0].vulnerabilities.map { it.id })
+    }
+
+    @Test
+    fun map_vulnerabilities_bomRefNull_fallsBackToPurl() {
+        val component = makeComponent(name = "lib", bomRef = null)
+        val vulnerability = makeVulnerability(id = "CVE-2021-2222", refs = listOf("pkg:maven/lib@1.0"))
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component), listOf(vulnerability)), "")
+        assertEquals(listOf("CVE-2021-2222"), result[0].vulnerabilities.map { it.id })
+    }
+
+    @Test
+    fun map_vulnerabilities_noMatchingRef_isEmptyList() {
+        val component = makeComponent(name = "lib", bomRef = "pkg:maven/lib@1.0")
+        val vulnerability = makeVulnerability(refs = listOf("pkg:maven/other@2.0"))
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component), listOf(vulnerability)), "")
+        assertTrue(result[0].vulnerabilities.isEmpty())
+    }
+
+    @Test
+    fun map_vulnerabilities_noVulnerabilitiesInResponse_isEmptyList() {
+        val component = makeComponent(name = "lib", bomRef = "pkg:maven/lib@1.0")
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component)), "")
+        assertTrue(result[0].vulnerabilities.isEmpty())
+    }
+
+    @Test
+    fun map_vulnerabilities_multipleRatings_picksWorstSeverity() {
+        val component = makeComponent(name = "lib", bomRef = "pkg:maven/lib@1.0")
+        val vulnerability = makeVulnerability(
+            refs = listOf("pkg:maven/lib@1.0"),
+            ratings = listOf(
+                OshVulnerabilityRatingResponse(score = 4.3, severity = "medium", method = "CVSSv2"),
+                OshVulnerabilityRatingResponse(score = 9.1, severity = "critical", method = "CVSSv3"),
+            ),
+        )
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component), listOf(vulnerability)), "")[0]
+        assertEquals(RiskSeverity.Critical, result.vulnerabilities[0].severity)
+        assertEquals(9.1, result.vulnerabilities[0].score)
+        assertEquals("CVSSv3", result.vulnerabilities[0].method)
+    }
+
+    @Test
+    fun map_vulnerabilities_nullRatings_severityIsUnknownAndScoreIsNull() {
+        val component = makeComponent(name = "lib", bomRef = "pkg:maven/lib@1.0")
+        val vulnerability = makeVulnerability(refs = listOf("pkg:maven/lib@1.0"), ratings = null)
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component), listOf(vulnerability)), "")[0]
+        assertEquals(RiskSeverity.Unknown, result.vulnerabilities[0].severity)
+        assertEquals(null, result.vulnerabilities[0].score)
+    }
+
+    @Test
+    fun map_vulnerabilities_multipleVulnerabilitiesAffectSameComponent_allAttached() {
+        val component = makeComponent(name = "lib", bomRef = "pkg:maven/lib@1.0")
+        val vulnerabilities = listOf(
+            makeVulnerability(id = "CVE-2021-1111", refs = listOf("pkg:maven/lib@1.0")),
+            makeVulnerability(id = "CVE-2021-3333", refs = listOf("pkg:maven/lib@1.0")),
+        )
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component), vulnerabilities), "")
+        assertEquals(listOf("CVE-2021-1111", "CVE-2021-3333"), result[0].vulnerabilities.map { it.id })
     }
 }
