@@ -124,6 +124,19 @@ class SigridApiService {
         return RefactoringCategory.entries.associateWith { getRefactoringCandidates(project, it) }
     }
 
+    // "raw" export of the full Architecture Quality graph - much heavier than the other end points, but it's
+    // the only place Sigrid exposes per-file Git activity (CHURN) today. See ArchitectureQualityMapper.
+    fun getArchitectureQualityRaw(project: Project): ArchitectureQualityRawResponse {
+        val projectConfig = SigridProjectConfiguration.getInstance(project)
+        val cacheKey = "architecture-quality-raw:${projectConfig.effectiveCustomer}:${projectConfig.system}"
+        return cached(cacheKey) {
+            val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "architecture-quality", projectConfig.effectiveCustomer, projectConfig.system, "raw")
+            val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
+            checkStatus(response)
+            gson.fromJson(response.body(), ArchitectureQualityRawResponse::class.java)
+        }
+    }
+
     fun editFinding(project: Project, findingId: String, findingRequest: FindingRequest) {
         val projectConfig = SigridProjectConfiguration.getInstance(project)
         val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "findings", projectConfig.effectiveCustomer, projectConfig.system, findingId)
