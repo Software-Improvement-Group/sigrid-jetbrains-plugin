@@ -103,4 +103,5 @@ class SigridApiServiceTest {
             service.withDateRangeQuery("https://example.com/api", "2026/01/01", "2026-06-01")
         )
     }
+
 }

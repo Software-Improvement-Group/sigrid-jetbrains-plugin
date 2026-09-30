@@ -2,6 +2,7 @@ package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
 import com.intellij.openapi.project.Project
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
+import com.softwareimprovementgroup.plugins.sigrid.mappers.ArchitectureQualityMapper
 import com.softwareimprovementgroup.plugins.sigrid.mappers.OpenSourceHealthMapper
 import com.softwareimprovementgroup.plugins.sigrid.mappers.PrioritizedFindingMapper
 import com.softwareimprovementgroup.plugins.sigrid.mappers.RefactoringCandidateMapper
@@ -9,11 +10,13 @@ import com.softwareimprovementgroup.plugins.sigrid.mappers.SecurityFindingMapper
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.models.FixItContext
 import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
+import com.softwareimprovementgroup.plugins.sigrid.models.OpenSourceHealthResponse
 import com.softwareimprovementgroup.plugins.sigrid.models.PriorityCapability
 import com.softwareimprovementgroup.plugins.sigrid.models.PriorityRank
 import com.softwareimprovementgroup.plugins.sigrid.models.PrioritizedFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.toSeverityEmoji
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
+import java.time.LocalDate
 
 class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
     project,
@@ -39,11 +42,34 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
         val maintainability = RefactoringCandidateMapper.map(api.getAllRefactoringCandidates(project), subsystem)
         val security = SecurityFindingMapper.map(api.getSecurityFindings(project), subsystem)
         val reliability = SecurityFindingMapper.map(api.getReliabilityFindings(project), subsystem)
-        val openSourceHealth = OpenSourceHealthMapper.map(api.getOpenSourceHealthFindings(project), subsystem)
+        val oshResponse = api.getOpenSourceHealthFindings(project)
+        val openSourceHealth = OpenSourceHealthMapper.map(oshResponse, subsystem)
+        val fileActivity = ArchitectureQualityMapper.map(api.getArchitectureQualityRaw(project), subsystem)
+        // Used by Gate 3 for Security/Reliability's severity-scale objectives only (targetMetAtEnd) - 90
+        // days is enough to establish that without depending on exactly when the user happens to refresh.
+        val objectives = api.getObjectivesEvaluation(project, ninetyDaysAgo(), today())
+        // Used by Gate 3 for Maintainability's rating-scale objective - the resolved target, with no date
+        // range dependency (see ObjectivesGate for why this replaces objectives-evaluation for this case).
+        val objectivesConfig = api.getObjectivesConfig(project)
+        // Gate 3's market-benchmark fallback, and Maintainability's "actual" side of its target comparison.
+        val currentRatings = currentRatings(api, oshResponse)
         // .testCodeFindings is intentionally unused here - test code is laned out of the main list per
         // Epic 432 section 3, but no dedicated view for that lane exists in the UI yet.
-        return PrioritizedFindingMapper.map(maintainability, security, reliability, openSourceHealth).findings
+        return PrioritizedFindingMapper.map(
+            maintainability, security, reliability, openSourceHealth, fileActivity, objectives, objectivesConfig, currentRatings,
+        ).findings
     }
+
+    private fun currentRatings(api: SigridApiService, oshResponse: OpenSourceHealthResponse): Map<PriorityCapability, Double> = buildMap {
+        // Normally a cache hit - MaintainabilityRatingWarmupActivity keeps this warm and re-fetches it on
+        // settings changes, rather than this refresh path hitting the network for it.
+        api.getMaintainabilityRating(project)?.let { put(PriorityCapability.Maintainability, it) }
+        // No separate call needed: OSH's rating already lives in the SBOM response fetched above.
+        OpenSourceHealthMapper.systemRating(oshResponse)?.let { put(PriorityCapability.OpenSourceHealth, it) }
+    }
+
+    private fun today(): String = LocalDate.now().toString()
+    private fun ninetyDaysAgo(): String = LocalDate.now().minusDays(90).toString()
 
     override fun PrioritizedFinding.matchesSearch(query: String) =
         capability.label.contains(query, ignoreCase = true) ||

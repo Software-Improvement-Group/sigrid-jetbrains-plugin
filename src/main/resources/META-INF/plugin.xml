@@ -40,6 +40,8 @@
                 implementation="com.softwareimprovementgroup.plugins.sigrid.services.UsageStatisticsActivity"/>
         <postStartupActivity
                 implementation="com.softwareimprovementgroup.plugins.sigrid.services.ClaudeCodeWarmupActivity"/>
+        <postStartupActivity
+                implementation="com.softwareimprovementgroup.plugins.sigrid.services.MaintainabilityRatingWarmupActivity"/>
         <applicationConfigurable
                 instance="com.softwareimprovementgroup.plugins.sigrid.settings.SigridSettingsConfigurable"
                 id="com.softwareimprovementgroup.plugins.sigrid.settings"

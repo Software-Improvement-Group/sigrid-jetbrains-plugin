@@ -39,7 +39,17 @@ class SigridApiService {
     // Cleared via invalidateCache(), called by the manual refresh action.
     private val responseCache = java.util.concurrent.ConcurrentHashMap<String, Any>()
 
+    // Maintainability's overall system rating (0.5-5.5 stars) only changes when Sigrid re-analyzes a
+    // system, not between manual refreshes - unlike responseCache, this is intentionally NOT cleared by
+    // invalidateCache(), and is kept warm by MaintainabilityRatingWarmupActivity instead of being
+    // re-fetched on every refresh. ConcurrentHashMap can't store null values directly, hence the
+    // CachedRating wrapper - a system genuinely having no rating is still a valid, cacheable result.
+    private data class CachedRating(val value: Double?)
+    private val maintainabilityRatingCache = java.util.concurrent.ConcurrentHashMap<String, CachedRating>()
+
     fun invalidateCache() = responseCache.clear()
+
+    fun invalidateMaintainabilityRatingCache() = maintainabilityRatingCache.clear()
 
     private fun <T : Any> cached(key: String, load: () -> T): T {
         @Suppress("UNCHECKED_CAST")
@@ -153,6 +163,52 @@ class SigridApiService {
             checkStatus(response)
             val evaluation = gson.fromJson(response.body(), ObjectivesEvaluationResponse::class.java)
             evaluation.systems.firstOrNull { it.systemName == projectConfig.system }?.objectives ?: emptyList()
+        }
+    }
+
+    // "maintainability" end point (system-level rating, not the /raw or /components variants) - used only
+    // by ObjectivesGate's Gate 3 market-benchmark fallback, for Maintainability findings with no explicit
+    // objective configured. Cached separately (see maintainabilityRatingCache above);
+    // MaintainabilityRatingWarmupActivity keeps this warm on project open and re-fetches it when Sigrid
+    // settings change, so this should almost always be a cache hit rather than a live HTTP call.
+    //
+    // Open Source Health's equivalent rating doesn't need a call here at all - it's already present in the
+    // OSH SBOM response this service fetches for the OSH tab (see OpenSourceHealthMapper.systemRating).
+    fun getMaintainabilityRating(project: Project): Double? {
+        val projectConfig = SigridProjectConfiguration.getInstance(project)
+        val cacheKey = "maintainability-rating:${projectConfig.effectiveCustomer}:${projectConfig.system}"
+        return maintainabilityRatingCache.computeIfAbsent(cacheKey) { CachedRating(fetchMaintainabilityRating(projectConfig)) }.value
+    }
+
+    private fun fetchMaintainabilityRating(projectConfig: SigridProjectConfiguration): Double? {
+        val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "maintainability", projectConfig.effectiveCustomer, projectConfig.system)
+        val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
+        checkStatusCode(response)
+        if (response.body().isNullOrBlank() || response.body() == "null") return null
+        return gson.fromJson(response.body(), MaintainabilityRatingResponse::class.java)?.maintainability
+    }
+
+    // "objectives config" end point - the resolved *target* per objective type, honoring Sigrid's own
+    // system-over-portfolio precedence, with no date range needed (unlike objectives-evaluation). Used by
+    // ObjectivesGate to compare Maintainability's live rating against its actual configured target
+    // instead of trusting objectives-evaluation's date-range-dependent targetMetAtEnd for that capability.
+    // Values are a mix of Double (rating/ratio types, e.g. MAINTAINABILITY: 4.0) and String (severity
+    // enum types, e.g. OSH_MAX_SEVERITY: "LOW") - Gson deserializes numbers to Double when the declared
+    // type is Any, so callers should check `as? Number` rather than `as? Double`.
+    fun getObjectivesConfig(project: Project): Map<String, Any> {
+        val projectConfig = SigridProjectConfiguration.getInstance(project)
+        val cacheKey = "objectives-config:${projectConfig.effectiveCustomer}:${projectConfig.system}"
+        return cached(cacheKey) {
+            val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "objectives", projectConfig.effectiveCustomer, projectConfig.system, "config")
+            val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
+            checkStatusCode(response)
+            // Unlike checkStatus()'s blank/"null" body handling elsewhere in this service: a system with
+            // zero objective coverage at all (a real, documented case - "orphan systems", design doc
+            // section 2.7) is expected to return an empty object here, not an error. Treat a blank body
+            // the same way, defensively, in case it comes back empty instead of "{}".
+            if (response.body().isNullOrBlank() || response.body() == "null") return@cached emptyMap()
+            val type = object : TypeToken<Map<String, Any>>() {}.type
+            gson.fromJson<Map<String, Any>>(response.body(), type) ?: emptyMap()
         }
     }
 

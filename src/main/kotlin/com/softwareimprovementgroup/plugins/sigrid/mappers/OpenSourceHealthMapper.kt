@@ -10,6 +10,14 @@ object OpenSourceHealthMapper {
     private const val ACTIVITY_RISK_KEY = "sigrid:risk:activity"
     private const val STABILITY_RISK_KEY = "sigrid:risk:stability"
     private const val MANAGEMENT_RISK_KEY = "sigrid:risk:management"
+    private const val SYSTEM_RATING_KEY = "sigrid:ratings:system"
+
+    // OSH's overall system rating (0.5-5.5 stars) - used only by ObjectivesGate's Gate 3 market-benchmark
+    // fallback. Lives in the SBOM's root metadata.properties (see the Sigrid API docs' OSH example
+    // response), not in a separate model-ratings-style endpoint, so no extra HTTP call is needed: this
+    // just reads a value out of the same response OpenSourceHealthPanel already fetches every refresh.
+    fun systemRating(response: OpenSourceHealthResponse): Double? =
+        response.metadata.properties.firstOrNull { it.name == SYSTEM_RATING_KEY }?.value?.toDoubleOrNull()
 
     fun map(response: OpenSourceHealthResponse, subsystem: String): List<OpenSourceHealthDependency> {
         val components = response.components.orEmpty()

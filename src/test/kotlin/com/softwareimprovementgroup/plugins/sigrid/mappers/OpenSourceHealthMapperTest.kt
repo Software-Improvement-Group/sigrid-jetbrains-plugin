@@ -31,11 +31,12 @@ class OpenSourceHealthMapperTest {
     private fun makeResponse(
         components: List<OshDependencyResponse>,
         vulnerabilities: List<OshVulnerabilityResponse> = emptyList(),
+        metadataProperties: List<Property> = emptyList(),
     ) = OpenSourceHealthResponse(
         bomFormat = "CycloneDX",
         specVersion = "1.4",
         version = 1,
-        metadata = OshMetadataResponse(timestamp = "", properties = emptyList()),
+        metadata = OshMetadataResponse(timestamp = "", properties = metadataProperties),
         components = components,
         vulnerabilities = vulnerabilities,
     )
@@ -362,5 +363,30 @@ class OpenSourceHealthMapperTest {
         )
         val result = OpenSourceHealthMapper.map(makeResponse(listOf(component), vulnerabilities), "")
         assertEquals(listOf("CVE-2021-1111"), result[0].vulnerabilities.map { it.id })
+    }
+
+    // systemRating - used only by ObjectivesGate's Gate 3 market-benchmark fallback
+
+    @Test
+    fun systemRating_propertyPresent_parsed() {
+        val response = makeResponse(emptyList(), metadataProperties = listOf(prop("sigrid:ratings:system", "3.89")))
+        assertEquals(3.89, OpenSourceHealthMapper.systemRating(response))
+    }
+
+    @Test
+    fun systemRating_propertyMissing_isNull() {
+        val response = makeResponse(emptyList(), metadataProperties = listOf(prop("sigrid:ratings:vulnerability", "3.3")))
+        assertEquals(null, OpenSourceHealthMapper.systemRating(response))
+    }
+
+    @Test
+    fun systemRating_noProperties_isNull() {
+        assertEquals(null, OpenSourceHealthMapper.systemRating(makeResponse(emptyList())))
+    }
+
+    @Test
+    fun systemRating_unparseableValue_isNull() {
+        val response = makeResponse(emptyList(), metadataProperties = listOf(prop("sigrid:ratings:system", "not-a-number")))
+        assertEquals(null, OpenSourceHealthMapper.systemRating(response))
     }
 }
