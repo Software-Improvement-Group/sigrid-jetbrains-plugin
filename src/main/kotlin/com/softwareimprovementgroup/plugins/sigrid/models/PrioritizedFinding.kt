@@ -30,6 +30,10 @@ data class PrioritizedFinding(
     val editable: Boolean,
     val statusOptions: List<Pair<String, String>>,
     val currentStatusValue: String,
+    // Null for every capability except Maintainability. Lets PriorityGrouper identify Duplication
+    // findings after the merge, since Duplication's severity is uninformative on its own (always
+    // VERY_HIGH - see design doc section 2.3) and needs separate "fix first" sequencing instead.
+    val refactoringCategory: RefactoringCategory? = null,
 )
 
 fun RefactoringCandidate.toPrioritizedFinding() = PrioritizedFinding(
@@ -45,6 +49,7 @@ fun RefactoringCandidate.toPrioritizedFinding() = PrioritizedFinding(
     editable = true,
     statusOptions = MaintainabilityFindingStatus.entries.map { "${it.icon} ${snakeCaseToTitleCase(it.apiValue)}" to it.apiValue },
     currentStatusValue = status.apiValue,
+    refactoringCategory = category,
 )
 
 // Reliability findings share this exact response/domain shape with Security (both come from

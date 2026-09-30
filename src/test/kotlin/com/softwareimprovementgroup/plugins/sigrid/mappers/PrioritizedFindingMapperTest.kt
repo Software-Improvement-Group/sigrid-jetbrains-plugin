@@ -9,17 +9,19 @@ class PrioritizedFindingMapperTest {
 
     private fun makeCandidate(
         id: String = "m1",
+        category: RefactoringCategory = RefactoringCategory.UnitSize,
         severity: MaintainabilitySeverity = MaintainabilitySeverity.High,
         status: MaintainabilityFindingStatus = MaintainabilityFindingStatus.Raw,
         displayLocation: String = "Foo.kt",
+        weight: Int = 100,
         fileLocations: List<FileLocation> = emptyList(),
     ) = RefactoringCandidate(
         id = id,
-        category = RefactoringCategory.UnitSize,
+        category = category,
         severity = severity,
         status = status,
         statusLabel = "",
-        weight = 100,
+        weight = weight,
         technology = "Kotlin",
         snapshotDate = "",
         name = "foo",
@@ -249,5 +251,83 @@ class PrioritizedFindingMapperTest {
         val result = map(openSourceHealth = listOf(makeOshDependency()))
         assertEquals(1, result.findings.size)
         assertTrue(result.testCodeFindings.isEmpty())
+    }
+
+    // dedup: OSH library-name collapsing
+
+    @Test
+    fun map_openSourceHealth_sameLibraryDifferentPurl_collapsedToOneFinding() {
+        val deps = listOf(makeOshDependency(name = "lib", purl = "pkg:pypi/lib@1"), makeOshDependency(name = "lib", purl = "pkg:pypi/lib@2"))
+        val result = map(openSourceHealth = deps)
+        assertEquals(1, result.findings.size)
+    }
+
+    // rank: Security and Reliability always first (product decision, confirmed with the epic's author)
+
+    @Test
+    fun map_lowSeveritySecurity_stillRankedAheadOfCriticalOtherFindings() {
+        val secLow = makeSecurityFinding(id = "sec-low", severity = RiskSeverity.Low)
+        val oshCritical = makeOshDependency(name = "critical-dep", risk = RiskSeverity.Critical)
+        val candidateCritical = makeCandidate(id = "maint-critical", severity = MaintainabilitySeverity.VeryHigh)
+
+        val result = map(maintainability = listOf(candidateCritical), security = listOf(secLow), openSourceHealth = listOf(oshCritical))
+
+        assertEquals("sec-low", result.findings.first().id)
+    }
+
+    @Test
+    fun map_lowSeverityReliability_stillRankedAheadOfCriticalOtherFindings() {
+        val relLow = makeSecurityFinding(id = "rel-low", severity = RiskSeverity.Low)
+        val oshCritical = makeOshDependency(name = "critical-dep", risk = RiskSeverity.Critical)
+
+        val result = map(reliability = listOf(relLow), openSourceHealth = listOf(oshCritical))
+
+        assertEquals("rel-low", result.findings.first().id)
+    }
+
+    @Test
+    fun map_securityAndReliability_mixedAndSortedTogetherBySeverity() {
+        val secLow = makeSecurityFinding(id = "sec-low", severity = RiskSeverity.Low, displayFilePath = "b.kt")
+        val relCritical = makeSecurityFinding(id = "rel-critical", severity = RiskSeverity.Critical, displayFilePath = "a.kt")
+
+        val result = map(security = listOf(secLow), reliability = listOf(relCritical))
+
+        // Both sit in the same "always first" bucket, sorted by severity - Reliability's Critical finding
+        // outranks Security's Low one, proving the bucket isn't secretly still Security-first internally.
+        assertEquals(listOf("rel-critical", "sec-low"), result.findings.map { it.id })
+    }
+
+    // group: duplication-first sequencing, end-to-end (applies within the remaining bucket only)
+
+    @Test
+    fun map_duplicationFirstEligible_sequencedAheadOfOtherFindingsButNotAheadOfSecurityOrReliability() {
+        // Overlap: "svc/A.kt" has both a Duplication finding and another Maintainability finding ->
+        // 1 of 2 duplication files overlaps = 50%, meeting PriorityGrouper's eligibility threshold.
+        val dupSmall = makeCandidate(id = "dupA", category = RefactoringCategory.Duplication, severity = MaintainabilitySeverity.VeryHigh, weight = 50, fileLocations = listOf(FileLocation("svc", "svc/A.kt")))
+        val dupBig = makeCandidate(id = "dupB", category = RefactoringCategory.Duplication, severity = MaintainabilitySeverity.VeryHigh, weight = 900, fileLocations = listOf(FileLocation("svc", "svc/B.kt")))
+        val otherOnA = makeCandidate(id = "otherOnA", category = RefactoringCategory.UnitSize, severity = MaintainabilitySeverity.Low, fileLocations = listOf(FileLocation("svc", "svc/A.kt")))
+        val secCritical = makeSecurityFinding(id = "sec-critical", severity = RiskSeverity.Critical, displayFilePath = "0-first-alphabetically.kt")
+        val relCritical = makeSecurityFinding(id = "rel-critical", severity = RiskSeverity.Critical, displayFilePath = "1-second-alphabetically.kt")
+
+        val result = map(maintainability = listOf(dupSmall, dupBig, otherOnA), security = listOf(secCritical), reliability = listOf(relCritical))
+
+        // Security/Reliability first no matter what, then Duplication sequenced ahead of the remaining
+        // Maintainability finding within what's left.
+        assertEquals(listOf("sec-critical", "rel-critical", "dupB", "dupA", "otherOnA"), result.findings.map { it.id })
+    }
+
+    @Test
+    fun map_duplicationFirstNotEligible_fallsBackToPlainSeveritySort() {
+        // No overlap between the Duplication file and any other Maintainability finding -> not eligible.
+        // Uses OSH rather than Security here so the assertion isolates the duplication-first fallback
+        // behavior, not the separate Security-always-first rule covered above.
+        val dup = makeCandidate(id = "dup", category = RefactoringCategory.Duplication, severity = MaintainabilitySeverity.VeryHigh, weight = 999, fileLocations = listOf(FileLocation("svc", "svc/A.kt")))
+        val oshCritical = makeOshDependency(name = "critical-dep", risk = RiskSeverity.Critical)
+
+        val result = map(maintainability = listOf(dup), openSourceHealth = listOf(oshCritical))
+
+        // Both map to PriorityRank.Critical, so the plain sort's displayLocation tie-break decides:
+        // "Foo.kt" (dup's default displayLocation) sorts before "critical-dep"'s displayLocation.
+        assertEquals(listOf("dup", "critical-dep"), result.findings.map { it.id })
     }
 }

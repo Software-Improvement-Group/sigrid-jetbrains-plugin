@@ -348,4 +348,19 @@ class OpenSourceHealthMapperTest {
         val result = OpenSourceHealthMapper.map(makeResponse(listOf(component), vulnerabilities), "")
         assertEquals(listOf("CVE-2021-1111", "CVE-2021-3333"), result[0].vulnerabilities.map { it.id })
     }
+
+    // Regression guard for the PriorityDeduplicator wiring in mapVulnerabilities(): the raw feed can list
+    // the same CVE twice for one component (design doc: one real dependency listed ~125 CVE entries but
+    // only 94 were unique) - this must come out deduplicated end-to-end through the real mapper, not just
+    // in PriorityDeduplicatorTest's isolated unit tests.
+    @Test
+    fun map_vulnerabilities_duplicateCveInRawFeed_dedupedInMappedResult() {
+        val component = makeComponent(name = "lib", bomRef = "pkg:maven/lib@1.0")
+        val vulnerabilities = listOf(
+            makeVulnerability(id = "CVE-2021-1111", refs = listOf("pkg:maven/lib@1.0")),
+            makeVulnerability(id = "CVE-2021-1111", refs = listOf("pkg:maven/lib@1.0")),
+        )
+        val result = OpenSourceHealthMapper.map(makeResponse(listOf(component), vulnerabilities), "")
+        assertEquals(listOf("CVE-2021-1111"), result[0].vulnerabilities.map { it.id })
+    }
 }

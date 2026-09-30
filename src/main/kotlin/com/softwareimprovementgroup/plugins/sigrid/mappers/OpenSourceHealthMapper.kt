@@ -33,7 +33,8 @@ object OpenSourceHealthMapper {
         vulnerabilitiesByRef: Map<String, List<OshVulnerabilityResponse>>,
     ): List<OshVulnerability> {
         val ref = component.bomRef ?: component.purl ?: return emptyList()
-        return vulnerabilitiesByRef[ref].orEmpty().map(::mapVulnerability)
+        val mapped = vulnerabilitiesByRef[ref].orEmpty().map(::mapVulnerability)
+        return PriorityDeduplicator.deduplicateVulnerabilities(mapped)
     }
 
     // A single CVE can carry ratings from multiple scoring methods (CVSSv2, CVSSv3, ...); take the worst
