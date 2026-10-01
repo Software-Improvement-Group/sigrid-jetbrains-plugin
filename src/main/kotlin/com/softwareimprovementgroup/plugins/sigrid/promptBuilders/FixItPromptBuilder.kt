@@ -21,6 +21,8 @@ object FindingCategory {
 data class FixPromptOptions(
     val supportsSlashCommands: Boolean,
     val mcpDetected: Boolean,
+    /** Only the pre-Axis Sigrid plugin is installed, which names its skills differently. */
+    val legacySkills: Boolean = false,
     /** Renders a tool name the way the agent links tools, or null if it cannot. */
     val resolveToolReference: (String) -> String? = { null },
 )
@@ -35,6 +37,13 @@ object FixItPromptBuilder {
     // Slash commands are protocol strings the agent parses literally, not language for a human -
     // they must stay exactly as written and are never localized.
     private val SLASH_COMMANDS = mapOf(
+        FindingCategory.MAINTAINABILITY to "/axis:autofix maintainability",
+        FindingCategory.SECURITY to "/axis:autofix security",
+        FindingCategory.OPEN_SOURCE_HEALTH to "/axis:autofix open-source",
+    )
+
+    // ponytail: legacy sigrid-ai-toolkit plugin, delete once it is retired.
+    private val LEGACY_SLASH_COMMANDS = mapOf(
         FindingCategory.MAINTAINABILITY to "/sigrid:sigrid-improve autonomous",
         FindingCategory.OPEN_SOURCE_HEALTH to "/sigrid:fix-osh-risk",
     )
@@ -59,8 +68,7 @@ object FixItPromptBuilder {
     private const val GUARDRAILS_TOOL = SigridToolNames.GUARDRAILS_QUALITY_CHECK
 
     fun build(findings: List<FixItContext>, context: FixPromptContext, options: FixPromptOptions): FixPrompt {
-        val canUseSkill = options.supportsSlashCommands && options.mcpDetected
-        val lead = buildLeadInstruction(findings, canUseSkill)
+        val lead = buildLeadInstruction(findings, slashCommandsFor(options))
         val sections = mutableListOf(lead, buildContextLine(context), buildFindingList(findings))
 
         if (!options.mcpDetected) {
@@ -71,6 +79,13 @@ object FixItPromptBuilder {
         }
 
         return FixPrompt(lead, sections.filter { it.isNotEmpty() }.joinToString("\n\n"))
+    }
+
+    /** The skills the agent can invoke: none without slash command support or a detected Sigrid plugin. */
+    private fun slashCommandsFor(options: FixPromptOptions): Map<String, String> = when {
+        !options.supportsSlashCommands || !options.mcpDetected -> emptyMap()
+        options.legacySkills -> LEGACY_SLASH_COMMANDS
+        else -> SLASH_COMMANDS
     }
 
     private fun isSlashCommand(lead: String): Boolean = lead.startsWith("/")
@@ -94,15 +109,10 @@ object FixItPromptBuilder {
         return lines.joinToString("\n")
     }
 
-    /**
-     * Prefers a Sigrid skill when the agent supports slash commands and every finding belongs to a
-     * category that has one. Security has no dedicated skill, so it always gets a plain instruction.
-     */
-    private fun buildLeadInstruction(findings: List<FixItContext>, supportsSlashCommands: Boolean): String {
+    /** Prefers a Sigrid skill when every finding belongs to a category that has one. */
+    private fun buildLeadInstruction(findings: List<FixItContext>, slashCommands: Map<String, String>): String {
         val category = singleCategory(findings) ?: return MIXED_INSTRUCTION
-        val slashCommand = SLASH_COMMANDS[category]
-        if (supportsSlashCommands && slashCommand != null) return slashCommand
-        return PLAIN_INSTRUCTIONS[category] ?: MIXED_INSTRUCTION
+        return slashCommands[category] ?: PLAIN_INSTRUCTIONS[category] ?: MIXED_INSTRUCTION
     }
 
     /** The category shared by all findings, or null for an empty or mixed selection. */

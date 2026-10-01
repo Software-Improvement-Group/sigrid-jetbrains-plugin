@@ -13,6 +13,7 @@ class FixItPromptBuilderTest {
     private val context = FixPromptContext(customer = "my-customer", system = "my-system")
     private val slashAgent = FixPromptOptions(supportsSlashCommands = true, mcpDetected = true)
     private val plainAgent = FixPromptOptions(supportsSlashCommands = false, mcpDetected = true)
+    private val legacyAgent = FixPromptOptions(supportsSlashCommands = true, mcpDetected = true, legacySkills = true)
 
     private val maintainability = FixItContext(
         category = FindingCategory.MAINTAINABILITY,
@@ -42,7 +43,7 @@ class FixItPromptBuilderTest {
     @Test
     fun maintainabilityOnly_withMcp_usesSkillAndContext() {
         val prompt = text(listOf(maintainability), slashAgent)
-        assertTrue(prompt.startsWith("/sigrid:sigrid-improve autonomous"))
+        assertTrue(prompt.startsWith("/axis:autofix maintainability"))
         assertTrue(prompt.contains("Customer: my-customer"))
         assertTrue(prompt.contains("System: my-system"))
     }
@@ -50,21 +51,30 @@ class FixItPromptBuilderTest {
     @Test
     fun oshOnly_withMcp_usesOshSkillAndLocation() {
         val prompt = text(listOf(osh), slashAgent)
-        assertTrue(prompt.startsWith("/sigrid:fix-osh-risk"))
+        assertTrue(prompt.startsWith("/axis:autofix open-source"))
         assertTrue(prompt.contains("Locations: package.json"))
     }
 
     @Test
-    fun securityOnly_fallsBackToPlainInstruction() {
-        val prompt = text(listOf(security), slashAgent)
-        assertFalse(prompt.contains("/sigrid:"))
-        assertTrue(prompt.startsWith("Fix the following Sigrid security findings."))
+    fun securityOnly_withMcp_usesSecuritySkill() {
+        assertTrue(text(listOf(security), slashAgent).startsWith("/axis:autofix security"))
+    }
+
+    @Test
+    fun legacyPlugin_usesLegacySkills() {
+        assertTrue(text(listOf(maintainability), legacyAgent).startsWith("/sigrid:sigrid-improve autonomous"))
+        assertTrue(text(listOf(osh), legacyAgent).startsWith("/sigrid:fix-osh-risk"))
+    }
+
+    @Test
+    fun legacyPlugin_securityFallsBackToPlainInstruction() {
+        assertTrue(text(listOf(security), legacyAgent).startsWith("Fix the following Sigrid security findings."))
     }
 
     @Test
     fun mixedSelection_usesMixedInstructionAndNumberedList() {
         val prompt = text(listOf(maintainability, osh), slashAgent)
-        assertFalse(prompt.contains("/sigrid:"))
+        assertFalse(prompt.contains("/axis:"))
         assertTrue(prompt.contains("1. Maintainability / Very High"))
         assertTrue(prompt.contains("2. Open Source Health / High"))
     }
@@ -72,7 +82,7 @@ class FixItPromptBuilderTest {
     @Test
     fun agentWithoutSlashCommands_neverUsesSkill() {
         val prompt = text(listOf(maintainability), FixPromptOptions(supportsSlashCommands = false, mcpDetected = true))
-        assertFalse(prompt.contains("/sigrid:"))
+        assertFalse(prompt.contains("/axis:"))
         assertTrue(prompt.startsWith("Fix the following Sigrid maintainability findings."))
     }
 
@@ -92,7 +102,7 @@ class FixItPromptBuilderTest {
     fun mcpNotDetected_prependsInstallHint() {
         val prompt = text(listOf(maintainability), FixPromptOptions(supportsSlashCommands = true, mcpDetected = false))
         assertTrue(prompt.startsWith("Note: the Sigrid MCP server and Sigrid skills were not detected"))
-        assertTrue(prompt.contains("sigrid-ai-toolkit") || prompt.contains("integration-sigrid-mcp"))
+        assertTrue(prompt.contains("docs.sigrid-says.com/axis/installation.html"))
     }
 
     @Test
@@ -102,7 +112,7 @@ class FixItPromptBuilderTest {
             context,
             FixPromptOptions(supportsSlashCommands = true, mcpDetected = false),
         )
-        assertFalse(result.lead.startsWith("/sigrid:"))
+        assertFalse(result.lead.startsWith("/"))
         assertEquals("Fix the following Sigrid maintainability findings.", result.lead)
     }
 
@@ -117,7 +127,7 @@ class FixItPromptBuilderTest {
     @Test
     fun mcpDetected_skillLead_omitsMcpInstruction() {
         val prompt = text(listOf(maintainability), slashAgent)
-        assertTrue(prompt.startsWith("/sigrid:"))
+        assertTrue(prompt.startsWith("/axis:"))
         assertFalse(prompt.contains("The Sigrid MCP server is available"))
     }
 
