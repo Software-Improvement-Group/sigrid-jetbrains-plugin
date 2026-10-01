@@ -45,6 +45,7 @@ object FixItPromptBuilder {
     // ponytail: legacy sigrid-ai-toolkit plugin, delete once it is retired.
     private val LEGACY_SLASH_COMMANDS = mapOf(
         FindingCategory.MAINTAINABILITY to "/sigrid:sigrid-improve autonomous",
+        FindingCategory.SECURITY to "/sigrid:resolve-security-findings",
         FindingCategory.OPEN_SOURCE_HEALTH to "/sigrid:fix-osh-risk",
     )
 

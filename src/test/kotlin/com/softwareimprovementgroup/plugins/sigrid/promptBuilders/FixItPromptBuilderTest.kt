@@ -67,8 +67,8 @@ class FixItPromptBuilderTest {
     }
 
     @Test
-    fun legacyPlugin_securityFallsBackToPlainInstruction() {
-        assertTrue(text(listOf(security), legacyAgent).startsWith("Fix the following Sigrid security findings."))
+    fun legacyPlugin_securityUsesLegacySecuritySkill() {
+        assertTrue(text(listOf(security), legacyAgent).startsWith("/sigrid:resolve-security-findings"))
     }
 
     @Test
