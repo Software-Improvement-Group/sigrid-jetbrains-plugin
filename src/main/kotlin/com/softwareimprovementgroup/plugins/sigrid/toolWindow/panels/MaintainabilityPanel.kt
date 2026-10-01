@@ -30,6 +30,7 @@ class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>
             getOptionId = { status.apiValue },
         ),
     ),
+    columnMaxWidths = mapOf(SigridBundle["column.risk"] to 80, SigridBundle["column.status"] to 100),
 ) {
     override val emptyMessage = SigridBundle["maintainability.empty"]
 

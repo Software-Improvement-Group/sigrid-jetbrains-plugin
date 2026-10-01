@@ -1,5 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.mappers
 
+import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.ObjectiveEvaluationResponse
 import com.softwareimprovementgroup.plugins.sigrid.models.PriorityCapability
 import com.softwareimprovementgroup.plugins.sigrid.models.PriorityRank
@@ -28,6 +29,10 @@ import com.softwareimprovementgroup.plugins.sigrid.models.PrioritizedFinding
 // for the market-benchmark fallback, OSH can never have an explicit *rating* objective to check first.
 // Its rating (from OpenSourceHealthMapper.systemRating) is therefore always compared straight against the
 // 3.0 market-average benchmark - there's no "explicit objective" branch to fall through from.
+//
+// Section 2.7 explicitly requires the market-benchmark fallback to be "clearly labeled wherever shown...
+// so it's never mistaken for something the customer chose" - MetVia tracks which of the two applied so
+// applyIfMet() can attach the right label as a promotionReason (see PrioritizedFinding.promotionReason).
 object ObjectivesGate {
     private const val MET = "MET"
     private const val MARKET_AVERAGE_RATING = 3.0
@@ -38,15 +43,25 @@ object ObjectivesGate {
         PriorityCapability.Reliability to "RELIABILITY",
     )
 
+    private enum class MetVia { NOT_MET, EXPLICIT_OBJECTIVE, MARKET_BENCHMARK }
+
     fun isObjectiveMet(
         capability: PriorityCapability,
         objectives: List<ObjectiveEvaluationResponse>,
         objectivesConfig: Map<String, Any> = emptyMap(),
         currentRatings: Map<PriorityCapability, Double> = emptyMap(),
-    ): Boolean = when (capability) {
-        PriorityCapability.Maintainability -> isMaintainabilityObjectiveMet(objectivesConfig, currentRatings)
-        PriorityCapability.OpenSourceHealth -> isAboveMarketAverage(currentRatings[capability])
-        else -> isSeverityObjectiveMet(capability, objectives)
+    ): Boolean = metVia(capability, objectives, objectivesConfig, currentRatings) != MetVia.NOT_MET
+
+    private fun metVia(
+        capability: PriorityCapability,
+        objectives: List<ObjectiveEvaluationResponse>,
+        objectivesConfig: Map<String, Any>,
+        currentRatings: Map<PriorityCapability, Double>,
+    ): MetVia = when (capability) {
+        PriorityCapability.Maintainability -> maintainabilityMetVia(objectivesConfig, currentRatings)
+        PriorityCapability.OpenSourceHealth ->
+            if (isAboveMarketAverage(currentRatings[capability])) MetVia.MARKET_BENCHMARK else MetVia.NOT_MET
+        else -> if (isSeverityObjectiveMet(capability, objectives)) MetVia.EXPLICIT_OBJECTIVE else MetVia.NOT_MET
     }
 
     private fun isSeverityObjectiveMet(capability: PriorityCapability, objectives: List<ObjectiveEvaluationResponse>): Boolean {
@@ -54,10 +69,12 @@ object ObjectivesGate {
         return objectives.any { it.feature == feature && it.targetMetAtEnd == MET }
     }
 
-    private fun isMaintainabilityObjectiveMet(objectivesConfig: Map<String, Any>, currentRatings: Map<PriorityCapability, Double>): Boolean {
-        val actual = currentRatings[PriorityCapability.Maintainability] ?: return false
-        val target = (objectivesConfig[MAINTAINABILITY_CONFIG_KEY] as? Number)?.toDouble() ?: MARKET_AVERAGE_RATING
-        return actual >= target
+    private fun maintainabilityMetVia(objectivesConfig: Map<String, Any>, currentRatings: Map<PriorityCapability, Double>): MetVia {
+        val actual = currentRatings[PriorityCapability.Maintainability] ?: return MetVia.NOT_MET
+        val configuredTarget = (objectivesConfig[MAINTAINABILITY_CONFIG_KEY] as? Number)?.toDouble()
+        val target = configuredTarget ?: MARKET_AVERAGE_RATING
+        if (actual < target) return MetVia.NOT_MET
+        return if (configuredTarget != null) MetVia.EXPLICIT_OBJECTIVE else MetVia.MARKET_BENCHMARK
     }
 
     private fun isAboveMarketAverage(rating: Double?): Boolean = rating != null && rating >= MARKET_AVERAGE_RATING
@@ -75,10 +92,18 @@ object ObjectivesGate {
         objectives: List<ObjectiveEvaluationResponse>,
         objectivesConfig: Map<String, Any> = emptyMap(),
         currentRatings: Map<PriorityCapability, Double> = emptyMap(),
-    ): PrioritizedFinding =
-        if (isObjectiveMet(finding.capability, objectives, objectivesConfig, currentRatings)) {
-            finding.copy(priorityRank = dampen(finding.priorityRank))
-        } else {
-            finding
-        }
+    ): PrioritizedFinding {
+        val via = metVia(finding.capability, objectives, objectivesConfig, currentRatings)
+        if (via == MetVia.NOT_MET) return finding
+        return finding.copy(
+            priorityRank = dampen(finding.priorityRank),
+            promotionReason = finding.promotionReason + reasonFor(finding.capability, via),
+        )
+    }
+
+    private fun reasonFor(capability: PriorityCapability, via: MetVia): String = when (via) {
+        MetVia.EXPLICIT_OBJECTIVE -> SigridBundle["prioritized.reason.objective.met", capability.label]
+        MetVia.MARKET_BENCHMARK -> SigridBundle["prioritized.reason.market.benchmark", capability.label]
+        MetVia.NOT_MET -> ""
+    }
 }

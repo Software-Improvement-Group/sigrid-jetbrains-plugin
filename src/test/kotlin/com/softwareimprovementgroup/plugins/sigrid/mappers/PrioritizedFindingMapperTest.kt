@@ -1,5 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.mappers
 
+import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -505,5 +506,116 @@ class PrioritizedFindingMapperTest {
         val result = map(security = listOf(sec), objectives = objectives)
 
         assertEquals(PriorityRank.Critical, result.findings.first().priorityRank)
+    }
+
+    // promotionReason: each pipeline stage that does something non-obvious to a finding's position or
+    // severity must label why, per Epic 432 section 3's "why it's here" requirement.
+
+    @Test
+    fun map_securityFinding_hasAlwaysFirstPromotionReason() {
+        val result = map(security = listOf(makeSecurityFinding(id = "sec-critical", severity = RiskSeverity.Critical)))
+        assertEquals(
+            listOf(SigridBundle["prioritized.reason.always.first", PriorityCapability.Security.label]),
+            result.findings.first().promotionReason,
+        )
+    }
+
+    @Test
+    fun map_reliabilityFinding_hasAlwaysFirstPromotionReasonLabeledReliability() {
+        val result = map(reliability = listOf(makeSecurityFinding(id = "rel-critical", severity = RiskSeverity.Critical)))
+        assertEquals(
+            listOf(SigridBundle["prioritized.reason.always.first", PriorityCapability.Reliability.label]),
+            result.findings.first().promotionReason,
+        )
+    }
+
+    @Test
+    fun map_urgentOsh_hasUrgencyOverridePromotionReason() {
+        val urgentOsh = makeOshDependency(name = "urgent-dep", risk = RiskSeverity.Low, vulnerabilities = listOf(makeVulnerability(severity = RiskSeverity.Critical)))
+        val result = map(openSourceHealth = listOf(urgentOsh))
+        assertEquals(listOf(SigridBundle["prioritized.reason.urgency.override"]), result.findings.first().promotionReason)
+    }
+
+    @Test
+    fun map_duplicationFirstEligible_hasDuplicationFirstPromotionReasonOnDuplicationFindingsOnly() {
+        val dupSmall = makeCandidate(id = "dupA", category = RefactoringCategory.Duplication, severity = MaintainabilitySeverity.VeryHigh, weight = 50, fileLocations = listOf(FileLocation("svc", "svc/A.kt")))
+        val dupBig = makeCandidate(id = "dupB", category = RefactoringCategory.Duplication, severity = MaintainabilitySeverity.VeryHigh, weight = 900, fileLocations = listOf(FileLocation("svc", "svc/B.kt")))
+        val otherOnA = makeCandidate(id = "otherOnA", category = RefactoringCategory.UnitSize, severity = MaintainabilitySeverity.Low, fileLocations = listOf(FileLocation("svc", "svc/A.kt")))
+
+        val byId = map(maintainability = listOf(dupSmall, dupBig, otherOnA)).findings.associateBy { it.id }
+
+        assertEquals(listOf(SigridBundle["prioritized.reason.duplication.first"]), byId["dupB"]?.promotionReason)
+        assertEquals(listOf(SigridBundle["prioritized.reason.duplication.first"]), byId["dupA"]?.promotionReason)
+        assertTrue(byId["otherOnA"]?.promotionReason?.isEmpty() ?: false)
+    }
+
+    @Test
+    fun map_plainlyRankedFinding_hasEmptyPromotionReason() {
+        // No gate/rule did anything unusual here - the UI falls back to a default "ranked by severity"
+        // label for this case rather than showing a blank cell (see PrioritizedPanel.reasonLabel).
+        val result = map(maintainability = listOf(makeCandidate(id = "m1")))
+        assertTrue(result.findings.first().promotionReason.isEmpty())
+    }
+
+    @Test
+    fun map_objectiveMetFinding_carriesBothObjectiveMetAndAlwaysFirstReasons() {
+        // A Security finding that's both "always first" AND objective-dampened must carry both
+        // explanations, proving the append-only design doesn't lose either one. Gate 3 runs before rank(),
+        // so its reason is appended first.
+        val sec = makeSecurityFinding(id = "sec-critical", severity = RiskSeverity.Critical)
+        val objectives = listOf(makeObjective("SECURITY", "MET"))
+
+        val result = map(security = listOf(sec), objectives = objectives)
+
+        assertEquals(
+            listOf(
+                SigridBundle["prioritized.reason.objective.met", PriorityCapability.Security.label],
+                SigridBundle["prioritized.reason.always.first", PriorityCapability.Security.label],
+            ),
+            result.findings.first().promotionReason,
+        )
+    }
+
+    // capToTopN: never drop a Critical-rank finding, no matter how long the ranked list is, but otherwise
+    // cap what's shown (Epic 432 OUTPUT step + Open Decision #2).
+
+    @Test
+    fun map_atOrBelowMaxVisibleFindings_notCapped() {
+        val candidates = (0 until 50).map { i -> makeCandidate(id = "m$i", displayLocation = "m%02d.kt".format(i)) }
+        val result = map(maintainability = candidates)
+        assertEquals(50, result.findings.size)
+    }
+
+    @Test
+    fun map_moreThanMaxVisibleFindings_neverDropsCriticalRankFindings() {
+        val criticals = (0 until 55).map { i ->
+            makeCandidate(id = "crit$i", severity = MaintainabilitySeverity.VeryHigh, displayLocation = "c%02d.kt".format(i))
+        }
+        val lows = (0 until 10).map { i ->
+            makeCandidate(id = "low$i", severity = MaintainabilitySeverity.Low, displayLocation = "z%02d.kt".format(i))
+        }
+
+        val result = map(maintainability = criticals + lows)
+
+        // All 55 Critical-rank findings survive even though the combined list (65) exceeds the cap; the
+        // 10 Low-rank findings are correctly dropped since they fall outside the cap and aren't Critical.
+        assertEquals(55, result.findings.size)
+        assertTrue(result.findings.all { it.priorityRank == PriorityRank.Critical })
+        assertTrue(result.findings.none { it.id.startsWith("low") })
+    }
+
+    @Test
+    fun map_moreThanMaxVisibleFindings_preservesVisibleWindowOrderThenAppendsTruncatedCriticals() {
+        val criticals = (0 until 55).map { i ->
+            makeCandidate(id = "crit$i", severity = MaintainabilitySeverity.VeryHigh, displayLocation = "c%02d.kt".format(i))
+        }
+
+        val result = map(maintainability = criticals)
+
+        // First 50 appear in their normal ranked order (ascending displayLocation, since all tie on rank);
+        // the last 5, which fell past the cap, are appended afterward rather than reordered to the front.
+        val expectedVisible = (0 until 50).map { "crit$it" }
+        val expectedAppended = (50 until 55).map { "crit$it" }
+        assertEquals(expectedVisible + expectedAppended, result.findings.map { it.id })
     }
 }

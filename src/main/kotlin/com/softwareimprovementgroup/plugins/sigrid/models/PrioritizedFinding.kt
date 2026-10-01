@@ -34,6 +34,7 @@ data class PrioritizedFinding(
     // findings after the merge, since Duplication's severity is uninformative on its own (always
     // VERY_HIGH - see design doc section 2.3) and needs separate "fix first" sequencing instead.
     val refactoringCategory: RefactoringCategory? = null,
+    val promotionReason: List<String> = emptyList(),
 )
 
 fun RefactoringCandidate.toPrioritizedFinding() = PrioritizedFinding(

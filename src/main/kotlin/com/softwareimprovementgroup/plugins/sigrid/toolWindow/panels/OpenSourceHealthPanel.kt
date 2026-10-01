@@ -49,6 +49,7 @@ class OpenSourceHealthPanel(project: Project) : SigridPanel<OpenSourceHealthDepe
             getOptionId = { activityRisk.name },
         ),
     ),
+    columnMaxWidths = mapOf(SigridBundle["column.risk"] to 80, SigridBundle["column.activity"] to 100),
 ) {
     override val emptyMessage = SigridBundle["osh.empty"]
 

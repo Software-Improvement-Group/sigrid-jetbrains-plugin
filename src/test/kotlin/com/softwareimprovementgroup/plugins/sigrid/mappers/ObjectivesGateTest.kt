@@ -1,5 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.mappers
 
+import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.ObjectiveEvaluationResponse
 import com.softwareimprovementgroup.plugins.sigrid.models.PriorityCapability
 import com.softwareimprovementgroup.plugins.sigrid.models.PriorityRank
@@ -23,7 +24,11 @@ class ObjectivesGateTest {
         parentId = null,
     )
 
-    private fun makeFinding(capability: PriorityCapability, priorityRank: PriorityRank = PriorityRank.Critical) = PrioritizedFinding(
+    private fun makeFinding(
+        capability: PriorityCapability,
+        priorityRank: PriorityRank = PriorityRank.Critical,
+        promotionReason: List<String> = emptyList(),
+    ) = PrioritizedFinding(
         id = "id",
         capability = capability,
         priorityRank = priorityRank,
@@ -36,6 +41,7 @@ class ObjectivesGateTest {
         editable = false,
         statusOptions = emptyList(),
         currentStatusValue = "",
+        promotionReason = promotionReason,
     )
 
     // isObjectiveMet: Security/Reliability - severity-scale, resolved via objectives-evaluation's
@@ -223,5 +229,74 @@ class ObjectivesGateTest {
         val finding = makeFinding(PriorityCapability.Security, PriorityRank.Low)
         val result = ObjectivesGate.applyIfMet(finding, listOf(makeObjective("SECURITY", "MET")))
         assertEquals(PriorityRank.Low, result.priorityRank)
+    }
+
+    // applyIfMet: promotionReason labeling - section 2.7 requires the market-benchmark fallback to be
+    // "clearly labeled... so it's never mistaken for something the customer chose", so EXPLICIT_OBJECTIVE
+    // and MARKET_BENCHMARK must each attach their own distinct, correct label.
+
+    @Test
+    fun applyIfMet_severityScaleObjectiveMet_addsExplicitObjectiveReason() {
+        val finding = makeFinding(PriorityCapability.Security)
+        val result = ObjectivesGate.applyIfMet(finding, listOf(makeObjective("SECURITY", "MET")))
+        assertEquals(
+            listOf(SigridBundle["prioritized.reason.objective.met", PriorityCapability.Security.label]),
+            result.promotionReason,
+        )
+    }
+
+    @Test
+    fun applyIfMet_maintainabilityExplicitTargetMet_addsExplicitObjectiveReason() {
+        val finding = makeFinding(PriorityCapability.Maintainability)
+        val config = mapOf("MAINTAINABILITY" to 3.5)
+        val ratings = mapOf(PriorityCapability.Maintainability to 4.0)
+        val result = ObjectivesGate.applyIfMet(finding, emptyList(), config, ratings)
+        assertEquals(
+            listOf(SigridBundle["prioritized.reason.objective.met", PriorityCapability.Maintainability.label]),
+            result.promotionReason,
+        )
+    }
+
+    @Test
+    fun applyIfMet_maintainabilityMarketBenchmarkFallback_addsMarketBenchmarkReason() {
+        val finding = makeFinding(PriorityCapability.Maintainability)
+        val ratings = mapOf(PriorityCapability.Maintainability to 3.5)
+        val result = ObjectivesGate.applyIfMet(finding, emptyList(), emptyMap(), ratings)
+        assertEquals(
+            listOf(SigridBundle["prioritized.reason.market.benchmark", PriorityCapability.Maintainability.label]),
+            result.promotionReason,
+        )
+    }
+
+    @Test
+    fun applyIfMet_openSourceHealth_alwaysUsesMarketBenchmarkReason() {
+        // OSH has no rating-scale objective type at all, so it's always the fallback label, never the
+        // explicit-objective one - even though a config/rating pair resembling an "explicit" case exists.
+        val finding = makeFinding(PriorityCapability.OpenSourceHealth)
+        val ratings = mapOf(PriorityCapability.OpenSourceHealth to 3.89)
+        val result = ObjectivesGate.applyIfMet(finding, emptyList(), emptyMap(), ratings)
+        assertEquals(
+            listOf(SigridBundle["prioritized.reason.market.benchmark", PriorityCapability.OpenSourceHealth.label]),
+            result.promotionReason,
+        )
+    }
+
+    @Test
+    fun applyIfMet_objectiveNotMet_promotionReasonUnchanged() {
+        val finding = makeFinding(PriorityCapability.Security)
+        val result = ObjectivesGate.applyIfMet(finding, listOf(makeObjective("SECURITY", "UNMET")))
+        assertTrue(result.promotionReason.isEmpty())
+    }
+
+    @Test
+    fun applyIfMet_appendsToExistingPromotionReason_doesNotOverwrite() {
+        // Append-only design: a finding can legitimately already carry a reason from an earlier pipeline
+        // stage (e.g. Security's "always first" label) - Gate 3 must add to that list, not replace it.
+        val finding = makeFinding(PriorityCapability.Security, promotionReason = listOf("earlier reason"))
+        val result = ObjectivesGate.applyIfMet(finding, listOf(makeObjective("SECURITY", "MET")))
+        assertEquals(
+            listOf("earlier reason", SigridBundle["prioritized.reason.objective.met", PriorityCapability.Security.label]),
+            result.promotionReason,
+        )
     }
 }

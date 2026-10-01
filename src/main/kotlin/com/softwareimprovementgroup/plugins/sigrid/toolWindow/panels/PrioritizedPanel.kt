@@ -20,7 +20,10 @@ import java.time.LocalDate
 
 class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
     project,
-    arrayOf(SigridBundle["column.capability"], SigridBundle["column.risk"], SigridBundle["column.location"], SigridBundle["column.description"], SigridBundle["column.status"]),
+    arrayOf(
+        SigridBundle["column.capability"], SigridBundle["column.risk"], SigridBundle["column.location"],
+        SigridBundle["column.description"], SigridBundle["column.status"], SigridBundle["column.reason"],
+    ),
     centeredColumns = setOf(SigridBundle["column.capability"], SigridBundle["column.risk"], SigridBundle["column.status"]),
     columnFilters = listOf(
         ColumnFilterDef(
@@ -33,6 +36,16 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
             options = PriorityRank.entries.map { FilterOption(it.toRiskIcon().label, it.name) },
             getOptionId = { priorityRank.name },
         ),
+    ),
+    // Capability and Status hold short, fixed-vocabulary text/icon labels, so they're capped like the
+    // other panels' Risk/Status columns - without a cap they'd take an even share of leftover space
+    // alongside genuinely long-text columns (Location, Description, Why), leaving those too narrow.
+    // Risk here is icon-only, same as every other panel. Why isn't capped: its sentences are often the
+    // longest content in the row, so it should compete for space on equal footing with Description.
+    columnMaxWidths = mapOf(
+        SigridBundle["column.capability"] to 150,
+        SigridBundle["column.risk"] to 80,
+        SigridBundle["column.status"] to 100,
     ),
 ) {
     override val emptyMessage = SigridBundle["prioritized.empty"]
@@ -71,11 +84,19 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
     private fun today(): String = LocalDate.now().toString()
     private fun ninetyDaysAgo(): String = LocalDate.now().minusDays(90).toString()
 
+    // Epic 432 section 3 (OUTPUT step): "why it's here" rendered as its own column rather than a hover
+    // tooltip, so it's visible at a glance rather than hidden behind a hover. Empty promotionReason means
+    // plain severity ranking - shown as a baseline label rather than a blank cell, so every row answers
+    // the "why" question, matching the design doc's "each item shows... why it's here" requirement.
+    private val PrioritizedFinding.reasonLabel: String
+        get() = promotionReason.takeIf { it.isNotEmpty() }?.joinToString(" · ") ?: SigridBundle["prioritized.reason.default"]
+
     override fun PrioritizedFinding.matchesSearch(query: String) =
         capability.label.contains(query, ignoreCase = true) ||
         displayLocation.contains(query, ignoreCase = true) ||
         description.contains(query, ignoreCase = true) ||
-        statusLabel.contains(query, ignoreCase = true)
+        statusLabel.contains(query, ignoreCase = true) ||
+        reasonLabel.contains(query, ignoreCase = true)
 
     override fun PrioritizedFinding.toRow(): Array<Any> = arrayOf(
         capability.label,
@@ -83,6 +104,7 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
         displayLocation,
         description,
         statusLabel,
+        reasonLabel,
     )
 
     override fun PrioritizedFinding.getFileLocations(): List<FileLocation> = fileLocations

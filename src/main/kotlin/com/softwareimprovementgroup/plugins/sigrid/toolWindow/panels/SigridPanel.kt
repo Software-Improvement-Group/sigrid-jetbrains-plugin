@@ -51,6 +51,7 @@ abstract class SigridPanel<T>(
     columns: Array<String>,
     centeredColumns: Set<String> = emptySet(),
     private val columnFilters: List<ColumnFilterDef<T>> = emptyList(),
+    private val columnMaxWidths: Map<String, Int> = emptyMap(),
 ) : JBPanel<SigridPanel<T>>(BorderLayout()) {
 
     protected abstract val emptyMessage: String
@@ -86,9 +87,8 @@ abstract class SigridPanel<T>(
         isStriped = true
         setDefaultEditor(Any::class.java, null)
         setDefaultRenderer(RiskIcon::class.java, riskIconRenderer)
-        columnModel.getColumn(0).maxWidth = 80
-        columnModel.getColumn(columns.size - 1).maxWidth = 100
         columns.forEachIndexed { i, name ->
+            columnMaxWidths[name]?.let { columnModel.getColumn(i).maxWidth = it }
             if (name in centeredColumns) {
                 val col = columnModel.getColumn(i)
                 col.headerRenderer = centeredCellRenderer
