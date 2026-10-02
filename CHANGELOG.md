@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- **Sigrid Axis support** — "Fix with AI" now uses the Sigrid Axis plugin skills (`/axis:autofix maintainability|security|open-source`), including for security findings. Note that `/axis:autofix` commits its fixes on a local branch, and for security findings updates their status in Sigrid.
+- **Legacy fallback** — when only the old `sigrid-ai-toolkit` plugin is enabled, the prompt keeps using its skills (`/sigrid:sigrid-improve`, `/sigrid:resolve-security-findings`, `/sigrid:fix-osh-risk`).
+- The install hint now links to the [Sigrid Axis installation guide](https://docs.sigrid-says.com/axis/installation.html).
+
 ## [1.0.2] - 2026-09-07
 
 ### Fixed
