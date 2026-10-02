@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.3-beta] - 2026-10-02
+
+### Added
+
+- **Unified "Prioritized" tab** — a new tab merges Maintainability, Security, Reliability, and Open Source Health findings into a single cross-capability ranked list, reusing the existing table, search, and All/Active toggle UI.
+- **Reliability findings** — the plugin now fetches and maps Reliability findings from the Sigrid API; they're tagged distinctly from Security findings and currently surfaced only in the Prioritized tab.
+- **Three-stage gating pipeline** for the Prioritized tab:
+  - **Urgency override** — Open Source Health findings with a real CVE/GHSA identifier and high severity are promoted ahead of other non-Security/Reliability findings.
+  - **Activity gate** — Maintainability findings in files with no recent Git activity (via a new raw Architecture Quality export fetch exposing per-file churn) are filtered out of the ranked list; systems or files without activity data fail open and fall back to severity-only ranking.
+  - **Objectives gate** — findings in a capability whose quality objective is already met are dampened by one severity tier. Maintainability compares its live rating against the configured target (via a new `objectives/config` fetch) or, if none is set, a 3.0-star market-benchmark fallback; Security/Reliability use the pre-computed `objectives-evaluation` result; Open Source Health always compares against the market benchmark, since Sigrid has no rating-scale OSH objective type.
+- **Cross-capability ranking rules** — Security and Reliability findings are always ranked ahead of every other capability regardless of severity; Duplication findings are sequenced first within the remaining findings when `PriorityGrouper`'s file-overlap eligibility rule is met; Open Source Health vulnerabilities are deduplicated and dependencies sharing a library name are collapsed into a single finding.
+- **Exclusion and test-code lanes** — findings in vendored, generated, or config files are dropped from the Prioritized tab entirely; findings in test code are routed to a separate lane instead of the main ranked list.
+- **"Why" column** — each row in the Prioritized tab explains why it's ranked where it is (always-first, urgency override, duplication-first, objective-met/market-benchmark dampening), and is searchable like the other columns.
+- **Capped, explainable output** — the Prioritized tab's list is capped at 50 visible findings, always keeping every Critical-rank finding visible even past the cap.
+- **Real CVE/CVSS data for Open Source Health** — `OpenSourceHealthMapper` now maps `bomRef`/`purl`, so `OpenSourceHealthDependency` carries genuine CVE identifiers and CVSS scores (used by the Prioritized tab's urgency override).
+- **Cached Maintainability rating** — the live Maintainability star rating is fetched once at project open and kept warm via a new startup activity, re-fetching automatically when Sigrid settings change instead of on every refresh.
+
+### Fixed
+
+- **Prioritized tab column widths** — Capability and "Why" were clipped to an icon-sized width cap intended for the Risk/Status columns in the other tabs; column width caps are now applied by column name instead of position, so each tab's columns size appropriately for its own content.
+
 ## [1.0.2] - 2026-09-07
 
 ### Fixed
