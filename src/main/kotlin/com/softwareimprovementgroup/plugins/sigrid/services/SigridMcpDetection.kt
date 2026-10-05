@@ -29,24 +29,35 @@ object SigridToolNames {
  */
 object SigridMcpDetection {
     const val SIGRID_MCP_INSTALL_URL =
-        "https://docs.sigrid-says.com/integrations/integration-sigrid-mcp.html#installation"
+        "https://docs.sigrid-says.com/axis/installation.html"
+
+    /** The pre-Axis plugin, which still ships `/sigrid:...` skills instead of `/axis:...`. */
+    const val LEGACY_SIGRID_PLUGIN = "sigrid@sigrid-ai-toolkit"
 
     /** Matches "sigrid" as a whole word, so keys like `mysigrid@x` don't match. */
     private val SIGRID_WORD = Regex("""\bsigrid\b""", RegexOption.IGNORE_CASE)
 
     /**
-     * Whether an *enabled* Sigrid Claude Code plugin (which provides the MCP server and the
-     * `/sigrid:...` skills) is present in `~/.claude/settings.json`. Requires the plugin to be
-     * enabled, not merely installed: a disabled plugin exposes no MCP server, so it must count as
-     * "not detected". A missing or malformed file also means "not detected".
+     * Whether an *enabled* Sigrid Claude Code plugin (which provides the MCP server and the Sigrid
+     * skills) is present in `~/.claude/settings.json`. Requires the plugin to be enabled, not merely
+     * installed: a disabled plugin exposes no MCP server, so it must count as "not detected".
      */
-    fun hasSigridClaudePlugin(claudeHome: File = defaultClaudeHome()): Boolean = try {
+    fun hasSigridClaudePlugin(claudeHome: File = defaultClaudeHome()): Boolean =
+        enabledSigridPlugins(claudeHome).isNotEmpty()
+
+    /** True when only the legacy plugin is enabled, so its skill names must be used. */
+    fun usesLegacySigridPlugin(claudeHome: File = defaultClaudeHome()): Boolean =
+        enabledSigridPlugins(claudeHome) == setOf(LEGACY_SIGRID_PLUGIN)
+
+    /** A missing or malformed settings file means "none enabled". */
+    private fun enabledSigridPlugins(claudeHome: File): Set<String> = try {
         val enabledPlugins = parseJsonObject(File(claudeHome, "settings.json"))
             ?.getAsJsonObject("enabledPlugins")
-        enabledPlugins?.entrySet()?.any { (name, value) -> isEnabledSigridPlugin(name, value) } == true
+        enabledPlugins?.entrySet()?.filter { (name, value) -> isEnabledSigridPlugin(name, value) }
+            ?.map { it.key }?.toSet().orEmpty()
     } catch (e: Exception) {
         thisLogger().debug("Sigrid Claude Code plugin detection failed", e)
-        false
+        emptySet()
     }
 
     private fun defaultClaudeHome(): File = File(System.getProperty("user.home"), ".claude")
