@@ -11,12 +11,13 @@ class ArchitectureQualityMapperTest {
     private fun makeElement(
         name: String = "svc/Foo.kt",
         type: String = "FILE",
-        churn: MeasurementTimeSeriesResponse? = MeasurementTimeSeriesResponse(dataPoints = mapOf("2026-01-05" to 10.0), averageValue = 10.0),
+        churn: Double? = 10.0,
+        commits: Double? = 3.0,
     ) = SystemElementResponse(
         id = "id-$name",
         name = name,
         type = type,
-        measurementTimeSeries = churn?.let { mapOf("CHURN" to it) },
+        measurementValues = listOfNotNull(churn?.let { "CHURN" to it }, commits?.let { "COMMITS" to it }).toMap(),
     )
 
     private fun makeResponse(
@@ -55,31 +56,38 @@ class ArchitectureQualityMapperTest {
 
     @Test
     fun map_fileElementWithoutChurnMetric_excluded() {
-        val file = makeElement(name = "svc/Foo.kt", churn = null)
+        val file = makeElement(name = "svc/Foo.kt", churn = null, commits = null)
         val result = ArchitectureQualityMapper.map(makeResponse(listOf(file)), "")
         assertTrue(result.fileActivities.isEmpty())
     }
 
     @Test
-    fun map_averageChurn_mapped() {
-        val file = makeElement(name = "svc/Foo.kt", churn = MeasurementTimeSeriesResponse(dataPoints = emptyMap(), averageValue = 42.5))
+    fun map_churn_mapped() {
+        val file = makeElement(name = "svc/Foo.kt", churn = 42.5)
         val result = ArchitectureQualityMapper.map(makeResponse(listOf(file)), "")
-        assertEquals(42.5, result.fileActivities[0].averageChurn)
+        assertEquals(42.5, result.fileActivities[0].churn)
     }
 
     @Test
-    fun map_churnByPeriod_preservesDataPoints() {
-        val dataPoints = mapOf("2026-01-05" to 10.0, "2026-01-12" to 20.0)
-        val file = makeElement(name = "svc/Foo.kt", churn = MeasurementTimeSeriesResponse(dataPoints = dataPoints, averageValue = 15.0))
+    fun map_zeroChurn_keptAsZeroNotDropped() {
+        val file = makeElement(name = "svc/Foo.kt", churn = 0.0)
         val result = ArchitectureQualityMapper.map(makeResponse(listOf(file)), "")
-        assertEquals(dataPoints, result.fileActivities[0].churnByPeriod)
+        assertEquals(0.0, result.fileActivities.single().churn)
     }
 
     @Test
-    fun map_nullDataPoints_churnByPeriodIsEmptyMap() {
-        val file = makeElement(name = "svc/Foo.kt", churn = MeasurementTimeSeriesResponse(dataPoints = null, averageValue = 1.0))
+    fun map_commitsOnly_includedWithZeroChurn() {
+        val file = makeElement(name = "svc/Foo.kt", churn = null, commits = 4.0)
+        val activity = ArchitectureQualityMapper.map(makeResponse(listOf(file)), "").fileActivities.single()
+        assertEquals(0.0, activity.churn)
+        assertEquals(4.0, activity.commits)
+    }
+
+    @Test
+    fun map_fileElementWithNullMeasurementValues_excluded() {
+        val file = SystemElementResponse(id = "id", name = "svc/Foo.kt", type = "FILE", measurementValues = null)
         val result = ArchitectureQualityMapper.map(makeResponse(listOf(file)), "")
-        assertTrue(result.fileActivities[0].churnByPeriod.isEmpty())
+        assertTrue(result.fileActivities.isEmpty())
     }
 
     @Test

@@ -389,7 +389,7 @@ class PrioritizedFindingMapperTest {
     @Test
     fun map_maintainabilityInDormantFile_gatedOutWhenHistoryKnown() {
         val candidates = listOf(makeCandidate(id = "dormant", fileLocations = listOf(FileLocation("svc", "svc/Dormant.kt"))))
-        val activity = makeActivity(fileActivities = listOf(FileActivity("svc/Dormant.kt", 0.0, emptyMap())))
+        val activity = makeActivity(fileActivities = listOf(FileActivity("svc/Dormant.kt", 0.0, 0.0)))
 
         val result = map(maintainability = candidates, fileActivity = activity)
 
@@ -399,7 +399,7 @@ class PrioritizedFindingMapperTest {
     @Test
     fun map_maintainabilityInActiveFile_kept() {
         val candidates = listOf(makeCandidate(id = "active", fileLocations = listOf(FileLocation("svc", "svc/Active.kt"))))
-        val activity = makeActivity(fileActivities = listOf(FileActivity("svc/Active.kt", 4.0, emptyMap())))
+        val activity = makeActivity(fileActivities = listOf(FileActivity("svc/Active.kt", 4.0, 2.0)))
 
         val result = map(maintainability = candidates, fileActivity = activity)
 
@@ -419,7 +419,7 @@ class PrioritizedFindingMapperTest {
     fun map_securityInDormantFile_notGated() {
         // Gate 2 is Maintainability-only - Security findings are never activity-gated.
         val findings = listOf(makeSecurityFinding(id = "sec", fileLocations = listOf(FileLocation("svc", "svc/Dormant.kt"))))
-        val activity = makeActivity(fileActivities = listOf(FileActivity("svc/Dormant.kt", 0.0, emptyMap())))
+        val activity = makeActivity(fileActivities = listOf(FileActivity("svc/Dormant.kt", 0.0, 0.0)))
 
         val result = map(security = findings, fileActivity = activity)
 

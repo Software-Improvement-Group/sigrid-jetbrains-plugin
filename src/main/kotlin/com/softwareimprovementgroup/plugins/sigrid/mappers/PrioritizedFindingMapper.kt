@@ -45,9 +45,7 @@ object PrioritizedFindingMapper {
         val merged = mergeRawFindings(rawMaintainability, security, reliability, collapsedOsh)
 
         val (testCode, everythingElse) = merged.partition { PriorityExclusionFilter.isTestCode(it) }
-        val gated = everythingElse
-            .filterNot { PriorityExclusionFilter.exclude(it) }
-            .filter { ActivityGate.isActiveOrUnknown(it, fileActivity) } // GATE 2
+        val gated = ActivityGate(fileActivity).filter(everythingElse.filterNot { PriorityExclusionFilter.exclude(it) }) // GATE 2
         val dampened = gated.map { ObjectivesGate.applyIfMet(it, objectives, objectivesConfig, currentRatings) } // GATE 3
 
         return PrioritizedFindingResult(
