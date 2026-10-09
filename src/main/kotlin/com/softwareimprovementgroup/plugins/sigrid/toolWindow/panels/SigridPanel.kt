@@ -293,26 +293,19 @@ abstract class SigridPanel<T>(
         searchField.preferredSize = java.awt.Dimension(220, searchField.preferredSize.height)
     }
 
-    private fun buildToolbar(): JPanel {
-        val leading = GridBagConstraints().apply {
-            anchor = GridBagConstraints.WEST
-            fill = GridBagConstraints.VERTICAL
-            weightx = 1.0
-        }
-        val trailing = GridBagConstraints().apply {
-            anchor = GridBagConstraints.EAST
-            fill = GridBagConstraints.VERTICAL
-        }
-        val controlHeight = fileFilterPanel.filterControlHeight
-        val trailingControls = listOf(editButton, openInSigridButton, createIssueButton.button, fixWithAiButton, searchField)
-        trailingControls.forEach { it.preferredSize = java.awt.Dimension(it.preferredSize.width, controlHeight) }
-        return JPanel(GridBagLayout()).apply {
-            add(fileFilterPanel, leading)
-            trailingControls.forEach { add(it, trailing) }
-        }
-    }
-
     private fun setupLayout() {
+        val leftButtons = JPanel(GridBagLayout()).apply {
+            val gbc = GridBagConstraints().apply { anchor = GridBagConstraints.CENTER }
+            add(editButton, gbc)
+            add(openInSigridButton, gbc)
+            add(createIssueButton.button, gbc)
+            add(fixWithAiButton, gbc)
+        }
+        val toolbar = JPanel(BorderLayout()).apply {
+            add(leftButtons, BorderLayout.WEST)
+            add(fileFilterPanel, BorderLayout.CENTER)
+            add(searchField, BorderLayout.EAST)
+        }
         cards.add(JBLabel(SigridBundle["panel.loading"]).apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
         cards.add(statusLabel, CARD_ERROR)
         cards.add(buildNotConfiguredCard(project), CARD_NOT_CONFIGURED)
@@ -321,7 +314,7 @@ abstract class SigridPanel<T>(
             add(filteredEmptyLabel, BorderLayout.SOUTH)
         }
         cards.add(tableCard, CARD_TABLE)
-        add(buildToolbar(), BorderLayout.NORTH)
+        add(toolbar, BorderLayout.NORTH)
         add(cards, BorderLayout.CENTER)
     }
 

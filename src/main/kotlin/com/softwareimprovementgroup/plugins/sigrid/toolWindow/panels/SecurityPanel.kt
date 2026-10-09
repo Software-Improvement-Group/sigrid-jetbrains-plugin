@@ -16,7 +16,7 @@ import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
 class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(
     project,
-    arrayOf(SigridBundle["column.risk"], SigridBundle["column.description"], SigridBundle["column.location"], SigridBundle["column.status"]),
+    arrayOf(SigridBundle["column.risk"], SigridBundle["column.location"], SigridBundle["column.description"], SigridBundle["column.status"]),
     centeredColumns = setOf(SigridBundle["column.risk"], SigridBundle["column.status"]),
     columnFilters = listOf(
         ColumnFilterDef(
@@ -44,8 +44,8 @@ class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(
 
     override fun SecurityFinding.toRow(): Array<Any> = arrayOf(
         severity.toRiskIcon(),
-        type,
         displayFilePath,
+        type,
         statusLabel,
     )
 
