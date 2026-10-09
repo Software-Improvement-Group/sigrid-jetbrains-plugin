@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **Group by file in the Prioritized tab** — a "Group by file" toggle nests findings under expandable file rows (each finding appears once, under its first file location). Expand/collapse state is kept across searches, filters, and refreshes.
+
+### Changed
+
+- All tabs now render in an IntelliJ `TreeTable` instead of a plain table. Flat tabs look the same; the first left-aligned column hosts the expander.
+
 ## [1.0.4-beta1] - 2026-10-02
 
 ### Added

@@ -48,6 +48,7 @@ The plugin targets IntelliJ IDEA 2026.1+ and is written in Kotlin 2.3.21. Packag
 - `SigridPanel` — abstract base; subclasses implement `fetchData()`, `getColumnNames()`, and `toRow()`
 - `MaintainabilityPanel`, `SecurityPanel`, `OpenSourceHealthPanel` — one per tab
 - `RiskIcon` / `RiskIconCellRenderer` — severity-to-color mapping and table cell rendering
+- `FindingTreeTable` — the `TreeTable` every panel renders in; callers use `findingAt`/`findingsAt`/`selectedFindings` by view row, never tree nodes. Panels opt into a "Group by file" toggle with `fileGroupingSupported = true` plus a `getGroupKey()` override (Prioritized only)
 
 **Mappers** (`mappers/` package) contain most of the business logic and are comprehensively unit-tested:
 - Filter findings by subsystem

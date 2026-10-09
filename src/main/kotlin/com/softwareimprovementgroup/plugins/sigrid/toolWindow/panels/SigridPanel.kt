@@ -6,9 +6,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.models.FixItContext
@@ -39,7 +39,6 @@ import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.table.DefaultTableCellRenderer
-import javax.swing.table.DefaultTableModel
 
 private const val CARD_LOADING = "loading"
 private const val CARD_ERROR = "error"
@@ -52,6 +51,7 @@ abstract class SigridPanel<T>(
     centeredColumns: Set<String> = emptySet(),
     private val columnFilters: List<ColumnFilterDef<T>> = emptyList(),
     private val columnMaxWidths: Map<String, Int> = emptyMap(),
+    private val fileGroupingSupported: Boolean = false,
 ) : JBPanel<SigridPanel<T>>(BorderLayout()) {
 
     protected abstract val emptyMessage: String
@@ -70,22 +70,19 @@ abstract class SigridPanel<T>(
     protected open fun T.getCurrentStatus(): String = ""
     protected open fun T.getCurrentRemark(): String = ""
     protected open fun T.getHref(): String? = null
+    protected open fun T.getGroupKey(): String = ""
 
     private var allFindings: List<T> = emptyList()
-    private var displayedFindings: List<T> = emptyList()
+    private var groupByFile = false
 
-    private val tableModel = object : DefaultTableModel(columns, 0) {
-        override fun getColumnClass(column: Int): Class<*> =
-            if (rowCount > 0) getValueAt(0, column)?.javaClass ?: Any::class.java else Any::class.java
-    }
     private val riskIconRenderer = RiskIconCellRenderer()
     private val centeredCellRenderer = DefaultTableCellRenderer().apply {
         horizontalAlignment = SwingConstants.CENTER
     }
 
-    private val table = JBTable(tableModel).apply {
+    // The first left-aligned column hosts the expander, so its text reads naturally next to the group arrows.
+    private val table = FindingTreeTable<T>(columns, columns.indexOfFirst { it !in centeredColumns }.coerceAtLeast(0)).apply {
         isStriped = true
-        setDefaultEditor(Any::class.java, null)
         setDefaultRenderer(RiskIcon::class.java, riskIconRenderer)
         columns.forEachIndexed { i, name ->
             columnMaxWidths[name]?.let { columnModel.getColumn(i).maxWidth = it }
@@ -116,10 +113,7 @@ abstract class SigridPanel<T>(
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
                 if (e.button == MouseEvent.BUTTON1 && e.clickCount == 2) {
-                    val viewRow = rowAtPoint(e.point)
-                    if (viewRow < 0) return
-                    val modelRow = convertRowIndexToModel(viewRow)
-                    val finding = displayedFindings.getOrNull(modelRow) ?: return
+                    val finding = findingAt(rowAtPoint(e.point)) ?: return
                     navigator.navigate(finding.getFileLocations(), e)
                 }
             }
@@ -129,23 +123,17 @@ abstract class SigridPanel<T>(
         })
         addKeyListener(object : KeyAdapter() {
             override fun keyPressed(e: KeyEvent) {
-                if (e.keyCode == KeyEvent.VK_ENTER) {
-                    val viewRow = selectedRow
-                    if (viewRow < 0) return
-                    val modelRow = convertRowIndexToModel(viewRow)
-                    val finding = displayedFindings.getOrNull(modelRow) ?: return
-                    navigator.navigate(finding.getFileLocations(), null)
-                }
+                if (e.keyCode == KeyEvent.VK_ENTER) openSelectedRow()
                 if (e.keyCode == KeyEvent.VK_F3) openFirstSelectedFindingInBrowser()
             }
         })
     }
     private val navigator: FindingNavigator by lazy { FindingNavigator(project, table) }
     private val jiraHandler: JiraIntegrationHandler<T> by lazy {
-        JiraIntegrationHandler(project, table, { displayedFindings }) { it.toIssueFinding() }
+        JiraIntegrationHandler(project, table) { it.toIssueFinding() }
     }
     private val azureDevOpsHandler: AzureDevOpsIntegrationHandler<T> by lazy {
-        AzureDevOpsIntegrationHandler(project, table, { displayedFindings }) { it.toIssueFinding() }
+        AzureDevOpsIntegrationHandler(project, table) { it.toIssueFinding() }
     }
     private val createIssueButton: CreateIssueButton<T> by lazy {
         CreateIssueButton(project, jiraHandler, azureDevOpsHandler, table)
@@ -157,7 +145,6 @@ abstract class SigridPanel<T>(
         FindingContextMenuHandler(
             project = project,
             table = table,
-            getDisplayedFindings = { displayedFindings },
             isEditable = { it.isEditable() },
             getId = { it.getId() },
             getDisplayLocation = { it.getDisplayLocation() },
@@ -194,6 +181,15 @@ abstract class SigridPanel<T>(
         isFocusable = false
         toolTipText = SigridBundle["finding.fixit.button.tooltip"]
         addActionListener { fixItHandler.openFixIt(contextMenuHandler.selectedFindings()) }
+    }
+
+    private val groupByFileCheckBox = JBCheckBox(SigridBundle["panel.group.by.file"]).apply {
+        isFocusable = false
+        toolTipText = SigridBundle["panel.group.by.file.tooltip"]
+        addActionListener {
+            groupByFile = isSelected
+            applyFilter()
+        }
     }
 
     private val fileFilterPanel = FileFilterPanel(project) { applyFilter() }
@@ -262,15 +258,9 @@ abstract class SigridPanel<T>(
         })
         table.selectionModel.addListSelectionListener { e ->
             if (!e.valueIsAdjusting) {
-                val editable = table.selectedRows.any { viewRow ->
-                    val modelRow = table.convertRowIndexToModel(viewRow)
-                    displayedFindings.getOrNull(modelRow)?.isEditable() == true
-                }
-                editButton.isEnabled = editable
-                openInSigridButton.isEnabled = table.selectedRows.any { viewRow ->
-                    val modelRow = table.convertRowIndexToModel(viewRow)
-                    displayedFindings.getOrNull(modelRow)?.getHref().orEmpty().isNotEmpty()
-                }
+                val selected = table.selectedFindings()
+                editButton.isEnabled = selected.any { it.isEditable() }
+                openInSigridButton.isEnabled = selected.any { it.getHref().orEmpty().isNotEmpty() }
                 updateFixWithAiButtonState()
                 createIssueButton.updateButtonState()
             }
@@ -278,10 +268,15 @@ abstract class SigridPanel<T>(
     }
 
     private fun openFirstSelectedFindingInBrowser() {
-        val viewRow = table.selectedRows.firstOrNull() ?: return
-        val modelRow = table.convertRowIndexToModel(viewRow)
-        val href = displayedFindings.getOrNull(modelRow)?.getHref()?.takeIf { it.isNotEmpty() } ?: return
+        val href = table.selectedFindings().firstOrNull()?.getHref()?.takeIf { it.isNotEmpty() } ?: return
         BrowserUtil.browse(href)
+    }
+
+    private fun openSelectedRow() {
+        val viewRow = table.selectedRow
+        if (viewRow < 0) return
+        val finding = table.findingAt(viewRow)
+        if (finding == null) table.toggleExpansion(viewRow) else navigator.navigate(finding.getFileLocations(), null)
     }
 
     private fun setupSearchField() {
@@ -300,6 +295,7 @@ abstract class SigridPanel<T>(
             add(openInSigridButton, gbc)
             add(createIssueButton.button, gbc)
             add(fixWithAiButton, gbc)
+            if (fileGroupingSupported) add(groupByFileCheckBox, gbc)
         }
         val toolbar = JPanel(BorderLayout()).apply {
             add(leftButtons, BorderLayout.WEST)
@@ -369,58 +365,56 @@ abstract class SigridPanel<T>(
         popup.show(e.component, e.x, e.y)
     }
 
-    private fun applyFilter() {
+    private fun filterFindings(): List<T> {
         val query = searchField.text.trim()
-
-        val afterActiveFilter = if (fileFilterPanel.activeFileOnly) {
-            val activePath = fileFilterPanel.activeFilePath()
-            if (activePath != null) {
-                allFindings.filter { finding ->
-                    finding.getFileLocations().any { loc ->
-                        FileFilterPanel.matchesActivePath(loc.filePath, activePath)
-                    }
-                }
-            } else allFindings
-        } else allFindings
-
-        val afterColumnFilters = columnFilters.fold(afterActiveFilter) { acc, def ->
-            if (def.selectedIds.isEmpty()) return@fold acc
-            acc.filter { def.getOptionId(it) in def.selectedIds }
+        val afterColumnFilters = columnFilters.fold(filterByActiveFile()) { acc, def ->
+            if (def.selectedIds.isEmpty()) acc else acc.filter { def.getOptionId(it) in def.selectedIds }
         }
+        return if (query.isEmpty()) afterColumnFilters else afterColumnFilters.filter { it.matchesSearch(query) }
+    }
 
-        val filtered = if (query.isEmpty()) afterColumnFilters else afterColumnFilters.filter { it.matchesSearch(query) }
-
-        val selectedIds = table.selectedRows
-            .map { table.convertRowIndexToModel(it) }
-            .mapNotNull { displayedFindings.getOrNull(it)?.getId()?.takeIf { id -> id.isNotEmpty() } }
-            .toSet()
-
-        tableModel.rowCount = 0
-        if (filtered.isEmpty()) {
-            displayedFindings = emptyList()
-            if (allFindings.isEmpty()) {
-                filteredEmptyLabel.isVisible = false
-                showSuccess(emptyMessage)
-            } else {
-                ApplicationManager.getApplication().invokeLater {
-                    filteredEmptyLabel.text = if (query.isEmpty())
-                        SigridBundle["panel.no.findings.match.filter"]
-                    else
-                        SigridBundle["panel.no.findings.match", query]
-                    filteredEmptyLabel.isVisible = true
-                    filteredEmptyLabel.foreground = JBColor.RED
-                }
-                showCard(CARD_TABLE)
-            }
-        } else {
-            ApplicationManager.getApplication().invokeLater {
-                filteredEmptyLabel.isVisible = false
-            }
-            displayedFindings = filtered
-            filtered.forEach { tableModel.addRow(it.toRow()) }
-            showCard(CARD_TABLE)
-            selectRowsById(selectedIds, filtered)
+    private fun filterByActiveFile(): List<T> {
+        val activePath = fileFilterPanel.activeFilePath()
+        if (!fileFilterPanel.activeFileOnly || activePath == null) return allFindings
+        return allFindings.filter { finding ->
+            finding.getFileLocations().any { loc -> FileFilterPanel.matchesActivePath(loc.filePath, activePath) }
         }
+    }
+
+    private fun applyFilter() {
+        val filtered = filterFindings()
+        val selectedIds = table.selectedFindings().map { it.getId() }.filter { it.isNotEmpty() }.toSet()
+
+        table.setFindings(filtered, { it.toRow() }, if (groupByFile) { finding -> finding.getGroupKey() } else null)
+        if (filtered.isEmpty()) showNoFindings() else showFindings(selectedIds)
+    }
+
+    private fun showNoFindings() {
+        if (allFindings.isEmpty()) {
+            filteredEmptyLabel.isVisible = false
+            showSuccess(emptyMessage)
+            return
+        }
+        val message = noMatchMessage()
+        ApplicationManager.getApplication().invokeLater {
+            filteredEmptyLabel.text = message
+            filteredEmptyLabel.isVisible = true
+            filteredEmptyLabel.foreground = JBColor.RED
+        }
+        showCard(CARD_TABLE)
+    }
+
+    private fun noMatchMessage(): String {
+        val query = searchField.text.trim()
+        return if (query.isEmpty()) SigridBundle["panel.no.findings.match.filter"] else SigridBundle["panel.no.findings.match", query]
+    }
+
+    private fun showFindings(selectedIds: Set<String>) {
+        ApplicationManager.getApplication().invokeLater {
+            filteredEmptyLabel.isVisible = false
+        }
+        showCard(CARD_TABLE)
+        selectRowsById(selectedIds)
     }
 
     fun loadData() {
@@ -461,22 +455,12 @@ abstract class SigridPanel<T>(
         }
     }
 
-    private fun selectRowsById(selectedIds: Set<String>, filtered: List<T>) {
+    private fun selectRowsById(selectedIds: Set<String>) {
         if (selectedIds.isEmpty()) return
         table.clearSelection()
-        var firstSelectedViewRow = -1
-        filtered.forEachIndexed { modelRow, finding ->
-            if (finding.getId() in selectedIds) {
-                val viewRow = table.convertRowIndexToView(modelRow)
-                if (viewRow >= 0) {
-                    table.selectionModel.addSelectionInterval(viewRow, viewRow)
-                    if (firstSelectedViewRow < 0) firstSelectedViewRow = viewRow
-                }
-            }
-        }
-        if (firstSelectedViewRow >= 0) {
-            table.scrollRectToVisible(table.getCellRect(firstSelectedViewRow, 0, true))
-        }
+        val rows = (0 until table.rowCount).filter { table.findingAt(it)?.getId().orEmpty() in selectedIds }
+        rows.forEach { table.selectionModel.addSelectionInterval(it, it) }
+        rows.firstOrNull()?.let { table.scrollRectToVisible(table.getCellRect(it, 0, true)) }
     }
 
     private fun showNotConfigured() {

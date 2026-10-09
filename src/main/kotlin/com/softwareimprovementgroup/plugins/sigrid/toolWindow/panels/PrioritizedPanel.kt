@@ -47,6 +47,7 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
         SigridBundle["column.risk"] to 80,
         SigridBundle["column.status"] to 100,
     ),
+    fileGroupingSupported = true,
 ) {
     override val emptyMessage = SigridBundle["prioritized.empty"]
 
@@ -124,6 +125,7 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
     )
 
     override fun PrioritizedFinding.getHref() = href
+    override fun PrioritizedFinding.getGroupKey() = fileGroupKey
     override fun PrioritizedFinding.isEditable() = editable
     override fun PrioritizedFinding.getId() = id
     override fun PrioritizedFinding.getDisplayLocation() = displayLocation

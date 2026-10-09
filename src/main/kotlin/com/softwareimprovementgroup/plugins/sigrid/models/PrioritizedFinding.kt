@@ -35,7 +35,12 @@ data class PrioritizedFinding(
     // VERY_HIGH - see design doc section 2.3) and needs separate "fix first" sequencing instead.
     val refactoringCategory: RefactoringCategory? = null,
     val promotionReason: List<String> = emptyList(),
-)
+) {
+    // The grouped view lists each finding once, under its first file. A finding without a file location
+    // (e.g. a dependency with no manifest reference) falls back to its display location.
+    val fileGroupKey: String
+        get() = fileLocations.firstOrNull { it.filePath.isNotBlank() }?.filePath ?: displayLocation
+}
 
 fun RefactoringCandidate.toPrioritizedFinding() = PrioritizedFinding(
     id = id,
