@@ -21,8 +21,8 @@ import java.time.LocalDate
 class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
     project,
     arrayOf(
-        SigridBundle["column.capability"], SigridBundle["column.risk"], SigridBundle["column.location"],
-        SigridBundle["column.description"], SigridBundle["column.status"], SigridBundle["column.reason"],
+        SigridBundle["column.risk"], SigridBundle["column.capability"], SigridBundle["column.description"],
+        SigridBundle["column.location"], SigridBundle["column.status"], SigridBundle["column.reason"],
     ),
     centeredColumns = setOf(SigridBundle["column.capability"], SigridBundle["column.risk"], SigridBundle["column.status"]),
     columnFilters = listOf(
@@ -99,10 +99,10 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
         reasonLabel.contains(query, ignoreCase = true)
 
     override fun PrioritizedFinding.toRow(): Array<Any> = arrayOf(
-        capability.label,
         priorityRank.toRiskIcon(),
-        displayLocation,
+        capability.label,
         description,
+        displayLocation,
         statusLabel,
         reasonLabel,
     )
