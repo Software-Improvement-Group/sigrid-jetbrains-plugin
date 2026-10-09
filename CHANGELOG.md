@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Group by file in the Prioritized tab** — a "Group by file" toggle nests findings under expandable file rows (each finding appears once, under its first file location). Expand/collapse state is kept across searches, filters, and refreshes.
 
+### Fixed
+
+- **Duplicate security findings** — when the API returns the same finding several times (same location, rule, and severity, differing only in id and first-seen date), it is now shown once in the Security tab and the Prioritized list. A triaged copy (non-RAW status or a remark) is kept over untriaged ones.
+
 ### Changed
 
 - All tabs now render in an IntelliJ `TreeTable` instead of a plain table. Flat tabs look the same; the first left-aligned column hosts the expander.

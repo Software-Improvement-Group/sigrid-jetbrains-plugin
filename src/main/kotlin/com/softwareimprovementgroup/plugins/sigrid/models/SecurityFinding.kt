@@ -26,6 +26,7 @@ data class SecurityFindingResponse(
     val isSeverityOverridden: Boolean,
     val weaknessIds: List<String>,
     val categories: List<String>,
+    val ruleId: String? = null,
 )
 
 data class SecurityFinding(
