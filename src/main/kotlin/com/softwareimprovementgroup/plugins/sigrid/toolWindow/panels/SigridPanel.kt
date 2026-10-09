@@ -293,29 +293,26 @@ abstract class SigridPanel<T>(
         searchField.preferredSize = java.awt.Dimension(220, searchField.preferredSize.height)
     }
 
-    private fun setupLayout() {
-        val toolbar = JPanel(GridBagLayout()).apply {
-            val leading = GridBagConstraints().apply {
-                anchor = GridBagConstraints.WEST
-                fill = GridBagConstraints.VERTICAL
-                weightx = 1.0
-            }
-            val trailing = GridBagConstraints().apply {
-                anchor = GridBagConstraints.EAST
-                fill = GridBagConstraints.VERTICAL
-            }
-            val controlHeight = fileFilterPanel.filterControlHeight
-            listOf(editButton, openInSigridButton, createIssueButton.button, fixWithAiButton).forEach { button ->
-                button.preferredSize = java.awt.Dimension(button.preferredSize.width, controlHeight)
-            }
-            searchField.preferredSize = java.awt.Dimension(searchField.preferredSize.width, controlHeight)
-            add(fileFilterPanel, leading)
-            add(editButton, trailing)
-            add(openInSigridButton, trailing)
-            add(createIssueButton.button, trailing)
-            add(fixWithAiButton, trailing)
-            add(searchField, trailing)
+    private fun buildToolbar(): JPanel {
+        val leading = GridBagConstraints().apply {
+            anchor = GridBagConstraints.WEST
+            fill = GridBagConstraints.VERTICAL
+            weightx = 1.0
         }
+        val trailing = GridBagConstraints().apply {
+            anchor = GridBagConstraints.EAST
+            fill = GridBagConstraints.VERTICAL
+        }
+        val controlHeight = fileFilterPanel.filterControlHeight
+        val trailingControls = listOf(editButton, openInSigridButton, createIssueButton.button, fixWithAiButton, searchField)
+        trailingControls.forEach { it.preferredSize = java.awt.Dimension(it.preferredSize.width, controlHeight) }
+        return JPanel(GridBagLayout()).apply {
+            add(fileFilterPanel, leading)
+            trailingControls.forEach { add(it, trailing) }
+        }
+    }
+
+    private fun setupLayout() {
         cards.add(JBLabel(SigridBundle["panel.loading"]).apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
         cards.add(statusLabel, CARD_ERROR)
         cards.add(buildNotConfiguredCard(project), CARD_NOT_CONFIGURED)
@@ -324,7 +321,7 @@ abstract class SigridPanel<T>(
             add(filteredEmptyLabel, BorderLayout.SOUTH)
         }
         cards.add(tableCard, CARD_TABLE)
-        add(toolbar, BorderLayout.NORTH)
+        add(buildToolbar(), BorderLayout.NORTH)
         add(cards, BorderLayout.CENTER)
     }
 
