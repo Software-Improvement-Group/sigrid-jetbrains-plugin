@@ -37,7 +37,7 @@ class FileFilterPanel(
     var onFileFilterChange: (Boolean) -> Unit = {}
 
     init {
-        val filterButton = panel {
+        panel {
             row {
                 fileFilterSegmentedButton = segmentedButton(FileFilter.entries.toList()) { value ->
                     val label = when (value) {
@@ -49,8 +49,10 @@ class FileFilterPanel(
                 }.bind(selectedFileFilterProperty)
             }
         }
-        add(filterButton)
-        setFocusableRecursively(filterButton, false)
+        val segmentedControl = fileFilterSegmentedButton.component!!
+        add(JBLabel(SigridBundle["panel.filter.scope"]))
+        add(segmentedControl)
+        setFocusableRecursively(segmentedControl, false)
         add(activeFileLabel)
 
         selectedFileFilterProperty.afterChange { value ->
@@ -101,6 +103,9 @@ class FileFilterPanel(
             suppressCallback = false
         }
     }
+
+    internal val filterControlHeight: Int
+        get() = fileFilterSegmentedButton.component?.preferredSize?.height ?: 0
 
     internal fun activeFilePath(): String? {
         val vFile = FileEditorManager.getInstance(project).selectedFiles.firstOrNull() ?: return null

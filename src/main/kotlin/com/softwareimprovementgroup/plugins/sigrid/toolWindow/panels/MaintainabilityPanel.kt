@@ -16,7 +16,7 @@ import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 
 class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>(
     project,
-    arrayOf(SigridBundle["column.risk"], SigridBundle["column.location"], SigridBundle["column.description"], SigridBundle["column.status"]),
+    arrayOf(SigridBundle["column.risk"], SigridBundle["column.description"], SigridBundle["column.location"], SigridBundle["column.status"]),
     centeredColumns = setOf(SigridBundle["column.risk"], SigridBundle["column.status"]),
     columnFilters = listOf(
         ColumnFilterDef(
@@ -44,8 +44,8 @@ class MaintainabilityPanel(project: Project) : SigridPanel<RefactoringCandidate>
 
     override fun RefactoringCandidate.toRow(): Array<Any> = arrayOf(
         severity.toRiskIcon(),
-        displayLocation,
         description,
+        displayLocation,
         statusLabel,
     )
 
