@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.0.4-beta2] - 2026-10-12
 
 ### Added
 
@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Same-severity maintainability ordering** — in the Prioritized tab (flat and grouped views), maintainability findings of equal severity are now ordered by size within their refactoring category, descending: duplication by lines of code, unit size by weight, unit complexity by McCabe, unit interfacing by parameter count (module coupling by fan-in). Previously they were tie-broken by location only.
 - **Duplicate security findings** — when the API returns the same finding several times (same location, rule, and severity, differing only in id and first-seen date), it is now shown once in the Security tab and the Prioritized list. A triaged copy (non-RAW status or a remark) is kept over untriaged ones.
 
 ### Changed
