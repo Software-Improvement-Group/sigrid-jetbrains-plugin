@@ -120,12 +120,19 @@ class FindingTreeTable<T>(
         spanPainter.paint(g)
     }
 
-    fun setFindings(findings: List<T>, toRow: (T) -> Array<Any>, groupKeyOf: ((T) -> String)?) {
+    fun setFindings(
+        findings: List<T>,
+        toRow: (T) -> Array<Any>,
+        groupKeyOf: ((T) -> String)?,
+        groupOrder: Comparator<Map.Entry<String, List<T>>>? = null,
+    ) {
         root.removeAllChildren()
         if (groupKeyOf == null) {
             findings.forEach { root.add(FindingTreeNode(it, toRow(it))) }
         } else {
-            findings.groupBy(groupKeyOf).forEach { (key, members) -> root.add(groupNode(key, members, toRow)) }
+            val groups = findings.groupBy(groupKeyOf).entries
+            val ordered = if (groupOrder == null) groups else groups.sortedWith(groupOrder)
+            ordered.forEach { (key, members) -> root.add(groupNode(key, members, toRow)) }
         }
         (tableModel as DefaultTreeModel).reload()
         tree.showsRootHandles = groupKeyOf != null

@@ -34,4 +34,46 @@ class PrioritizedFindingTest {
     fun fileGroupKey_withoutFileLocations_fallsBackToDisplayLocation() {
         assertEquals("lodash", finding("lodash").fileGroupKey)
     }
+
+    private fun groupedFinding(rank: PriorityRank, tier: PriorityTier = PriorityTier.Standard) =
+        finding("x", "src/x.kt").copy(priorityRank = rank, tier = tier)
+
+    private fun orderedGroups(vararg groups: Pair<String, List<PrioritizedFinding>>) =
+        groups.toMap().entries.sortedWith(PrioritizedFinding.fileGroupOrder).map { it.key }
+
+    @Test
+    fun fileGroupOrder_tierBeatsSeverityAndCount() {
+        val order = orderedGroups(
+            "big" to List(5) { groupedFinding(PriorityRank.Critical) },
+            "security" to listOf(groupedFinding(PriorityRank.Low, PriorityTier.AlwaysFirst)),
+        )
+        assertEquals(listOf("security", "big"), order)
+    }
+
+    @Test
+    fun fileGroupOrder_sameTier_higherSeverityBeatsLargerCount() {
+        val order = orderedGroups(
+            "many" to List(5) { groupedFinding(PriorityRank.Medium) },
+            "severe" to listOf(groupedFinding(PriorityRank.High)),
+        )
+        assertEquals(listOf("severe", "many"), order)
+    }
+
+    @Test
+    fun fileGroupOrder_sameTierAndSeverity_moreFindingsFirst() {
+        val order = orderedGroups(
+            "a" to listOf(groupedFinding(PriorityRank.High)),
+            "b" to List(3) { groupedFinding(PriorityRank.High) },
+        )
+        assertEquals(listOf("b", "a"), order)
+    }
+
+    @Test
+    fun fileGroupOrder_fullTie_keepsIncomingOrder() {
+        val order = orderedGroups(
+            "z" to listOf(groupedFinding(PriorityRank.High)),
+            "a" to listOf(groupedFinding(PriorityRank.High)),
+        )
+        assertEquals(listOf("z", "a"), order)
+    }
 }

@@ -15,6 +15,9 @@ class PrioritizedFindingMapperTest {
         status: MaintainabilityFindingStatus = MaintainabilityFindingStatus.Raw,
         displayLocation: String = "Foo.kt",
         weight: Int = 100,
+        mcCabe: Int? = null,
+        parameters: Int? = null,
+        loc: Int? = null,
         fileLocations: List<FileLocation> = emptyList(),
     ) = RefactoringCandidate(
         id = id,
@@ -26,15 +29,16 @@ class PrioritizedFindingMapperTest {
         technology = "Kotlin",
         snapshotDate = "",
         name = "foo",
-        mcCabe = null,
+        mcCabe = mcCabe,
         fanIn = null,
         component = "svc",
-        parameters = null,
+        parameters = parameters,
         displayLocation = displayLocation,
         description = "Foo.kt is too long.",
         remark = "",
         fileLocations = fileLocations,
         href = null,
+        loc = loc,
     )
 
     private fun makeSecurityFinding(
@@ -530,6 +534,21 @@ class PrioritizedFindingMapperTest {
     }
 
     @Test
+    fun map_securityAndReliabilityFindings_haveAlwaysFirstTier() {
+        val result = map(
+            security = listOf(makeSecurityFinding(id = "sec")),
+            reliability = listOf(makeSecurityFinding(id = "rel")),
+        )
+        assertTrue(result.findings.all { it.tier == PriorityTier.AlwaysFirst })
+    }
+
+    @Test
+    fun map_urgentOsh_hasUrgencyOverrideTier() {
+        val urgentOsh = makeOshDependency(name = "urgent-dep", risk = RiskSeverity.Low, vulnerabilities = listOf(makeVulnerability(severity = RiskSeverity.Critical)))
+        assertEquals(PriorityTier.UrgencyOverride, map(openSourceHealth = listOf(urgentOsh)).findings.first().tier)
+    }
+
+    @Test
     fun map_urgentOsh_hasUrgencyOverridePromotionReason() {
         val urgentOsh = makeOshDependency(name = "urgent-dep", risk = RiskSeverity.Low, vulnerabilities = listOf(makeVulnerability(severity = RiskSeverity.Critical)))
         val result = map(openSourceHealth = listOf(urgentOsh))
@@ -617,5 +636,53 @@ class PrioritizedFindingMapperTest {
         val expectedVisible = (0 until 50).map { "crit$it" }
         val expectedAppended = (50 until 55).map { "crit$it" }
         assertEquals(expectedVisible + expectedAppended, result.findings.map { it.id })
+    }
+
+    private fun orderedIds(vararg candidates: RefactoringCandidate) =
+        map(maintainability = candidates.toList()).findings.map { it.id }
+
+    @Test
+    fun map_sameSeverityUnitSize_ordersByWeightDescending() {
+        val ids = orderedIds(
+            makeCandidate(id = "small", category = RefactoringCategory.UnitSize, weight = 10),
+            makeCandidate(id = "big", category = RefactoringCategory.UnitSize, weight = 90),
+        )
+        assertEquals(listOf("big", "small"), ids)
+    }
+
+    @Test
+    fun map_sameSeverityUnitComplexity_ordersByMcCabeDescending() {
+        val ids = orderedIds(
+            makeCandidate(id = "low", category = RefactoringCategory.UnitComplexity, mcCabe = 5),
+            makeCandidate(id = "high", category = RefactoringCategory.UnitComplexity, mcCabe = 40),
+        )
+        assertEquals(listOf("high", "low"), ids)
+    }
+
+    @Test
+    fun map_sameSeverityUnitInterfacing_ordersByParametersDescending() {
+        val ids = orderedIds(
+            makeCandidate(id = "few", category = RefactoringCategory.UnitInterfacing, parameters = 3),
+            makeCandidate(id = "many", category = RefactoringCategory.UnitInterfacing, parameters = 9),
+        )
+        assertEquals(listOf("many", "few"), ids)
+    }
+
+    @Test
+    fun map_sameSeverityDuplication_ordersByLocDescending() {
+        val ids = orderedIds(
+            makeCandidate(id = "short", category = RefactoringCategory.Duplication, loc = 12),
+            makeCandidate(id = "long", category = RefactoringCategory.Duplication, loc = 80),
+        )
+        assertEquals(listOf("long", "short"), ids)
+    }
+
+    @Test
+    fun map_higherSeverityBeatsLargerMetric() {
+        val ids = orderedIds(
+            makeCandidate(id = "medium-big", severity = MaintainabilitySeverity.Medium, weight = 500),
+            makeCandidate(id = "high-small", severity = MaintainabilitySeverity.High, weight = 1),
+        )
+        assertEquals(listOf("high-small", "medium-big"), ids)
     }
 }

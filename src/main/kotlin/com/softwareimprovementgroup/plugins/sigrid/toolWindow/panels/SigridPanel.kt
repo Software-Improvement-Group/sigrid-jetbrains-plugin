@@ -72,6 +72,9 @@ abstract class SigridPanel<T>(
     protected open fun T.getHref(): String? = null
     protected open fun T.getGroupKey(): String = ""
 
+    /** Order of file groups; null keeps the order in which each group's first finding appears. */
+    protected open fun groupOrder(): Comparator<Map.Entry<String, List<T>>>? = null
+
     private var allFindings: List<T> = emptyList()
     private var groupByFile = false
 
@@ -385,7 +388,7 @@ abstract class SigridPanel<T>(
         val filtered = filterFindings()
         val selectedIds = table.selectedFindings().map { it.getId() }.filter { it.isNotEmpty() }.toSet()
 
-        table.setFindings(filtered, { it.toRow() }, if (groupByFile) { finding -> finding.getGroupKey() } else null)
+        table.setFindings(filtered, { it.toRow() }, if (groupByFile) { finding -> finding.getGroupKey() } else null, groupOrder())
         if (filtered.isEmpty()) showNoFindings() else showFindings(selectedIds)
     }
 

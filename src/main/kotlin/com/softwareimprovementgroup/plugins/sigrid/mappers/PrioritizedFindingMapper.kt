@@ -8,6 +8,7 @@ import com.softwareimprovementgroup.plugins.sigrid.models.ObjectiveEvaluationRes
 import com.softwareimprovementgroup.plugins.sigrid.models.OpenSourceHealthDependency
 import com.softwareimprovementgroup.plugins.sigrid.models.PriorityCapability
 import com.softwareimprovementgroup.plugins.sigrid.models.PriorityRank
+import com.softwareimprovementgroup.plugins.sigrid.models.PriorityTier
 import com.softwareimprovementgroup.plugins.sigrid.models.PrioritizedFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.PrioritizedFindingResult
 import com.softwareimprovementgroup.plugins.sigrid.models.RefactoringCandidate
@@ -27,8 +28,11 @@ object PrioritizedFindingMapper {
     // it's applied (every Critical-rank finding is always shown, regardless of this number).
     private const val MAX_VISIBLE_FINDINGS = 50
 
-    private val byPriorityThenLocation =
-        compareByDescending<PrioritizedFinding> { it.priorityRank.ordinal }.thenBy { it.displayLocation }
+    private val byPriorityThenMetric =
+        compareByDescending<PrioritizedFinding> { it.priorityRank.ordinal }
+            .thenBy(nullsLast()) { it.refactoringCategory }
+            .thenByDescending { it.sortMetric }
+            .thenBy { it.displayLocation }
 
     fun map(
         maintainability: List<RefactoringCandidate>,
@@ -50,7 +54,7 @@ object PrioritizedFindingMapper {
 
         return PrioritizedFindingResult(
             findings = capToTopN(rank(dampened, rawMaintainability, collapsedOsh)),
-            testCodeFindings = testCode.sortedWith(byPriorityThenLocation),
+            testCodeFindings = testCode.sortedWith(byPriorityThenMetric),
         )
     }
 
@@ -77,8 +81,8 @@ object PrioritizedFindingMapper {
         val (urgent, everythingElse) = visible.partition {
             it.capability == PriorityCapability.Security || it.capability == PriorityCapability.Reliability
         }
-        val labeledUrgent = urgent.map { withReason(it, SigridBundle["prioritized.reason.always.first", it.capability.label]) }
-        return labeledUrgent.sortedWith(byPriorityThenLocation) + rankRemaining(everythingElse, rawMaintainability, collapsedOsh)
+        val labeledUrgent = urgent.map { promote(it, PriorityTier.AlwaysFirst, SigridBundle["prioritized.reason.always.first", it.capability.label]) }
+        return labeledUrgent.sortedWith(byPriorityThenMetric) + rankRemaining(everythingElse, rawMaintainability, collapsedOsh)
     }
 
     // Within the non-Security/Reliability bucket: Gate 1's urgency-override OSH findings go first, then
@@ -91,24 +95,24 @@ object PrioritizedFindingMapper {
     ): List<PrioritizedFinding> {
         val urgentIds = UrgencyGate.urgentFindingIds(collapsedOsh)
         val (urgentOsh, rest) = findings.partition { it.capability == PriorityCapability.OpenSourceHealth && it.id in urgentIds }
-        val labeledUrgentOsh = urgentOsh.map { withReason(it, SigridBundle["prioritized.reason.urgency.override"]) }
-        return labeledUrgentOsh.sortedWith(byPriorityThenLocation) + sequenceOrSort(rest, rawMaintainability)
+        val labeledUrgentOsh = urgentOsh.map { promote(it, PriorityTier.UrgencyOverride, SigridBundle["prioritized.reason.urgency.override"]) }
+        return labeledUrgentOsh.sortedWith(byPriorityThenMetric) + sequenceOrSort(rest, rawMaintainability)
     }
 
     private fun sequenceOrSort(findings: List<PrioritizedFinding>, rawMaintainability: List<RefactoringCandidate>): List<PrioritizedFinding> {
         if (!PriorityGrouper.duplicationFirstEligible(rawMaintainability)) {
-            return findings.sortedWith(byPriorityThenLocation)
+            return findings.sortedWith(byPriorityThenMetric)
         }
         val byId = findings.associateBy { it.id }
         val sequencedDuplication = PriorityGrouper.sequenceDuplicationFirst(rawMaintainability)
             .mapNotNull { byId[it.id] }
-            .map { withReason(it, SigridBundle["prioritized.reason.duplication.first"]) }
+            .map { promote(it, PriorityTier.DuplicationFirst, SigridBundle["prioritized.reason.duplication.first"]) }
         val rest = findings.filterNot { it.refactoringCategory == RefactoringCategory.Duplication }
-        return sequencedDuplication + rest.sortedWith(byPriorityThenLocation)
+        return sequencedDuplication + rest.sortedWith(byPriorityThenMetric)
     }
 
-    private fun withReason(finding: PrioritizedFinding, reason: String): PrioritizedFinding =
-        finding.copy(promotionReason = finding.promotionReason + reason)
+    private fun promote(finding: PrioritizedFinding, tier: PriorityTier, reason: String): PrioritizedFinding =
+        finding.copy(promotionReason = finding.promotionReason + reason, tier = tier)
 
     // OUTPUT step (design doc section 3): never drop a Critical-rank finding, no matter how long the
     // ranked list is, but otherwise cap what's shown. Takes the first MAX_VISIBLE_FINDINGS exactly as

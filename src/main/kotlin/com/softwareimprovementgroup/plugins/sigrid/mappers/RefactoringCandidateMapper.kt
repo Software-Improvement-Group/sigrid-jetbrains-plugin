@@ -37,6 +37,7 @@ object RefactoringCandidateMapper {
         fanIn = r.fanIn,
         component = r.component,
         parameters = r.parameters,
+        loc = r.loc,
         displayLocation = displayLocation(r),
         description = description(category, r),
         remark = "",

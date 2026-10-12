@@ -35,12 +35,38 @@ data class PrioritizedFinding(
     // VERY_HIGH - see design doc section 2.3) and needs separate "fix first" sequencing instead.
     val refactoringCategory: RefactoringCategory? = null,
     val promotionReason: List<String> = emptyList(),
+    val tier: PriorityTier = PriorityTier.Standard,
+    // Magnitude used to order same-rank findings; 0 for everything but Maintainability.
+    val sortMetric: Int = 0,
 ) {
     // The grouped view lists each finding once, under its first file. A finding without a file location
     // (e.g. a dependency with no manifest reference) falls back to its display location.
     val fileGroupKey: String
         get() = fileLocations.firstOrNull { it.filePath.isNotBlank() }?.filePath ?: displayLocation
+
+    companion object {
+        /**
+         * Orders file groups by the best tier among their findings (so Security/Reliability files stay first),
+         * then by highest severity, then by number of findings. Ties keep the incoming (ranked) order.
+         */
+        val fileGroupOrder: Comparator<Map.Entry<String, List<PrioritizedFinding>>> =
+            compareBy<Map.Entry<String, List<PrioritizedFinding>>> { (_, members) -> members.minOf { it.tier } }
+                .thenByDescending { (_, members) -> members.maxOf { it.priorityRank } }
+                .thenByDescending { it.value.size }
+    }
 }
+
+/** Ranking tiers, most important first; declaration order is the precedence. */
+enum class PriorityTier { AlwaysFirst, UrgencyOverride, DuplicationFirst, Standard }
+
+// The metric that makes a candidate "bigger" within its refactoring category.
+private fun RefactoringCandidate.sortMetric(): Int = when (category) {
+    RefactoringCategory.Duplication -> loc
+    RefactoringCategory.UnitSize -> weight
+    RefactoringCategory.UnitComplexity -> mcCabe
+    RefactoringCategory.UnitInterfacing -> parameters
+    RefactoringCategory.ModuleCoupling -> fanIn
+} ?: 0
 
 fun RefactoringCandidate.toPrioritizedFinding() = PrioritizedFinding(
     id = id,
@@ -56,6 +82,7 @@ fun RefactoringCandidate.toPrioritizedFinding() = PrioritizedFinding(
     statusOptions = MaintainabilityFindingStatus.entries.map { "${it.icon} ${snakeCaseToTitleCase(it.apiValue)}" to it.apiValue },
     currentStatusValue = status.apiValue,
     refactoringCategory = category,
+    sortMetric = sortMetric(),
 )
 
 // Reliability findings share this exact response/domain shape with Security (both come from

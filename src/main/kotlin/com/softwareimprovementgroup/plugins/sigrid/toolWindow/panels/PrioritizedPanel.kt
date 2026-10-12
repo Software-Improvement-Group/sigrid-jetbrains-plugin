@@ -126,6 +126,7 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
 
     override fun PrioritizedFinding.getHref() = href
     override fun PrioritizedFinding.getGroupKey() = fileGroupKey
+    override fun groupOrder() = PrioritizedFinding.fileGroupOrder
     override fun PrioritizedFinding.isEditable() = editable
     override fun PrioritizedFinding.getId() = id
     override fun PrioritizedFinding.getDisplayLocation() = displayLocation
