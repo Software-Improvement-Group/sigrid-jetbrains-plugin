@@ -94,7 +94,7 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
 
     override fun PrioritizedFinding.matchesSearch(query: String) =
         capability.label.contains(query, ignoreCase = true) ||
-        displayLocation.contains(query, ignoreCase = true) ||
+        locationLabel.contains(query, ignoreCase = true) ||
         description.contains(query, ignoreCase = true) ||
         statusLabel.contains(query, ignoreCase = true) ||
         reasonLabel.contains(query, ignoreCase = true)
@@ -102,7 +102,7 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
     override fun PrioritizedFinding.toRow(): Array<Any> = arrayOf(
         capability.label,
         priorityRank.toRiskIcon(),
-        displayLocation,
+        locationLabel,
         description,
         statusLabel,
         reasonLabel,
@@ -119,7 +119,7 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
     override fun PrioritizedFinding.toFixItContext() = FixItContext(
         category = capability.label,
         severity = priorityRank.toRiskIcon().label,
-        title = "$displayLocation: $description",
+        title = "$locationLabel: $description",
         fileLocations = fileLocations,
         href = href,
     )
@@ -129,7 +129,7 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
     override fun groupOrder() = PrioritizedFinding.fileGroupOrder
     override fun PrioritizedFinding.isEditable() = editable
     override fun PrioritizedFinding.getId() = id
-    override fun PrioritizedFinding.getDisplayLocation() = displayLocation
+    override fun PrioritizedFinding.getDisplayLocation() = locationLabel
     override fun PrioritizedFinding.getEditDescription() = description
     override fun PrioritizedFinding.getStatusOptions() = statusOptions
     override fun PrioritizedFinding.getCurrentStatus() = currentStatusValue

@@ -38,7 +38,12 @@ data class PrioritizedFinding(
     val tier: PriorityTier = PriorityTier.Standard,
     // Magnitude used to order same-rank findings; 0 for everything but Maintainability.
     val sortMetric: Int = 0,
+    // Set for Security/Reliability, whose vague descriptions can otherwise make distinct findings in one file look identical.
+    val startLine: Int? = null,
 ) {
+    val locationLabel: String
+        get() = startLine?.let { "$displayLocation:$it" } ?: displayLocation
+
     // The grouped view lists each finding once, under its first file. A finding without a file location
     // (e.g. a dependency with no manifest reference) falls back to its display location.
     val fileGroupKey: String
@@ -57,7 +62,7 @@ data class PrioritizedFinding(
 }
 
 /** Ranking tiers, most important first; declaration order is the precedence. */
-enum class PriorityTier { AlwaysFirst, UrgencyOverride, DuplicationFirst, Standard }
+enum class PriorityTier { VulnerabilityFirst, AlwaysFirst, DuplicationFirst, Standard }
 
 // The metric that makes a candidate "bigger" within its refactoring category.
 private fun RefactoringCandidate.sortMetric(): Int = when (category) {
@@ -101,12 +106,13 @@ fun SecurityFinding.toPrioritizedFinding(capability: PriorityCapability = Priori
     editable = true,
     statusOptions = FindingStatus.entries.map { "${it.icon} ${snakeCaseToTitleCase(it.apiValue)}" to it.apiValue },
     currentStatusValue = status.apiValue,
+    startLine = fileLocations.firstOrNull()?.startLine,
 )
 
 fun OpenSourceHealthDependency.toPrioritizedFinding() = PrioritizedFinding(
     id = purl ?: name,
     capability = PriorityCapability.OpenSourceHealth,
-    priorityRank = risk.toPriorityRank(),
+    priorityRank = vulnerabilityRisk.toPriorityRank(),
     displayLocation = displayName,
     description = "$displayName $version",
     statusLabel = "",

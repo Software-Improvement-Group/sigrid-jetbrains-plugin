@@ -7,12 +7,12 @@ import com.softwareimprovementgroup.plugins.sigrid.models.MaintainabilityFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.ObjectiveEvaluationResponse
 import com.softwareimprovementgroup.plugins.sigrid.models.OpenSourceHealthDependency
 import com.softwareimprovementgroup.plugins.sigrid.models.PriorityCapability
-import com.softwareimprovementgroup.plugins.sigrid.models.PriorityRank
 import com.softwareimprovementgroup.plugins.sigrid.models.PriorityTier
 import com.softwareimprovementgroup.plugins.sigrid.models.PrioritizedFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.PrioritizedFindingResult
 import com.softwareimprovementgroup.plugins.sigrid.models.RefactoringCandidate
 import com.softwareimprovementgroup.plugins.sigrid.models.RefactoringCategory
+import com.softwareimprovementgroup.plugins.sigrid.models.RiskSeverity
 import com.softwareimprovementgroup.plugins.sigrid.models.SecurityFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.toPrioritizedFinding
 
@@ -21,18 +21,12 @@ object PrioritizedFindingMapper {
     // Architecture Quality data yet (e.g. existing tests) see unchanged, ungated behavior.
     private val NO_ACTIVITY_DATA = FileActivityData(hasHistory = false, historyStartDate = null, historyEndDate = null, fileActivities = emptyList())
 
-    // Epic 432 OUTPUT step + Open Decision #2: "a capped, explainable top-N list... the data doesn't
-    // support an unbounded 'true' global rank". The exact number is explicitly flagged in the design doc
-    // as a product call, not a data-backed one ("yours to make, not a data question") - this is a
-    // provisional placeholder, not a validated figure. Change freely; see capToTopN's doc comment for how
-    // it's applied (every Critical-rank finding is always shown, regardless of this number).
-    private const val MAX_VISIBLE_FINDINGS = 50
-
     private val byPriorityThenMetric =
         compareByDescending<PrioritizedFinding> { it.priorityRank.ordinal }
             .thenBy(nullsLast()) { it.refactoringCategory }
             .thenByDescending { it.sortMetric }
             .thenBy { it.displayLocation }
+            .thenBy(nullsLast()) { it.startLine }
 
     fun map(
         maintainability: List<RefactoringCandidate>,
@@ -45,7 +39,7 @@ object PrioritizedFindingMapper {
         currentRatings: Map<PriorityCapability, Double> = emptyMap(),
     ): PrioritizedFindingResult {
         val rawMaintainability = maintainability.filter { it.status == MaintainabilityFindingStatus.Raw }
-        val collapsedOsh = PriorityDeduplicator.collapseByLibraryName(openSourceHealth)
+        val collapsedOsh = PriorityDeduplicator.collapseByLibraryName(openSourceHealth).filter { it.hasVulnerability() }
         val merged = mergeRawFindings(rawMaintainability, security, reliability, collapsedOsh)
 
         val (testCode, everythingElse) = merged.partition { PriorityExclusionFilter.isTestCode(it) }
@@ -53,7 +47,7 @@ object PrioritizedFindingMapper {
         val dampened = gated.map { ObjectivesGate.applyIfMet(it, objectives, objectivesConfig, currentRatings) } // GATE 3
 
         return PrioritizedFindingResult(
-            findings = capToTopN(rank(dampened, rawMaintainability, collapsedOsh)),
+            findings = rank(dampened, rawMaintainability),
             testCodeFindings = testCode.sortedWith(byPriorityThenMetric),
         )
     }
@@ -69,35 +63,27 @@ object PrioritizedFindingMapper {
             reliability.filter { it.status == FindingStatus.Raw }.map { it.toPrioritizedFinding(PriorityCapability.Reliability) } +
             collapsedOsh.map { it.toPrioritizedFinding() }
 
-    // Product decision, confirmed with the epic's author: Security and Reliability findings are always
-    // ranked ahead of every other capability, full stop - not just weighted higher within a combined
-    // severity sort. Only once those two are placed does Gate 1 (urgency) and duplication-first
-    // sequencing apply to what's left.
+    // Product decision: Security findings and Open Source Health vulnerabilities are always ranked ahead
+    // of everything else, then Reliability, regardless of severity. Only once those are placed does
+    // duplication-first sequencing apply to what's left.
     private fun rank(
         visible: List<PrioritizedFinding>,
         rawMaintainability: List<RefactoringCandidate>,
-        collapsedOsh: List<OpenSourceHealthDependency>,
     ): List<PrioritizedFinding> {
-        val (urgent, everythingElse) = visible.partition {
-            it.capability == PriorityCapability.Security || it.capability == PriorityCapability.Reliability
-        }
-        val labeledUrgent = urgent.map { promote(it, PriorityTier.AlwaysFirst, SigridBundle["prioritized.reason.always.first", it.capability.label]) }
-        return labeledUrgent.sortedWith(byPriorityThenMetric) + rankRemaining(everythingElse, rawMaintainability, collapsedOsh)
+        val (vulnerabilities, others) = visible.partition { it.capability.isVulnerabilityCapability() }
+        val (reliability, rest) = others.partition { it.capability == PriorityCapability.Reliability }
+        return promoteAndSort(vulnerabilities, PriorityTier.VulnerabilityFirst) +
+            promoteAndSort(reliability, PriorityTier.AlwaysFirst) +
+            sequenceOrSort(rest, rawMaintainability)
     }
 
-    // Within the non-Security/Reliability bucket: Gate 1's urgency-override OSH findings go first, then
-    // Duplication findings are sequenced ahead of the rest when this system's own data supports Pascal's
-    // rule, otherwise everything falls back to the plain severity sort.
-    private fun rankRemaining(
-        findings: List<PrioritizedFinding>,
-        rawMaintainability: List<RefactoringCandidate>,
-        collapsedOsh: List<OpenSourceHealthDependency>,
-    ): List<PrioritizedFinding> {
-        val urgentIds = UrgencyGate.urgentFindingIds(collapsedOsh)
-        val (urgentOsh, rest) = findings.partition { it.capability == PriorityCapability.OpenSourceHealth && it.id in urgentIds }
-        val labeledUrgentOsh = urgentOsh.map { promote(it, PriorityTier.UrgencyOverride, SigridBundle["prioritized.reason.urgency.override"]) }
-        return labeledUrgentOsh.sortedWith(byPriorityThenMetric) + sequenceOrSort(rest, rawMaintainability)
-    }
+    private fun promoteAndSort(findings: List<PrioritizedFinding>, tier: PriorityTier): List<PrioritizedFinding> =
+        findings
+            .map { promote(it, tier, SigridBundle["prioritized.reason.always.first", it.capability.label]) }
+            .sortedWith(byPriorityThenMetric)
+
+    private fun PriorityCapability.isVulnerabilityCapability() =
+        this == PriorityCapability.Security || this == PriorityCapability.OpenSourceHealth
 
     private fun sequenceOrSort(findings: List<PrioritizedFinding>, rawMaintainability: List<RefactoringCandidate>): List<PrioritizedFinding> {
         if (!PriorityGrouper.duplicationFirstEligible(rawMaintainability)) {
@@ -114,15 +100,5 @@ object PrioritizedFindingMapper {
     private fun promote(finding: PrioritizedFinding, tier: PriorityTier, reason: String): PrioritizedFinding =
         finding.copy(promotionReason = finding.promotionReason + reason, tier = tier)
 
-    // OUTPUT step (design doc section 3): never drop a Critical-rank finding, no matter how long the
-    // ranked list is, but otherwise cap what's shown. Takes the first MAX_VISIBLE_FINDINGS exactly as
-    // ranked (preserving the Security/Reliability-always-first and Gate 1/duplication-first placement
-    // rules above), then appends any Critical-rank findings that fell past the cut - still visible, just
-    // not reordered to the very front of the capped list.
-    private fun capToTopN(ranked: List<PrioritizedFinding>): List<PrioritizedFinding> {
-        if (ranked.size <= MAX_VISIBLE_FINDINGS) return ranked
-        val visible = ranked.take(MAX_VISIBLE_FINDINGS)
-        val truncatedCriticals = ranked.drop(MAX_VISIBLE_FINDINGS).filter { it.priorityRank == PriorityRank.Critical }
-        return visible + truncatedCriticals
-    }
+    private fun OpenSourceHealthDependency.hasVulnerability() = vulnerabilityRisk >= RiskSeverity.Low
 }

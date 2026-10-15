@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **Line numbers for Security and Reliability findings** — the Prioritized tab's location column now shows `file:line` for these findings, so distinct findings with similar descriptions in the same file can be told apart. The line is also searchable and included in the fix prompt title.
+
+### Changed
+
+- **Vulnerabilities ranked first in the Prioritized tab** — Security findings and Open Source Health vulnerabilities are now ranked ahead of everything else regardless of severity, followed by Reliability findings, then the remaining findings.
+- **Open Source Health in the Prioritized tab** — only dependencies with a known vulnerability are listed, and their rank is based on vulnerability risk rather than overall dependency risk.
+- **Same-location ordering** — findings with the same priority, category, and location are ordered by start line.
+
+### Removed
+
+- **Urgency override gate** — superseded by the vulnerabilities-first ranking above.
+- **50-finding cap** — the Prioritized tab now lists all ranked findings.
+
 ## [1.0.4-beta2] - 2026-10-12
 
 ### Added

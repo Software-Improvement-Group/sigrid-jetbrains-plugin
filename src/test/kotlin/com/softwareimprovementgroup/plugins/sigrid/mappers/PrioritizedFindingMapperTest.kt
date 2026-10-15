@@ -63,6 +63,7 @@ class PrioritizedFindingMapperTest {
     private fun makeOshDependency(
         name: String = "left-pad",
         risk: RiskSeverity = RiskSeverity.Critical,
+        vulnerabilityRisk: RiskSeverity = risk,
         purl: String? = null,
         vulnerabilities: List<OshVulnerability> = emptyList(),
     ) = OpenSourceHealthDependency(
@@ -74,7 +75,7 @@ class PrioritizedFindingMapperTest {
         purl = purl,
         risk = risk,
         licenseRisk = RiskSeverity.None,
-        vulnerabilityRisk = risk,
+        vulnerabilityRisk = vulnerabilityRisk,
         freshnessRisk = RiskSeverity.None,
         activityRisk = RiskSeverity.None,
         stabilityRisk = RiskSeverity.None,
@@ -151,6 +152,14 @@ class PrioritizedFindingMapperTest {
         )
         val result = map(reliability = findings)
         assertEquals(listOf("raw"), result.findings.map { it.id })
+    }
+
+    @Test
+    fun map_security_sameFileSameSeverity_sortedByLineAndLabeledWithLine() {
+        fun at(id: String, line: Int) = makeSecurityFinding(id = id, fileLocations = listOf(FileLocation("c", "Bar.kt", line, line)))
+        val result = map(security = listOf(at("l104", 104), at("l54", 54), at("l71", 71)))
+        assertEquals(listOf("l54", "l71", "l104"), result.findings.map { it.id })
+        assertEquals("Bar.kt:54", result.findings[0].locationLabel)
     }
 
     @Test
@@ -298,10 +307,9 @@ class PrioritizedFindingMapperTest {
     @Test
     fun map_lowSeveritySecurity_stillRankedAheadOfCriticalOtherFindings() {
         val secLow = makeSecurityFinding(id = "sec-low", severity = RiskSeverity.Low)
-        val oshCritical = makeOshDependency(name = "critical-dep", risk = RiskSeverity.Critical)
         val candidateCritical = makeCandidate(id = "maint-critical", severity = MaintainabilitySeverity.VeryHigh)
 
-        val result = map(maintainability = listOf(candidateCritical), security = listOf(secLow), openSourceHealth = listOf(oshCritical))
+        val result = map(maintainability = listOf(candidateCritical), security = listOf(secLow))
 
         assertEquals("sec-low", result.findings.first().id)
     }
@@ -309,23 +317,46 @@ class PrioritizedFindingMapperTest {
     @Test
     fun map_lowSeverityReliability_stillRankedAheadOfCriticalOtherFindings() {
         val relLow = makeSecurityFinding(id = "rel-low", severity = RiskSeverity.Low)
-        val oshCritical = makeOshDependency(name = "critical-dep", risk = RiskSeverity.Critical)
+        val candidateCritical = makeCandidate(id = "maint-critical", severity = MaintainabilitySeverity.VeryHigh)
 
-        val result = map(reliability = listOf(relLow), openSourceHealth = listOf(oshCritical))
+        val result = map(maintainability = listOf(candidateCritical), reliability = listOf(relLow))
 
         assertEquals("rel-low", result.findings.first().id)
     }
 
     @Test
-    fun map_securityAndReliability_mixedAndSortedTogetherBySeverity() {
+    fun map_securityAndReliability_securityFirstEvenWhenReliabilityMoreSevere() {
         val secLow = makeSecurityFinding(id = "sec-low", severity = RiskSeverity.Low, displayFilePath = "b.kt")
         val relCritical = makeSecurityFinding(id = "rel-critical", severity = RiskSeverity.Critical, displayFilePath = "a.kt")
 
         val result = map(security = listOf(secLow), reliability = listOf(relCritical))
 
-        // Both sit in the same "always first" bucket, sorted by severity - Reliability's Critical finding
-        // outranks Security's Low one, proving the bucket isn't secretly still Security-first internally.
-        assertEquals(listOf("rel-critical", "sec-low"), result.findings.map { it.id })
+        assertEquals(listOf("sec-low", "rel-critical"), result.findings.map { it.id })
+    }
+
+    @Test
+    fun map_securityAndOshVulnerability_interleavedBySeverityAheadOfReliability() {
+        val secMedium = makeSecurityFinding(id = "sec-medium", severity = RiskSeverity.Medium)
+        val oshCritical = makeOshDependency(name = "osh-critical", risk = RiskSeverity.Critical)
+        val relCritical = makeSecurityFinding(id = "rel-critical", severity = RiskSeverity.Critical)
+
+        val result = map(security = listOf(secMedium), reliability = listOf(relCritical), openSourceHealth = listOf(oshCritical))
+
+        assertEquals(listOf("osh-critical", "sec-medium", "rel-critical"), result.findings.map { it.id })
+    }
+
+    @Test
+    fun map_oshWithoutVulnerability_excludedEvenWithOtherHighRisk() {
+        val noVuln = makeOshDependency(name = "stale", risk = RiskSeverity.High, vulnerabilityRisk = RiskSeverity.None)
+
+        assertTrue(map(openSourceHealth = listOf(noVuln)).findings.isEmpty())
+    }
+
+    @Test
+    fun map_oshVulnerability_rankedByVulnerabilityRiskNotOverallRisk() {
+        val osh = makeOshDependency(name = "dep", risk = RiskSeverity.Critical, vulnerabilityRisk = RiskSeverity.Low)
+
+        assertEquals(PriorityRank.Low, map(openSourceHealth = listOf(osh)).findings.single().priorityRank)
     }
 
     // group: duplication-first sequencing, end-to-end (applies within the remaining bucket only)
@@ -350,42 +381,26 @@ class PrioritizedFindingMapperTest {
     @Test
     fun map_duplicationFirstNotEligible_fallsBackToPlainSeveritySort() {
         // No overlap between the Duplication file and any other Maintainability finding -> not eligible.
-        // Uses OSH rather than Security here so the assertion isolates the duplication-first fallback
-        // behavior, not the separate Security-always-first rule covered above.
         val dup = makeCandidate(id = "dup", category = RefactoringCategory.Duplication, severity = MaintainabilitySeverity.VeryHigh, weight = 999, fileLocations = listOf(FileLocation("svc", "svc/A.kt")))
-        val oshCritical = makeOshDependency(name = "critical-dep", risk = RiskSeverity.Critical)
+        val unitSize = makeCandidate(id = "unit", category = RefactoringCategory.UnitSize, severity = MaintainabilitySeverity.VeryHigh, weight = 10, fileLocations = listOf(FileLocation("svc", "svc/B.kt")))
 
-        val result = map(maintainability = listOf(dup), openSourceHealth = listOf(oshCritical))
+        val result = map(maintainability = listOf(unitSize, dup))
 
-        // Both map to PriorityRank.Critical, so the plain sort's displayLocation tie-break decides:
-        // "Foo.kt" (dup's default displayLocation) sorts before "critical-dep"'s displayLocation.
-        assertEquals(listOf("dup", "critical-dep"), result.findings.map { it.id })
+        // Both are Critical rank, so the category order decides (Duplication sorts first); no promotion happens.
+        assertEquals(listOf("dup", "unit"), result.findings.map { it.id })
+        assertTrue(result.findings.all { it.tier == PriorityTier.Standard })
     }
 
-    // gate 1: urgency override (OSH CVE/GHSA + high severity, within the non-Security/Reliability bucket)
+    // OSH vulnerabilities: ranked like Security, ahead of Maintainability
 
     @Test
-    fun map_urgentOsh_promotedAheadOfMaintainabilityButNotAheadOfSecurity() {
-        val urgentOsh = makeOshDependency(name = "urgent-dep", risk = RiskSeverity.Low, vulnerabilities = listOf(makeVulnerability(severity = RiskSeverity.Critical)))
-        val maint = makeCandidate(id = "maint-critical", severity = MaintainabilitySeverity.VeryHigh)
-        val sec = makeSecurityFinding(id = "sec-critical", severity = RiskSeverity.Critical)
-
-        val result = map(maintainability = listOf(maint), security = listOf(sec), openSourceHealth = listOf(urgentOsh))
-
-        // Security first no matter what, then the urgent OSH finding ahead of Maintainability - even
-        // though its own OSH risk field (Low) would otherwise rank it last.
-        assertEquals(listOf("sec-critical", "urgent-dep", "maint-critical"), result.findings.map { it.id })
-    }
-
-    @Test
-    fun map_oshWithoutRealIdentifier_notTreatedAsUrgent() {
-        val notUrgent = makeOshDependency(name = "not-urgent", risk = RiskSeverity.Low, vulnerabilities = listOf(makeVulnerability(id = "internal-1", severity = RiskSeverity.Critical)))
+    fun map_oshVulnerability_rankedAheadOfCriticalMaintainability() {
+        val osh = makeOshDependency(name = "vuln-dep", risk = RiskSeverity.Low)
         val maint = makeCandidate(id = "maint-critical", severity = MaintainabilitySeverity.VeryHigh)
 
-        val result = map(maintainability = listOf(maint), openSourceHealth = listOf(notUrgent))
+        val result = map(maintainability = listOf(maint), openSourceHealth = listOf(osh))
 
-        // Plain severity sort applies: Maintainability's Critical outranks OSH's Low.
-        assertEquals(listOf("maint-critical", "not-urgent"), result.findings.map { it.id })
+        assertEquals(listOf("vuln-dep", "maint-critical"), result.findings.map { it.id })
     }
 
     // gate 2: activity (Maintainability only, fails open with no/unknown history)
@@ -534,25 +549,20 @@ class PrioritizedFindingMapperTest {
     }
 
     @Test
-    fun map_securityAndReliabilityFindings_haveAlwaysFirstTier() {
+    fun map_securityAndReliabilityFindings_haveTheirTiers() {
         val result = map(
             security = listOf(makeSecurityFinding(id = "sec")),
             reliability = listOf(makeSecurityFinding(id = "rel")),
         )
-        assertTrue(result.findings.all { it.tier == PriorityTier.AlwaysFirst })
+        assertEquals(PriorityTier.VulnerabilityFirst, result.findings.first { it.id == "sec" }.tier)
+        assertEquals(PriorityTier.AlwaysFirst, result.findings.first { it.id == "rel" }.tier)
     }
 
     @Test
-    fun map_urgentOsh_hasUrgencyOverrideTier() {
-        val urgentOsh = makeOshDependency(name = "urgent-dep", risk = RiskSeverity.Low, vulnerabilities = listOf(makeVulnerability(severity = RiskSeverity.Critical)))
-        assertEquals(PriorityTier.UrgencyOverride, map(openSourceHealth = listOf(urgentOsh)).findings.first().tier)
-    }
-
-    @Test
-    fun map_urgentOsh_hasUrgencyOverridePromotionReason() {
-        val urgentOsh = makeOshDependency(name = "urgent-dep", risk = RiskSeverity.Low, vulnerabilities = listOf(makeVulnerability(severity = RiskSeverity.Critical)))
-        val result = map(openSourceHealth = listOf(urgentOsh))
-        assertEquals(listOf(SigridBundle["prioritized.reason.urgency.override"]), result.findings.first().promotionReason)
+    fun map_oshVulnerability_hasVulnerabilityFirstTierAndAlwaysFirstReason() {
+        val finding = map(openSourceHealth = listOf(makeOshDependency(name = "vuln-dep"))).findings.single()
+        assertEquals(PriorityTier.VulnerabilityFirst, finding.tier)
+        assertEquals(listOf(SigridBundle["prioritized.reason.always.first", PriorityCapability.OpenSourceHealth.label]), finding.promotionReason)
     }
 
     @Test
@@ -595,47 +605,15 @@ class PrioritizedFindingMapperTest {
         )
     }
 
-    // capToTopN: never drop a Critical-rank finding, no matter how long the ranked list is, but otherwise
-    // cap what's shown (Epic 432 OUTPUT step + Open Decision #2).
-
     @Test
-    fun map_atOrBelowMaxVisibleFindings_notCapped() {
-        val candidates = (0 until 50).map { i -> makeCandidate(id = "m$i", displayLocation = "m%02d.kt".format(i)) }
-        val result = map(maintainability = candidates)
-        assertEquals(50, result.findings.size)
-    }
+    fun map_manyFindings_neverCapsAnyCapability() {
+        val maintainability = (0 until 60).map { makeCandidate(id = "m$it", severity = MaintainabilitySeverity.Low, displayLocation = "m%02d.kt".format(it)) }
+        val security = (0 until 30).map { makeSecurityFinding(id = "sec$it", severity = RiskSeverity.Low, displayFilePath = "s%02d.kt".format(it)) }
+        val reliability = listOf(makeSecurityFinding(id = "rel-medium", severity = RiskSeverity.Medium))
 
-    @Test
-    fun map_moreThanMaxVisibleFindings_neverDropsCriticalRankFindings() {
-        val criticals = (0 until 55).map { i ->
-            makeCandidate(id = "crit$i", severity = MaintainabilitySeverity.VeryHigh, displayLocation = "c%02d.kt".format(i))
-        }
-        val lows = (0 until 10).map { i ->
-            makeCandidate(id = "low$i", severity = MaintainabilitySeverity.Low, displayLocation = "z%02d.kt".format(i))
-        }
+        val result = map(maintainability = maintainability, security = security, reliability = reliability)
 
-        val result = map(maintainability = criticals + lows)
-
-        // All 55 Critical-rank findings survive even though the combined list (65) exceeds the cap; the
-        // 10 Low-rank findings are correctly dropped since they fall outside the cap and aren't Critical.
-        assertEquals(55, result.findings.size)
-        assertTrue(result.findings.all { it.priorityRank == PriorityRank.Critical })
-        assertTrue(result.findings.none { it.id.startsWith("low") })
-    }
-
-    @Test
-    fun map_moreThanMaxVisibleFindings_preservesVisibleWindowOrderThenAppendsTruncatedCriticals() {
-        val criticals = (0 until 55).map { i ->
-            makeCandidate(id = "crit$i", severity = MaintainabilitySeverity.VeryHigh, displayLocation = "c%02d.kt".format(i))
-        }
-
-        val result = map(maintainability = criticals)
-
-        // First 50 appear in their normal ranked order (ascending displayLocation, since all tie on rank);
-        // the last 5, which fell past the cap, are appended afterward rather than reordered to the front.
-        val expectedVisible = (0 until 50).map { "crit$it" }
-        val expectedAppended = (50 until 55).map { "crit$it" }
-        assertEquals(expectedVisible + expectedAppended, result.findings.map { it.id })
+        assertEquals(91, result.findings.size)
     }
 
     private fun orderedIds(vararg candidates: RefactoringCandidate) =

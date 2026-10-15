@@ -20,7 +20,7 @@ object PriorityDeduplicator {
 
     // The same library can appear multiple times under different version constraints
     // (e.g. apache-airflow >=3.0.0, >=3.0.1, >=3.0.2) - collapse by library identity (group + name), not
-    // by finding id, or Gate 1's urgency override would see the same real vulnerability multiple times.
+    // by finding id, or the same real vulnerability would be listed multiple times.
     fun collapseByLibraryName(dependencies: List<OpenSourceHealthDependency>): List<OpenSourceHealthDependency> =
         dependencies
             .groupBy { it.group.orEmpty() to it.name }

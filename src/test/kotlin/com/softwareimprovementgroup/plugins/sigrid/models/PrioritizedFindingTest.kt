@@ -45,7 +45,7 @@ class PrioritizedFindingTest {
     fun fileGroupOrder_tierBeatsSeverityAndCount() {
         val order = orderedGroups(
             "big" to List(5) { groupedFinding(PriorityRank.Critical) },
-            "security" to listOf(groupedFinding(PriorityRank.Low, PriorityTier.AlwaysFirst)),
+            "security" to listOf(groupedFinding(PriorityRank.Low, PriorityTier.VulnerabilityFirst)),
         )
         assertEquals(listOf("security", "big"), order)
     }
