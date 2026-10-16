@@ -43,13 +43,23 @@ object PrioritizedFindingMapper {
         val merged = mergeRawFindings(rawMaintainability, security, reliability, collapsedOsh)
 
         val (testCode, everythingElse) = merged.partition { PriorityExclusionFilter.isTestCode(it) }
-        val gated = ActivityGate(fileActivity).filter(everythingElse.filterNot { PriorityExclusionFilter.exclude(it) }) // GATE 2
+        TempFilterLog.log("TestCode", "test code, moved to testCodeFindings", testCode)
+        val gated = ActivityGate(fileActivity).filter(dropExcluded(everythingElse)) // GATE 2
         val dampened = gated.map { ObjectivesGate.applyIfMet(it, objectives, objectivesConfig, currentRatings) } // GATE 3
 
         return PrioritizedFindingResult(
             findings = rank(dampened, rawMaintainability),
             testCodeFindings = testCode.sortedWith(byPriorityThenMetric),
         )
+    }
+
+    // TEMP: wraps PriorityExclusionFilter so removals are logged (see TempFilterLog).
+    private fun dropExcluded(findings: List<PrioritizedFinding>): List<PrioritizedFinding> {
+        val (excluded, kept) = findings.partition { PriorityExclusionFilter.exclude(it) }
+        val (vendored, config) = excluded.partition { f -> f.fileLocations.any { PriorityExclusionFilter.isVendoredOrGenerated(it.filePath) } }
+        TempFilterLog.log("PriorityExclusionFilter", "vendored/generated path", vendored)
+        TempFilterLog.log("PriorityExclusionFilter", "Maintainability config file", config)
+        return kept
     }
 
     private fun mergeRawFindings(
@@ -79,8 +89,21 @@ object PrioritizedFindingMapper {
 
     private fun promoteAndSort(findings: List<PrioritizedFinding>, tier: PriorityTier): List<PrioritizedFinding> =
         findings
-            .map { promote(it, tier, SigridBundle["prioritized.reason.always.first", it.capability.label]) }
+            .map { withAlwaysFirstReason(it).copy(tier = tier) }
             .sortedWith(byPriorityThenMetric)
+
+    // An objective-met reason says "deprioritized", which contradicts staying at the top, so for
+    // always-first findings it is replaced by one message that explains both facts.
+    private fun withAlwaysFirstReason(finding: PrioritizedFinding): PrioritizedFinding {
+        val label = finding.capability.label
+        val objectiveMet = SigridBundle["prioritized.reason.objective.met", label]
+        val reasons = if (objectiveMet in finding.promotionReason) {
+            finding.promotionReason.map { if (it == objectiveMet) SigridBundle["prioritized.reason.objective.met.always.first", label] else it }
+        } else {
+            finding.promotionReason + SigridBundle["prioritized.reason.always.first", label]
+        }
+        return finding.copy(promotionReason = reasons)
+    }
 
     private fun PriorityCapability.isVulnerabilityCapability() =
         this == PriorityCapability.Security || this == PriorityCapability.OpenSourceHealth

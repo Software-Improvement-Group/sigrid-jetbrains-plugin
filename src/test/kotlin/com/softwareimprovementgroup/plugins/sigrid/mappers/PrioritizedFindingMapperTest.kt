@@ -587,20 +587,29 @@ class PrioritizedFindingMapperTest {
     }
 
     @Test
-    fun map_objectiveMetFinding_carriesBothObjectiveMetAndAlwaysFirstReasons() {
-        // A Security finding that's both "always first" AND objective-dampened must carry both
-        // explanations, proving the append-only design doesn't lose either one. Gate 3 runs before rank(),
-        // so its reason is appended first.
+    fun map_objectiveMetSecurityFinding_showsCombinedObjectiveMetAlwaysFirstReason() {
+        // Gate 3 adds "objective met - deprioritized", but the finding stays on top as always-first, so
+        // rank() folds both facts into one message instead of showing a contradiction.
         val sec = makeSecurityFinding(id = "sec-critical", severity = RiskSeverity.Critical)
         val objectives = listOf(makeObjective("SECURITY", "MET"))
 
         val result = map(security = listOf(sec), objectives = objectives)
 
         assertEquals(
-            listOf(
-                SigridBundle["prioritized.reason.objective.met", PriorityCapability.Security.label],
-                SigridBundle["prioritized.reason.always.first", PriorityCapability.Security.label],
-            ),
+            listOf(SigridBundle["prioritized.reason.objective.met.always.first", PriorityCapability.Security.label]),
+            result.findings.first().promotionReason,
+        )
+    }
+
+    @Test
+    fun map_objectiveMetReliabilityFinding_showsCombinedObjectiveMetAlwaysFirstReason() {
+        val rel = makeSecurityFinding(id = "rel-critical", severity = RiskSeverity.Critical)
+        val objectives = listOf(makeObjective("RELIABILITY", "MET"))
+
+        val result = map(reliability = listOf(rel), objectives = objectives)
+
+        assertEquals(
+            listOf(SigridBundle["prioritized.reason.objective.met.always.first", PriorityCapability.Reliability.label]),
             result.findings.first().promotionReason,
         )
     }

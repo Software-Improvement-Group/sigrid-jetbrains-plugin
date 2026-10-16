@@ -27,6 +27,7 @@ class ActivityGate(private val activity: FileActivityData) {
     fun filter(findings: List<PrioritizedFinding>): List<PrioritizedFinding> {
         val judged = findings.map { it to outcomeOf(it) }
         logSummary(judged.map { it.second })
+        TempFilterLog.log("ActivityGate", "no churn or commits in ${activity.historyStartDate}..${activity.historyEndDate}", judged.filter { it.second == Outcome.Dormant }.map { it.first })
         return judged.filter { it.second != Outcome.Dormant }.map { it.first }
     }
 

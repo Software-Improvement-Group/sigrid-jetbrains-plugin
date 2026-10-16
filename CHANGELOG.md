@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.0.4-beta3] - 2026-10-16
 
 ### Added
 
@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Vulnerabilities ranked first in the Prioritized tab** — Security findings and Open Source Health vulnerabilities are now ranked ahead of everything else regardless of severity, followed by Reliability findings, then the remaining findings.
 - **Open Source Health in the Prioritized tab** — only dependencies with a known vulnerability are listed, and their rank is based on vulnerability risk rather than overall dependency risk.
+- **"Why" text for always-prioritized findings with a met objective** — Security and Reliability findings whose objective is met now read "Security objective met — Security findings are always prioritized." instead of the contradictory "deprioritized · always prioritized".
 - **Same-location ordering** — findings with the same priority, category, and location are ordered by start line.
 
 ### Removed
