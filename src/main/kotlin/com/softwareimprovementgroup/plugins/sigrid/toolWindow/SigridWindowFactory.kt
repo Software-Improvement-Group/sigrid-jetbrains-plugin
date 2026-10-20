@@ -11,6 +11,7 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.ContentFactory
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridProjectSettingsConfigurable
+import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.ArchitecturePanel
 import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.MaintainabilityPanel
 import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.OpenSourceHealthPanel
 import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.SecurityPanel
@@ -24,8 +25,9 @@ class SigridWindowFactory : ToolWindowFactory, DumbAware {
         val maintainabilityPanel = MaintainabilityPanel(project)
         val securityPanel = SecurityPanel(project)
         val oshPanel = OpenSourceHealthPanel(project)
+        val architecturePanel = ArchitecturePanel(project)
 
-        val allPanels = listOf(maintainabilityPanel, securityPanel, oshPanel)
+        val allPanels = listOf(maintainabilityPanel, securityPanel, oshPanel, architecturePanel)
         allPanels.forEach { panel ->
             panel.onSearchChange = { query -> allPanels.filter { it !== panel }.forEach { it.setSearchText(query) } }
             panel.onFileFilterChange = { value -> allPanels.filter { it !== panel }.forEach { it.setActiveFileOnly(value) } }
@@ -46,6 +48,7 @@ class SigridWindowFactory : ToolWindowFactory, DumbAware {
         toolWindow.contentManager.addContent(contentFactory.createContent(maintainabilityPanel, SigridBundle["maintainability.tab"], false))
         toolWindow.contentManager.addContent(contentFactory.createContent(securityPanel, SigridBundle["security.tab"], false))
         toolWindow.contentManager.addContent(contentFactory.createContent(oshPanel, SigridBundle["osh.tab"], false))
+        toolWindow.contentManager.addContent(contentFactory.createContent(architecturePanel, SigridBundle["architecture.tab"], false))
 
         toolWindow.contentManager.setSelectedContent(toolWindow.contentManager.getContent(0)!!)
     }

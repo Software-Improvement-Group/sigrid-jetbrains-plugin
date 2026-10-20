@@ -37,6 +37,14 @@ class FixItPromptBuilderTest {
         href = null,
     )
 
+    private val architecture = FixItContext(
+        category = FindingCategory.ARCHITECTURE,
+        severity = "High",
+        title = ".../A.kt:7: Undesirable dependency from app to lib.",
+        fileLocations = listOf(FileLocation("app", "src/A.kt", 7, 7)),
+        href = null,
+    )
+
     private fun text(findings: List<FixItContext>, options: FixPromptOptions) =
         FixItPromptBuilder.build(findings, context, options).text
 
@@ -58,6 +66,13 @@ class FixItPromptBuilderTest {
     @Test
     fun securityOnly_withMcp_usesSecuritySkill() {
         assertTrue(text(listOf(security), slashAgent).startsWith("/axis:autofix security"))
+    }
+
+    @Test
+    fun architectureOnly_usesArchitectureSkill() {
+        assertTrue(text(listOf(architecture), slashAgent).startsWith("/axis:autofix architecture"))
+        assertTrue(text(listOf(architecture), legacyAgent).startsWith("/sigrid:architecture-improve"))
+        assertTrue(text(listOf(architecture), plainAgent).startsWith("Fix the following Sigrid architecture findings."))
     }
 
     @Test
