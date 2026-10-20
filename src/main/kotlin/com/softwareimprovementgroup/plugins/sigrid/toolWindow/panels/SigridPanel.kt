@@ -52,9 +52,12 @@ abstract class SigridPanel<T>(
     centeredColumns: Set<String> = emptySet(),
     private val columnFilters: List<ColumnFilterDef<T>> = emptyList(),
     lastColumnMaxWidth: Int = 100,
+    lazyLoad: Boolean = false,
 ) : JBPanel<SigridPanel<T>>(BorderLayout()) {
 
     protected abstract val emptyMessage: String
+
+    @Volatile private var loadingEnabled = !lazyLoad
     protected abstract fun fetch(subsystem: String): List<T>
     protected abstract fun T.toRow(): Array<Any>
     protected abstract fun T.matchesSearch(query: String): Boolean
@@ -434,7 +437,15 @@ abstract class SigridPanel<T>(
         }
     }
 
+    /** Starts the first load of a lazy panel, e.g. when its tab is first selected. Later calls do nothing. */
+    fun activate() {
+        if (loadingEnabled) return
+        loadingEnabled = true
+        loadData()
+    }
+
     fun loadData() {
+        if (!loadingEnabled) return
         showCard(CARD_LOADING)
 
         ApplicationManager.getApplication().executeOnPooledThread {

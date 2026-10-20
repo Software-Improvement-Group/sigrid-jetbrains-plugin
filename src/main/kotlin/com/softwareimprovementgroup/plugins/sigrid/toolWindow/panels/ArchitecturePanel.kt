@@ -25,6 +25,7 @@ class ArchitecturePanel(project: Project) : SigridPanel<ArchitectureFinding>(
         ),
     ),
     lastColumnMaxWidth = Int.MAX_VALUE,
+    lazyLoad = true,
 ) {
     override val emptyMessage = SigridBundle["architecture.empty"]
 

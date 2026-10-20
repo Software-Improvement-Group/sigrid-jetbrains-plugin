@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Architecture tab** — lists undesirable and cyclic dependencies between components, derived from the raw architecture graph, with "Fix with AI" support.
+- **Architecture tab** — lists undesirable and cyclic dependencies between components, derived from the raw architecture graph, with "Fix with AI" support. The architecture graph is large, so the tab is only loaded once you first open it.
 
 ## [1.0.3] - 2026-10-05
 
