@@ -6,9 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-10-21
+
 ### Added
 
 - **Architecture tab** — lists undesirable and cyclic dependencies between components, derived from the raw architecture graph, with "Fix with AI" support. The architecture graph is large, so the tab is only loaded once you first open it.
+
+### Changed
+
+- **Findings toolbar layout** — the Scope control is left-aligned with a "Scope:" label (the "Active" option is now "Active file"), the action buttons sit directly left of the search bar, and all toolbar controls share the same height.
+- **Column order** — Description now comes before Location on the Maintainability and Security tabs.
 
 ## [1.0.3] - 2026-10-05
 
