@@ -20,9 +20,13 @@ import javax.swing.tree.TreePath
 
 class FindingTreeNode<T>(val finding: T, val row: Array<Any>) : DefaultMutableTreeNode(finding)
 
-class FindingGroupNode(val key: String) : DefaultMutableTreeNode(key) {
-    val label: String get() = SigridBundle["panel.group.label", key, childCount]
+// `title` replaces the key in the label when the key isn't meant to be read (e.g. the pinned section's).
+class FindingGroupNode(val key: String, private val title: String = key) : DefaultMutableTreeNode(key) {
+    val label: String get() = SigridBundle["panel.group.label", title, childCount]
 }
+
+// Can't collide with a file path, which is what every other group is keyed by.
+private const val PINNED_GROUP_KEY = "\u0000pinned"
 
 private class RowColumnInfo(name: String, private val index: Int) : ColumnInfo<DefaultMutableTreeNode, Any>(name) {
     override fun valueOf(node: DefaultMutableTreeNode): Any = (node as? FindingTreeNode<*>)?.row?.get(index) ?: ""
@@ -92,6 +96,9 @@ private class GroupRowSpanPainter(
 private fun columnInfos(columns: Array<String>, treeColumn: Int): Array<ColumnInfo<*, *>> =
     Array(columns.size) { i -> if (i == treeColumn) TreeColumnInfo(columns[i]) else RowColumnInfo(columns[i], i) }
 
+/** A section shown above the rest of the findings; it is only passed when it has something to show. */
+class PinnedFindings<T>(val title: String, val findings: List<T>)
+
 /**
  * Table of findings whose [treeColumn] doubles as the tree column. Flat mode lists findings directly under a
  * hidden root; grouped mode nests them under expandable group nodes. Callers deal in findings and view rows,
@@ -125,8 +132,10 @@ class FindingTreeTable<T>(
         toRow: (T) -> Array<Any>,
         groupKeyOf: ((T) -> String)?,
         groupOrder: Comparator<Map.Entry<String, List<T>>>? = null,
+        pinned: PinnedFindings<T>? = null,
     ) {
         root.removeAllChildren()
+        pinned?.let { root.add(groupNode(PINNED_GROUP_KEY, it.findings, toRow, it.title)) }
         if (groupKeyOf == null) {
             findings.forEach { root.add(FindingTreeNode(it, toRow(it))) }
         } else {
@@ -135,7 +144,7 @@ class FindingTreeTable<T>(
             ordered.forEach { (key, members) -> root.add(groupNode(key, members, toRow)) }
         }
         (tableModel as DefaultTreeModel).reload()
-        tree.showsRootHandles = groupKeyOf != null
+        tree.showsRootHandles = groupKeyOf != null || pinned != null
         expandUncollapsedGroups()
     }
 
@@ -151,8 +160,8 @@ class FindingTreeTable<T>(
         if (tree.isExpanded(viewRow)) tree.collapseRow(viewRow) else tree.expandRow(viewRow)
     }
 
-    private fun groupNode(key: String, members: List<T>, toRow: (T) -> Array<Any>) =
-        FindingGroupNode(key).also { group -> members.forEach { group.add(FindingTreeNode(it, toRow(it))) } }
+    private fun groupNode(key: String, members: List<T>, toRow: (T) -> Array<Any>, title: String = key) =
+        FindingGroupNode(key, title).also { group -> members.forEach { group.add(FindingTreeNode(it, toRow(it))) } }
 
     private fun expandUncollapsedGroups() {
         for (i in 0 until root.childCount) {

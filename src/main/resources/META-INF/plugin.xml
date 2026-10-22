@@ -32,6 +32,17 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends optional="true" config-file="withTerminal.xml">org.jetbrains.plugins.terminal</depends>
+    <!-- VCS support is a platform module up to 2026.2 and the com.intellij.platform.vcs plugin from 2026.3; each
+         IDE has one or both, and both configs register the same source (deduplicated by class). -->
+    <depends optional="true" config-file="withVcs.xml">com.intellij.modules.vcs</depends>
+    <depends optional="true" config-file="withPlatformVcs.xml">com.intellij.platform.vcs</depends>
+    <depends optional="true" config-file="withGit.xml">Git4Idea</depends>
+
+    <extensionPoints>
+        <extensionPoint
+                name="changedFilesSource"
+                interface="com.softwareimprovementgroup.plugins.sigrid.services.vcs.ChangedFilesSource"/>
+    </extensionPoints>
 
     <resource-bundle>messages.Sigrid</resource-bundle>
 

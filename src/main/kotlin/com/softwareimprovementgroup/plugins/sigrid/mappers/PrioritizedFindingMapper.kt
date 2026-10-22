@@ -1,6 +1,7 @@
 package com.softwareimprovementgroup.plugins.sigrid.mappers
 
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
+import com.softwareimprovementgroup.plugins.sigrid.models.ChangedFiles
 import com.softwareimprovementgroup.plugins.sigrid.models.FileActivityData
 import com.softwareimprovementgroup.plugins.sigrid.models.FindingStatus
 import com.softwareimprovementgroup.plugins.sigrid.models.MaintainabilityFindingStatus
@@ -37,6 +38,8 @@ object PrioritizedFindingMapper {
         objectives: List<ObjectiveEvaluationResponse> = emptyList(),
         objectivesConfig: Map<String, Any> = emptyMap(),
         currentRatings: Map<PriorityCapability, Double> = emptyMap(),
+        changedFiles: ChangedFiles = ChangedFiles.EMPTY,
+        localHistory: ChangedFiles? = null,
     ): PrioritizedFindingResult {
         val rawMaintainability = maintainability.filter { it.status == MaintainabilityFindingStatus.Raw }
         val collapsedOsh = PriorityDeduplicator.collapseByLibraryName(openSourceHealth).filter { it.hasVulnerability() }
@@ -44,7 +47,7 @@ object PrioritizedFindingMapper {
 
         val (testCode, everythingElse) = merged.partition { PriorityExclusionFilter.isTestCode(it) }
         TempFilterLog.log("TestCode", "test code, moved to testCodeFindings", testCode)
-        val gated = ActivityGate(fileActivity).filter(dropExcluded(everythingElse)) // GATE 2
+        val gated = ActivityGate(fileActivity, changedFiles, localHistory).apply(dropExcluded(everythingElse)) // GATE 2
         val dampened = gated.map { ObjectivesGate.applyIfMet(it, objectives, objectivesConfig, currentRatings) } // GATE 3
 
         return PrioritizedFindingResult(

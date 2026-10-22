@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.5-beta4]
+
+### Added
+
+- **"Your files" section in the Prioritized tab** — findings in files you have changed on the current branch (committed since it left the default branch, or uncommitted) are pinned in a section at the top, and update as you edit. Needs the Git plugin for the branch diff; uncommitted changes work with any VCS.
+- **"Show all" in the Prioritized tab** — the list opens with the top 50 findings and a "Show all" button reveals the rest. Searching or filtering always covers every finding.
+
+### Changed
+
+- **Findings in files with no recent Git activity are deprioritized instead of hidden** — Sigrid's change history only covers a short window, so a quiet file isn't necessarily dormant. Before demoting, the plugin checks the local Git history over the last 12 months (needs the Git plugin; without it only Sigrid's shorter window is used). Such Maintainability findings now drop one severity tier, with the reason in the "Why" column. Files you have changed on your branch are never deprioritized.
+
 ## [1.0.4-beta3] - 2026-10-16
 
 ### Added

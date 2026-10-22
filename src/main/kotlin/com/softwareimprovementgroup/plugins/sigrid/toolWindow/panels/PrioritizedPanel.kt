@@ -1,5 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.mappers.ArchitectureQualityMapper
@@ -16,7 +17,11 @@ import com.softwareimprovementgroup.plugins.sigrid.models.PriorityRank
 import com.softwareimprovementgroup.plugins.sigrid.models.PrioritizedFinding
 import com.softwareimprovementgroup.plugins.sigrid.models.toSeverityEmoji
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
+import com.softwareimprovementgroup.plugins.sigrid.services.vcs.BranchChangesProvider
 import java.time.LocalDate
+
+// Findings shown before "Show all": enough to be a focused first view without hiding anything permanently.
+private const val INITIAL_FINDING_LIMIT = 50
 
 class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
     project,
@@ -48,8 +53,18 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
         SigridBundle["column.status"] to 100,
     ),
     fileGroupingSupported = true,
+    initialLimit = INITIAL_FINDING_LIMIT,
 ) {
     override val emptyMessage = SigridBundle["prioritized.empty"]
+    override val pinnedTitle: String get() = SigridBundle["prioritized.your.files"]
+
+    init {
+        // Only the local changes are re-read: the branch diff doesn't change under the developer's feet and
+        // costs a git call. No API refetch either - pinning just regroups the findings already loaded.
+        BranchChangesProvider.getInstance(project).onUncommittedChanged {
+            ApplicationManager.getApplication().invokeLater { refreshView() }
+        }
+    }
 
     override fun fetch(subsystem: String): List<PrioritizedFinding> {
         val api = SigridApiService.getInstance()
@@ -67,10 +82,12 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
         val objectivesConfig = api.getObjectivesConfig(project)
         // Gate 3's market-benchmark fallback, and Maintainability's "actual" side of its target comparison.
         val currentRatings = currentRatings(api, oshResponse)
+        val branchChanges = BranchChangesProvider.getInstance(project)
+        val changedFiles = branchChanges.refresh()
         // .testCodeFindings is intentionally unused here - test code is laned out of the main list per
         // Epic 432 section 3, but no dedicated view for that lane exists in the UI yet.
         return PrioritizedFindingMapper.map(
-            maintainability, security, reliability, openSourceHealth, fileActivity, objectives, objectivesConfig, currentRatings,
+            maintainability, security, reliability, openSourceHealth, fileActivity, objectives, objectivesConfig, currentRatings, changedFiles, branchChanges.recentHistory,
         ).findings
     }
 
@@ -107,6 +124,11 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
         statusLabel,
         reasonLabel,
     )
+
+    override fun PrioritizedFinding.isPinned(): Boolean {
+        val changedFiles = BranchChangesProvider.getInstance(project).current
+        return fileLocations.any { changedFiles.matches(it.filePath) }
+    }
 
     override fun PrioritizedFinding.getFileLocations(): List<FileLocation> = fileLocations
 

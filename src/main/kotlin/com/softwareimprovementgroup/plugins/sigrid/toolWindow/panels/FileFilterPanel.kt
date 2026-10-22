@@ -10,6 +10,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.dsl.builder.SegmentedButton
 import com.intellij.ui.dsl.builder.panel
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
+import com.softwareimprovementgroup.plugins.sigrid.models.ChangedFiles
 import java.awt.Component
 import java.awt.Container
 import java.awt.FlowLayout
@@ -113,7 +114,7 @@ class FileFilterPanel(
             absolutePath.removePrefix("$basePath/")
 
         internal fun matchesActivePath(locFilePath: String, activePath: String): Boolean =
-            locFilePath == activePath || activePath.endsWith("/$locFilePath")
+            ChangedFiles.pathMatches(locFilePath, activePath)
     }
 
     private fun updateActiveFileLabel() {

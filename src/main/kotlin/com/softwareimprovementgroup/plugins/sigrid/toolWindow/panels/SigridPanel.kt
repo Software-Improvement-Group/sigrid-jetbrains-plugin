@@ -29,6 +29,7 @@ import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.FlowLayout
 import java.awt.FocusTraversalPolicy
 import javax.swing.JButton
 import javax.swing.JCheckBoxMenuItem
@@ -52,6 +53,7 @@ abstract class SigridPanel<T>(
     private val columnFilters: List<ColumnFilterDef<T>> = emptyList(),
     private val columnMaxWidths: Map<String, Int> = emptyMap(),
     private val fileGroupingSupported: Boolean = false,
+    initialLimit: Int? = null,
 ) : JBPanel<SigridPanel<T>>(BorderLayout()) {
 
     protected abstract val emptyMessage: String
@@ -72,11 +74,16 @@ abstract class SigridPanel<T>(
     protected open fun T.getHref(): String? = null
     protected open fun T.getGroupKey(): String = ""
 
+    /** Findings the user should see first, in a section above the ranked list; they never count toward the cap. */
+    protected open fun T.isPinned(): Boolean = false
+    protected open val pinnedTitle: String get() = ""
+
     /** Order of file groups; null keeps the order in which each group's first finding appears. */
     protected open fun groupOrder(): Comparator<Map.Entry<String, List<T>>>? = null
 
     private var allFindings: List<T> = emptyList()
     private var groupByFile = false
+    private val disclosure = ProgressiveDisclosure(initialLimit)
 
     private val riskIconRenderer = RiskIconCellRenderer()
     private val centeredCellRenderer = DefaultTableCellRenderer().apply {
@@ -197,6 +204,20 @@ abstract class SigridPanel<T>(
 
     private val fileFilterPanel = FileFilterPanel(project) { applyFilter() }
 
+    private val disclosureLabel = JBLabel()
+    private val showAllButton = JButton(SigridBundle["panel.show.all"]).apply {
+        isFocusable = false
+        addActionListener {
+            disclosure.expanded = true
+            applyFilter()
+        }
+    }
+    private val disclosureBar = JPanel(FlowLayout(FlowLayout.LEFT, 8, 2)).apply {
+        add(disclosureLabel)
+        add(showAllButton)
+        isVisible = false
+    }
+
     private val cardLayout = CardLayout()
     private val cards = JPanel(cardLayout)
     private val statusLabel = JBLabel().apply { horizontalAlignment = JBLabel.CENTER }
@@ -310,7 +331,10 @@ abstract class SigridPanel<T>(
         cards.add(buildNotConfiguredCard(project), CARD_NOT_CONFIGURED)
         val tableCard = JPanel(BorderLayout()).apply {
             add(JBScrollPane(table), BorderLayout.CENTER)
-            add(filteredEmptyLabel, BorderLayout.SOUTH)
+            add(JPanel(BorderLayout()).apply {
+                add(filteredEmptyLabel, BorderLayout.NORTH)
+                add(disclosureBar, BorderLayout.SOUTH)
+            }, BorderLayout.SOUTH)
         }
         cards.add(tableCard, CARD_TABLE)
         add(toolbar, BorderLayout.NORTH)
@@ -333,6 +357,9 @@ abstract class SigridPanel<T>(
         }
         applyFilter()
     }
+
+    /** Re-renders the findings already loaded, e.g. after pinning changed. Call on the EDT. */
+    protected fun refreshView() = applyFilter()
 
     fun setActiveFileOnly(value: Boolean) = fileFilterPanel.setActiveFileOnly(value)
 
@@ -368,6 +395,10 @@ abstract class SigridPanel<T>(
         popup.show(e.component, e.x, e.y)
     }
 
+    // Search, column filters and the active-file filter all narrow the list; a narrowed view is never capped.
+    private fun isNarrowed(): Boolean =
+        searchField.text.isNotBlank() || fileFilterPanel.activeFileOnly || columnFilters.any { it.isActive }
+
     private fun filterFindings(): List<T> {
         val query = searchField.text.trim()
         val afterColumnFilters = columnFilters.fold(filterByActiveFile()) { acc, def ->
@@ -385,11 +416,19 @@ abstract class SigridPanel<T>(
     }
 
     private fun applyFilter() {
-        val filtered = filterFindings()
+        val (pinnedFindings, matching) = filterFindings().partition { it.isPinned() }
+        val filtered = disclosure.visible(matching, isNarrowed())
+        updateDisclosureBar(matching.size, filtered.size)
+        val pinned = pinnedFindings.takeIf { it.isNotEmpty() }?.let { PinnedFindings(pinnedTitle, it) }
         val selectedIds = table.selectedFindings().map { it.getId() }.filter { it.isNotEmpty() }.toSet()
 
-        table.setFindings(filtered, { it.toRow() }, if (groupByFile) { finding -> finding.getGroupKey() } else null, groupOrder())
-        if (filtered.isEmpty()) showNoFindings() else showFindings(selectedIds)
+        table.setFindings(filtered, { it.toRow() }, if (groupByFile) { finding -> finding.getGroupKey() } else null, groupOrder(), pinned)
+        if (filtered.isEmpty() && pinned == null) showNoFindings() else showFindings(selectedIds)
+    }
+
+    private fun updateDisclosureBar(total: Int, shown: Int) {
+        disclosureBar.isVisible = shown < total
+        disclosureLabel.text = SigridBundle["panel.showing.top", shown, total]
     }
 
     private fun showNoFindings() {
@@ -422,6 +461,7 @@ abstract class SigridPanel<T>(
 
     fun loadData() {
         showCard(CARD_LOADING)
+        disclosure.expanded = false
 
         ApplicationManager.getApplication().executeOnPooledThread {
             val projectConfig = SigridProjectConfiguration.getInstance(project)

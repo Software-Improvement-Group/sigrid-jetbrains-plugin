@@ -112,8 +112,9 @@ class PrioritizedFindingMapperTest {
         objectives: List<ObjectiveEvaluationResponse> = emptyList(),
         objectivesConfig: Map<String, Any> = emptyMap(),
         currentRatings: Map<PriorityCapability, Double> = emptyMap(),
+        changedFiles: ChangedFiles = ChangedFiles.EMPTY,
     ) = PrioritizedFindingMapper.map(
-        maintainability, security, reliability, openSourceHealth, fileActivity, objectives, objectivesConfig, currentRatings,
+        maintainability, security, reliability, openSourceHealth, fileActivity, objectives, objectivesConfig, currentRatings, changedFiles,
     )
 
     @Test
@@ -406,13 +407,25 @@ class PrioritizedFindingMapperTest {
     // gate 2: activity (Maintainability only, fails open with no/unknown history)
 
     @Test
-    fun map_maintainabilityInDormantFile_gatedOutWhenHistoryKnown() {
+    fun map_maintainabilityInDormantFile_demotedWhenHistoryKnown() {
         val candidates = listOf(makeCandidate(id = "dormant", fileLocations = listOf(FileLocation("svc", "svc/Dormant.kt"))))
         val activity = makeActivity(fileActivities = listOf(FileActivity("svc/Dormant.kt", 0.0, 0.0)))
 
         val result = map(maintainability = candidates, fileActivity = activity)
 
-        assertTrue(result.findings.isEmpty())
+        val finding = result.findings.single()
+        assertEquals("dormant", finding.id)
+        assertEquals(1, finding.promotionReason.size)
+    }
+
+    @Test
+    fun map_maintainabilityInDormantFileChangedOnBranch_notDemoted() {
+        val candidates = listOf(makeCandidate(id = "mine", fileLocations = listOf(FileLocation("svc", "svc/Dormant.kt"))))
+        val activity = makeActivity(fileActivities = listOf(FileActivity("svc/Dormant.kt", 0.0, 0.0)))
+
+        val result = map(maintainability = candidates, fileActivity = activity, changedFiles = ChangedFiles(setOf("repo/svc/Dormant.kt")))
+
+        assertTrue(result.findings.single().promotionReason.isEmpty())
     }
 
     @Test
