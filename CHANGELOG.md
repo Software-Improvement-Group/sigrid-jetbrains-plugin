@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **"Your files" section in the Prioritized tab** — findings in files you have changed on the current branch (committed since it left the default branch, or uncommitted) are pinned in a section at the top, and update as you edit. Needs the Git plugin for the branch diff; uncommitted changes work with any VCS.
-- **"Show all" in the Prioritized tab** — the list opens with the top 50 findings and a "Show all" button reveals the rest. Searching or filtering always covers every finding.
+- **"Show all" in the Prioritized tab** — the list opens with the top 50 findings and a "Show all" button reveals the rest, and "Show top 50" collapses it again. Searching or filtering always covers every finding.
 
 ### Changed
 

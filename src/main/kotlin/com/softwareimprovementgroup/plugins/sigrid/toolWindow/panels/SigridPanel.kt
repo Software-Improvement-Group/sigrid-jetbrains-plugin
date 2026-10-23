@@ -208,8 +208,9 @@ abstract class SigridPanel<T>(
     private val showAllButton = JButton(SigridBundle["panel.show.all"]).apply {
         isFocusable = false
         addActionListener {
-            disclosure.expanded = true
+            disclosure.toggle()
             applyFilter()
+            if (!disclosure.expanded) table.scrollRectToVisible(table.getCellRect(0, 0, true))
         }
     }
     private val disclosureBar = JPanel(FlowLayout(FlowLayout.LEFT, 8, 2)).apply {
@@ -418,7 +419,7 @@ abstract class SigridPanel<T>(
     private fun applyFilter() {
         val (pinnedFindings, matching) = filterFindings().partition { it.isPinned() }
         val filtered = disclosure.visible(matching, isNarrowed())
-        updateDisclosureBar(matching.size, filtered.size)
+        updateDisclosureBar(matching.size)
         val pinned = pinnedFindings.takeIf { it.isNotEmpty() }?.let { PinnedFindings(pinnedTitle, it) }
         val selectedIds = table.selectedFindings().map { it.getId() }.filter { it.isNotEmpty() }.toSet()
 
@@ -426,9 +427,13 @@ abstract class SigridPanel<T>(
         if (filtered.isEmpty() && pinned == null) showNoFindings() else showFindings(selectedIds)
     }
 
-    private fun updateDisclosureBar(total: Int, shown: Int) {
-        disclosureBar.isVisible = shown < total
-        disclosureLabel.text = SigridBundle["panel.showing.top", shown, total]
+    private fun updateDisclosureBar(total: Int) {
+        val limit = disclosure.limit ?: return
+        disclosureBar.isVisible = disclosure.canToggle(total, isNarrowed())
+        disclosureLabel.text =
+            if (disclosure.expanded) SigridBundle["panel.showing.all", total] else SigridBundle["panel.showing.top", limit, total]
+        showAllButton.text =
+            if (disclosure.expanded) SigridBundle["panel.show.top", limit] else SigridBundle["panel.show.all"]
     }
 
     private fun showNoFindings() {
@@ -461,7 +466,7 @@ abstract class SigridPanel<T>(
 
     fun loadData() {
         showCard(CARD_LOADING)
-        disclosure.expanded = false
+        disclosure.reset()
 
         ApplicationManager.getApplication().executeOnPooledThread {
             val projectConfig = SigridProjectConfiguration.getInstance(project)
