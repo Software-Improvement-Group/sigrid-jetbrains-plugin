@@ -6,6 +6,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.softwareimprovementgroup.plugins.sigrid.models.*
+import java.lang.reflect.Type
 import java.net.ProxySelector
 import java.net.URI
 import java.net.URLEncoder
@@ -63,30 +64,25 @@ class SigridApiService {
         return "$normalizedBase/$path"
     }
 
-    fun getOpenSourceHealthFindings(project: Project): OpenSourceHealthResponse {
+    private fun <T> getJson(project: Project, type: Type, vararg path: String): T {
         val projectConfig = SigridProjectConfiguration.getInstance(project)
-        val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "osh-findings", projectConfig.effectiveCustomer, projectConfig.system)
+        val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, path.first(), projectConfig.effectiveCustomer, projectConfig.system, *path.drop(1).toTypedArray())
         val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
         checkStatus(response)
-        return gson.fromJson(response.body(), OpenSourceHealthResponse::class.java)
-    }
-
-    fun getSecurityFindings(project: Project): List<SecurityFindingResponse> {
-        val projectConfig = SigridProjectConfiguration.getInstance(project)
-        val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "security-findings", projectConfig.effectiveCustomer, projectConfig.system)
-        val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
-        checkStatus(response)
-        val type = object : TypeToken<List<SecurityFindingResponse>>() {}.type
         return gson.fromJson(response.body(), type)
     }
 
-    fun getRefactoringCandidates(project: Project, category: RefactoringCategory): RefactoringCandidatesResponse {
-        val projectConfig = SigridProjectConfiguration.getInstance(project)
-        val url = joinUrl(projectConfig.effectiveSigridApiBaseUrl, "refactoring-candidates", projectConfig.effectiveCustomer, projectConfig.system, category.value)
-        val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
-        checkStatus(response)
-        return gson.fromJson(response.body(), RefactoringCandidatesResponse::class.java)
-    }
+    fun getOpenSourceHealthFindings(project: Project): OpenSourceHealthResponse =
+        getJson(project, OpenSourceHealthResponse::class.java, "osh-findings")
+
+    fun getSecurityFindings(project: Project): List<SecurityFindingResponse> =
+        getJson(project, object : TypeToken<List<SecurityFindingResponse>>() {}.type, "security-findings")
+
+    fun getArchitectureGraph(project: Project): ArchitectureGraphResponse =
+        getJson(project, ArchitectureGraphResponse::class.java, "architecture-quality", "raw")
+
+    fun getRefactoringCandidates(project: Project, category: RefactoringCategory): RefactoringCandidatesResponse =
+        getJson(project, RefactoringCandidatesResponse::class.java, "refactoring-candidates", category.value)
 
     fun getAllRefactoringCandidates(project: Project): Map<RefactoringCategory, RefactoringCandidatesResponse> {
         return RefactoringCategory.entries.associateWith { getRefactoringCandidates(project, it) }

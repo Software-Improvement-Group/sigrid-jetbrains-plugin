@@ -16,6 +16,7 @@ object FindingCategory {
     const val MAINTAINABILITY = "Maintainability"
     const val SECURITY = "Security"
     const val OPEN_SOURCE_HEALTH = "Open Source Health"
+    const val ARCHITECTURE = "Architecture"
 }
 
 data class FixPromptOptions(
@@ -40,6 +41,7 @@ object FixItPromptBuilder {
         FindingCategory.MAINTAINABILITY to "/axis:autofix maintainability",
         FindingCategory.SECURITY to "/axis:autofix security",
         FindingCategory.OPEN_SOURCE_HEALTH to "/axis:autofix open-source",
+        FindingCategory.ARCHITECTURE to "/axis:autofix architecture",
     )
 
     // ponytail: legacy sigrid-ai-toolkit plugin, delete once it is retired.
@@ -47,12 +49,14 @@ object FixItPromptBuilder {
         FindingCategory.MAINTAINABILITY to "/sigrid:sigrid-improve autonomous",
         FindingCategory.SECURITY to "/sigrid:resolve-security-findings",
         FindingCategory.OPEN_SOURCE_HEALTH to "/sigrid:fix-osh-risk",
+        FindingCategory.ARCHITECTURE to "/sigrid:architecture-improve",
     )
 
     private val PLAIN_INSTRUCTIONS = mapOf(
         FindingCategory.MAINTAINABILITY to SigridBundle["finding.fixit.prompt.maintainability"],
         FindingCategory.SECURITY to SigridBundle["finding.fixit.prompt.security"],
         FindingCategory.OPEN_SOURCE_HEALTH to SigridBundle["finding.fixit.prompt.opensourcehealth"],
+        FindingCategory.ARCHITECTURE to SigridBundle["finding.fixit.prompt.architecture"],
     )
 
     private val MIXED_INSTRUCTION = SigridBundle["finding.fixit.prompt.mixed"]
@@ -64,6 +68,7 @@ object FixItPromptBuilder {
         FindingCategory.MAINTAINABILITY to listOf(SigridToolNames.MAINTAINABILITY_GET_FINDINGS, SigridToolNames.GUARDRAILS_QUALITY_CHECK),
         FindingCategory.SECURITY to listOf(SigridToolNames.SECURITY_GET_FINDINGS, SigridToolNames.GUARDRAILS_QUALITY_CHECK),
         FindingCategory.OPEN_SOURCE_HEALTH to listOf(SigridToolNames.OPENSOURCEHEALTH_GET_RISKS, SigridToolNames.OPENSOURCEHEALTH_GET_VULNERABILITIES),
+        FindingCategory.ARCHITECTURE to listOf(SigridToolNames.ARCHITECTURE_GET_INTERNAL, SigridToolNames.ARCHITECTURE_GET_WORST_DIRS),
     )
 
     private const val GUARDRAILS_TOOL = SigridToolNames.GUARDRAILS_QUALITY_CHECK

@@ -16,6 +16,8 @@ object SigridToolNames {
     const val SECURITY_GET_FINDINGS = "security_get_findings"
     const val OPENSOURCEHEALTH_GET_RISKS = "opensourcehealth_get_risks"
     const val OPENSOURCEHEALTH_GET_VULNERABILITIES = "opensourcehealth_get_vulnerabilities"
+    const val ARCHITECTURE_GET_INTERNAL = "architecture_get_internal"
+    const val ARCHITECTURE_GET_WORST_DIRS = "architecture_get_worst_dirs"
     const val GUARDRAILS_QUALITY_CHECK = "guardrails_quality_check"
 }
 
