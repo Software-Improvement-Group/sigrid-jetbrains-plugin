@@ -64,6 +64,11 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
         BranchChangesProvider.getInstance(project).onUncommittedChanged {
             ApplicationManager.getApplication().invokeLater { refreshView() }
         }
+        // At startup git may not know its repositories yet; the gate then falls back to the API's activity
+        // data, so reload once git can answer.
+        BranchChangesProvider.getInstance(project).onHistoryAvailable {
+            ApplicationManager.getApplication().invokeLater { loadData() }
+        }
     }
 
     override fun fetch(subsystem: String): List<PrioritizedFinding> {

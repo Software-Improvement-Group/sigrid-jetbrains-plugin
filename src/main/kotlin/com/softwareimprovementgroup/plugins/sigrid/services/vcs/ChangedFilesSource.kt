@@ -24,6 +24,9 @@ interface ChangedFilesSource {
     /** Calls [onChange] whenever the local changes may have changed, until the project closes. */
     fun onUncommittedChanged(project: Project, onChange: () -> Unit) {}
 
+    /** Calls [onReady] whenever repositories become (or change) available, until the project closes. */
+    fun onRepositoriesReady(project: Project, onReady: () -> Unit) {}
+
     companion object {
         const val RECENT_HISTORY_DAYS = 365
 

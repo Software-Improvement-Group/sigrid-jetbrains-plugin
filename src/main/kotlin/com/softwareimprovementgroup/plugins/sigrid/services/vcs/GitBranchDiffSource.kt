@@ -1,5 +1,7 @@
 package com.softwareimprovementgroup.plugins.sigrid.services.vcs
 
+import com.intellij.dvcs.repo.VcsRepositoryManager
+import com.intellij.dvcs.repo.VcsRepositoryMappingListener
 import com.intellij.openapi.project.Project
 import git4idea.commands.Git
 import git4idea.commands.GitCommand
@@ -17,6 +19,11 @@ class GitBranchDiffSource : ChangedFilesSource {
         val repositories = GitRepositoryManager.getInstance(project).repositories
         if (repositories.isEmpty()) return null
         return repositories.flatMapTo(mutableSetOf()) { touchedIn(project, it) }
+    }
+
+    // Repositories are registered asynchronously after startup, so the first read can find none.
+    override fun onRepositoriesReady(project: Project, onReady: () -> Unit) {
+        project.messageBus.connect().subscribe(VcsRepositoryManager.VCS_REPOSITORY_MAPPING_UPDATED, VcsRepositoryMappingListener { onReady() })
     }
 
     // An empty pretty format leaves only the file names, one per line, for every commit in the window.

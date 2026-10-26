@@ -42,6 +42,11 @@ class BranchChangesProvider(private val project: Project) {
         forEachSource { it.onUncommittedChanged(project) { refreshIfChanged(onChange) } }
     }
 
+    /** Calls [onChange] when repositories show up after a read that found no history (the startup race). */
+    fun onHistoryAvailable(onChange: () -> Unit) {
+        forEachSource { it.onRepositoriesReady(project) { if (recentHistory == null) onChange() } }
+    }
+
     private fun refreshIfChanged(onChange: () -> Unit) {
         ApplicationManager.getApplication().executeOnPooledThread {
             val before = current.paths
