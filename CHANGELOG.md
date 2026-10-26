@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.5-beta5] - 2026-10-26
+
+### Changed
+
+- **"Why" text for pinned findings** — findings in the "Your files" section now read "Prioritized because you modified this file" instead of the fetch-time reasons, which could contradict their pinned position (e.g. "No Git activity … — deprioritized").
+- **Dormant "Why" text shows dates only** — the "No Git activity between X and Y" reason no longer includes the time of day.
+- **Prioritization message** — now mentions that findings are ranked by severity and size.
+
+### Fixed
+
+- **Prioritized tab reloads when Git repositories appear after startup** — on IDE start, Git could still be registering its repositories when the tab first loaded, so the local-history check was skipped until a manual refresh. The tab now reloads once when the repositories become available.
+
 ## [1.0.5-beta4]
 
 ### Added
