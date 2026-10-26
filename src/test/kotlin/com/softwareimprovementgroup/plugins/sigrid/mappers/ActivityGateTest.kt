@@ -119,6 +119,16 @@ class ActivityGateTest {
     }
 
     @Test
+    fun apply_dormantFileWithTimestampedWindow_reasonShowsDatesOnly() {
+        val activity = FileActivityData(true, "2026-09-30 09:30:48", "2026-10-21T10:00:00", listOf(FileActivity("svc/Foo.kt", 0.0, 0.0)))
+
+        val reason = ActivityGate(activity).apply(listOf(makeFinding())).single().promotionReason.single()
+
+        assertTrue(reason.contains("2026-09-30") && reason.contains("2026-10-21"))
+        assertFalse(reason.contains("09:30:48") || reason.contains("10:00:00"))
+    }
+
+    @Test
     fun apply_dormantFileChangedOnBranch_notDemoted() {
         val activity = makeActivity(fileActivities = listOf(FileActivity("svc/Foo.kt", 0.0, 0.0)))
         val changed = ChangedFiles(setOf("repo/svc/Foo.kt"))

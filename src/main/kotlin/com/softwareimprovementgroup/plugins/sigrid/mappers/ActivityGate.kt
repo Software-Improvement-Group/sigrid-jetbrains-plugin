@@ -52,8 +52,10 @@ class ActivityGate(
         if (localHistory != null) return SigridBundle["prioritized.reason.dormant.local", ChangedFilesSource.RECENT_HISTORY_DAYS / DAYS_PER_MONTH]
         val start = activity.historyStartDate
         val end = activity.historyEndDate
-        return if (start != null && end != null) SigridBundle["prioritized.reason.dormant", start, end] else SigridBundle["prioritized.reason.dormant.no.window"]
+        return if (start != null && end != null) SigridBundle["prioritized.reason.dormant", start.toDateOnly(), end.toDateOnly()] else SigridBundle["prioritized.reason.dormant.no.window"]
     }
+
+    private fun String.toDateOnly(): String = substringBefore('T').substringBefore(' ')
 
     private fun outcomeOf(finding: PrioritizedFinding): Outcome {
         if (finding.capability != PriorityCapability.Maintainability) return Outcome.NotApplicable
