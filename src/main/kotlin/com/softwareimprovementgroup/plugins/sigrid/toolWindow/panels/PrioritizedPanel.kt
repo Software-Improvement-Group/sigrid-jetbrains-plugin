@@ -111,8 +111,14 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
     // tooltip, so it's visible at a glance rather than hidden behind a hover. Empty promotionReason means
     // plain severity ranking - shown as a baseline label rather than a blank cell, so every row answers
     // the "why" question, matching the design doc's "each item shows... why it's here" requirement.
+    // A pinned row's reasons were computed at fetch time and may say "deprioritized", which contradicts
+    // the row sitting in "Your files", so pinning replaces them.
     private val PrioritizedFinding.reasonLabel: String
-        get() = promotionReason.takeIf { it.isNotEmpty() }?.joinToString(" · ") ?: SigridBundle["prioritized.reason.default"]
+        get() = when {
+            isPinned() -> SigridBundle["prioritized.reason.your.file"]
+            promotionReason.isNotEmpty() -> promotionReason.joinToString(" · ")
+            else -> SigridBundle["prioritized.reason.default"]
+        }
 
     override fun PrioritizedFinding.matchesSearch(query: String) =
         capability.label.contains(query, ignoreCase = true) ||
