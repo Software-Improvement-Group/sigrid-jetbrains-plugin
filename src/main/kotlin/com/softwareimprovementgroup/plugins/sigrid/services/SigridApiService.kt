@@ -1,6 +1,7 @@
 package com.softwareimprovementgroup.plugins.sigrid.services
 
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
@@ -13,6 +14,7 @@ import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.file.Path
 import java.time.Duration
 
 @Service(Service.Level.APP)
@@ -22,14 +24,27 @@ class SigridApiService {
 
         private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(10)
         private val REQUEST_TIMEOUT: Duration = Duration.ofSeconds(30)
+        private val UPLOAD_TIMEOUT: Duration = Duration.ofMinutes(10)
+        private val ONBOARDING_CAPABILITIES = listOf("MAINTAINABILITY", "SECURITY", "OPEN_SOURCE_HEALTH")
 
         internal fun requireHttpsUrl(url: String) {
             val scheme = try { URI.create(url).scheme } catch (_: Exception) { null }
             if (scheme != "https") throw IllegalArgumentException("Sigrid URL must use HTTPS (got: $url)")
         }
+
+        /** 2xx means the system exists, 404 means it does not; anything else is an error. */
+        internal fun isOnboardedStatus(statusCode: Int, uri: Any?): Boolean = when (statusCode) {
+            in 200..299 -> true
+            404 -> false
+            else -> throw Exception("HTTP $statusCode from $uri")
+        }
+
+        internal fun licensedCapabilities(licenses: List<String>?): List<String> =
+            licenses.orEmpty().filter { it in ONBOARDING_CAPABILITIES }
     }
 
     private val gson = Gson()
+    private val nullSerializingGson = GsonBuilder().serializeNulls().create()
     private val httpClient: HttpClient = HttpClient.newBuilder()
         .proxy(ProxySelector.getDefault())
         .connectTimeout(CONNECT_TIMEOUT)
@@ -98,5 +113,51 @@ class SigridApiService {
             .build()
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         checkStatusCode(response)
+    }
+
+    private fun onboardingUrl(projectConfig: SigridProjectConfiguration, vararg path: String): String =
+        joinUrl(projectConfig.effectiveSigridUrl, *path)
+
+    fun isSystemOnboarded(project: Project): Boolean {
+        val config = SigridProjectConfiguration.getInstance(project)
+        val url = onboardingUrl(config, "rest", "analysis-results", "sigridci", config.effectiveCustomer, config.system, "v1", "ci")
+        val response = httpClient.send(buildRequest(url, config).GET().build(), HttpResponse.BodyHandlers.ofString())
+        return isOnboardedStatus(response.statusCode(), response.uri())
+    }
+
+    fun getLicensedCapabilities(project: Project): List<String> {
+        val config = SigridProjectConfiguration.getInstance(project)
+        val url = joinUrl(config.effectiveSigridApiBaseUrl, "licenses", config.effectiveCustomer)
+        val response = httpClient.send(buildRequest(url, config).GET().build(), HttpResponse.BodyHandlers.ofString())
+        checkStatusCode(response)
+        return licensedCapabilities(gson.fromJson(response.body(), LicensesResponse::class.java)?.licenses)
+    }
+
+    /** Asks Sigrid for a presigned URL to which the repository archive is uploaded. */
+    fun requestOnboardingUpload(project: Project, capabilities: List<String>): String {
+        val config = SigridProjectConfiguration.getInstance(project)
+        val url = onboardingUrl(config, "rest", "inboundresults", "sig", config.effectiveCustomer, config.system, "ci", "uploads", "v1")
+        val body = nullSerializingGson.toJson(OnboardingRequest(capabilities = capabilities, subsystem = config.subsystem.ifBlank { null }))
+        val request = buildRequest(url, config)
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .header("Content-Type", "application/json")
+            .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        checkStatusCode(response)
+        return gson.fromJson(response.body(), OnboardingUploadResponse::class.java)?.uploadUrl
+            ?: throw Exception("Sigrid did not return an upload URL")
+    }
+
+    /** The upload URL is presigned, so the Sigrid API key must not be sent along with it. */
+    fun uploadArchive(uploadUrl: String, archive: Path) {
+        requireHttpsUrl(uploadUrl)
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(uploadUrl))
+            .timeout(UPLOAD_TIMEOUT)
+            .header("Content-Type", "application/zip")
+            .header("x-amz-server-side-encryption", "AES256")
+            .PUT(HttpRequest.BodyPublishers.ofFile(archive))
+            .build()
+        checkStatusCode(httpClient.send(request, HttpResponse.BodyHandlers.ofString()))
     }
 }

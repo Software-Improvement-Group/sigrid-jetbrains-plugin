@@ -10,6 +10,7 @@ import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
+import com.softwareimprovementgroup.plugins.sigrid.services.toErrorMessage as httpErrorMessage
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.models.FixItContext
 import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
@@ -527,17 +528,7 @@ abstract class SigridPanel<T>(
         }
     }
 
-    private fun toErrorMessage(e: Exception): String {
-        if (e is java.io.IOException || e.cause is java.io.IOException) {
-            return SigridBundle["panel.error.network"]
-        }
-        val status = e.message?.substringAfter("HTTP ")?.substringBefore(" ")?.toIntOrNull()
-        return when (status) {
-            401  -> SigridBundle["panel.error.unauthorized"]
-            403  -> SigridBundle["panel.error.forbidden"]
-            404  -> SigridBundle["panel.error.not.found"]
-            else -> SigridBundle["panel.error.generic", e.message ?: ""]
-        }
-    }
+    private fun toErrorMessage(e: Exception): String =
+        httpErrorMessage(e) { SigridBundle["panel.error.generic", it] }
 
 }
