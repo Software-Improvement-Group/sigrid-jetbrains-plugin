@@ -23,7 +23,7 @@ To run a single test class:
 The plugin targets IntelliJ IDEA 2026.1+ and is written in Kotlin 2.3.21. Package root: `com.softwareimprovementgroup.plugins.sigrid`.
 
 **Entry points registered in `plugin.xml`:**
-- `toolWindow` → `SigridWindowFactory` — creates a bottom tool window with 4 tabs (Maintainability, Security, Open Source Health, Architecture)
+- `toolWindow` → `SigridWindowFactory` — creates a bottom tool window; `SigridToolWindowContent` shows 4 tabs (Maintainability, Security, Open Source Health, Architecture), or `OnboardingPanel` while the system is not yet onboarded in Sigrid
 - `postStartupActivity` → `MyProjectActivity` — runs on every project open (currently unused)
 - `applicationConfigurable` → `SigridSettingsConfigurable` — global settings under Settings → Tools → Sigrid
 - `projectConfigurable` → `SigridProjectSettingsConfigurable` — per-project settings
@@ -55,6 +55,8 @@ The plugin targets IntelliJ IDEA 2026.1+ and is written in Kotlin 2.3.21. Packag
 - Compute display fields: `displayLocation` (abbreviated path), `normalizedPath` (strips subsystem prefix)
 - Sort results (severity descending, then name/path ascending)
 - OSH mapper uses `maxOf()` across 7 risk dimensions to derive an overall risk level
+
+**Onboarding** (`services/onboarding/`): `SystemOnboardingService` (project service) checks whether the system exists (`SigridApiService.isSystemOnboarded`: 2xx/404) and, on request, uploads the repo zipped by `RepositoryArchiver` (`git ls-files`, falling back to `GitignoreMatcher`). State changes are published on `SigridOnboardingTopic`; the tool window swaps tabs/onboarding view accordingly.
 
 **Localization:** All user-facing strings go through `SigridBundle` (wraps `DynamicBundle`) backed by `src/main/resources/messages/Sigrid.properties`. Access via `SigridBundle["key"]` or `SigridBundle["key", param1]`.
 

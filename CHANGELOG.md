@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.5] - 2026-10-27
+
+### Added
+
+- **Onboard from the IDE** — when the configured system does not exist in Sigrid yet, the tool window explains this and offers an "Onboard" button. It uploads the repository (respecting `.gitignore`) to Sigrid; onboarding takes a few minutes, so use Refresh to check back.
+
 ## [1.0.4] - 2026-10-21
 
 ### Added
