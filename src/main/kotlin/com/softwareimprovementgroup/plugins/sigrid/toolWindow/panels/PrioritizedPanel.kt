@@ -48,7 +48,7 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
     // Risk here is icon-only, same as every other panel. Why isn't capped: its sentences are often the
     // longest content in the row, so it should compete for space on equal footing with Description.
     columnMaxWidths = mapOf(
-        SigridBundle["column.capability"] to 150,
+        SigridBundle["column.capability"] to 120,
         SigridBundle["column.risk"] to 80,
         SigridBundle["column.status"] to 100,
     ),

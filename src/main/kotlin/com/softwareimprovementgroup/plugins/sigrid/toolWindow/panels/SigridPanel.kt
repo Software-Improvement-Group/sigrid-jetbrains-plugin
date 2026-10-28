@@ -6,6 +6,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.JBUI
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
@@ -46,6 +47,7 @@ private const val CARD_LOADING = "loading"
 private const val CARD_ERROR = "error"
 private const val CARD_NOT_CONFIGURED = "notConfigured"
 private const val CARD_TABLE = "table"
+private const val GROUP_CHECKBOX_GAP = 16
 
 abstract class SigridPanel<T>(
     protected val project: Project,
@@ -97,7 +99,8 @@ abstract class SigridPanel<T>(
         isStriped = true
         setDefaultRenderer(RiskIcon::class.java, riskIconRenderer)
         columns.forEachIndexed { i, name ->
-            columnMaxWidths[name]?.let { columnModel.getColumn(i).maxWidth = it }
+            // Auto-resize starts from preferredWidth (default 75), so the cap alone never widens a column.
+            columnMaxWidths[name]?.let { columnModel.getColumn(i).apply { maxWidth = it; preferredWidth = it } }
             if (name in centeredColumns) {
                 val col = columnModel.getColumn(i)
                 col.headerRenderer = centeredCellRenderer
@@ -332,7 +335,9 @@ abstract class SigridPanel<T>(
             }
             searchField.preferredSize = java.awt.Dimension(searchField.preferredSize.width, controlHeight)
             add(fileFilterPanel, leading)
-            if (fileGroupingSupported) add(groupByFileCheckBox, trailing)
+            if (fileGroupingSupported) {
+                add(groupByFileCheckBox, (trailing.clone() as GridBagConstraints).apply { insets = JBUI.insetsRight(GROUP_CHECKBOX_GAP) })
+            }
             add(editButton, trailing)
             add(openInSigridButton, trailing)
             add(createIssueButton.button, trailing)
