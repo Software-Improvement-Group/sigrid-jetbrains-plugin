@@ -10,17 +10,58 @@ object OpenSourceHealthMapper {
     private const val ACTIVITY_RISK_KEY = "sigrid:risk:activity"
     private const val STABILITY_RISK_KEY = "sigrid:risk:stability"
     private const val MANAGEMENT_RISK_KEY = "sigrid:risk:management"
+    private const val SYSTEM_RATING_KEY = "sigrid:ratings:system"
+
+    // OSH's overall system rating (0.5-5.5 stars) - used only by the Objectives Gate's market-benchmark
+    // fallback. Lives in the SBOM's root metadata.properties (see the Sigrid API docs' OSH example
+    // response), not in a separate model-ratings-style endpoint, so no extra HTTP call is needed: this
+    // just reads a value out of the same response OpenSourceHealthPanel already fetches every refresh.
+    fun systemRating(response: OpenSourceHealthResponse): Double? =
+        response.metadata.properties.firstOrNull { it.name == SYSTEM_RATING_KEY }?.value?.toDoubleOrNull()
 
     fun map(response: OpenSourceHealthResponse, subsystem: String): List<OpenSourceHealthDependency> {
         val components = response.components.orEmpty()
         if (components.isEmpty()) return emptyList()
+        val vulnerabilitiesByRef = groupVulnerabilitiesByRef(response.vulnerabilities.orEmpty())
         return components
-            .map { create(it, subsystem) }
+            .map { create(it, subsystem, vulnerabilitiesByRef) }
             .filter { subsystem.isBlank() || it.fileLocations.any { loc -> loc.component == subsystem } }
             .sortedWith(compareByDescending<OpenSourceHealthDependency> { it.risk }.thenBy { it.displayName })
     }
 
-    private fun create(component: OshDependencyResponse, subsystem: String): OpenSourceHealthDependency {
+    // A vulnerability's `affects` list names the components it applies to by their bom-ref; index by ref
+    // once per response so each component can look its vulnerabilities up in O(1) instead of re-scanning.
+    private fun groupVulnerabilitiesByRef(vulnerabilities: List<OshVulnerabilityResponse>): Map<String, List<OshVulnerabilityResponse>> =
+        vulnerabilities
+            .flatMap { vuln -> vuln.affects.orEmpty().map { it.ref to vuln } }
+            .groupBy({ it.first }, { it.second })
+
+    private fun mapVulnerabilities(
+        component: OshDependencyResponse,
+        vulnerabilitiesByRef: Map<String, List<OshVulnerabilityResponse>>,
+    ): List<OshVulnerability> {
+        val ref = component.bomRef ?: component.purl ?: return emptyList()
+        val mapped = vulnerabilitiesByRef[ref].orEmpty().map(::mapVulnerability)
+        return PriorityDeduplicator.deduplicateVulnerabilities(mapped)
+    }
+
+    // A single CVE can carry ratings from multiple scoring methods (CVSSv2, CVSSv3, ...); take the worst
+    // one, same "max wins" approach as the six OSH risk dimensions above.
+    private fun mapVulnerability(vulnerability: OshVulnerabilityResponse): OshVulnerability {
+        val worstRating = vulnerability.ratings.orEmpty().maxByOrNull { RiskSeverity.from(it.severity).ordinal }
+        return OshVulnerability(
+            id = vulnerability.id,
+            severity = RiskSeverity.from(worstRating?.severity),
+            score = worstRating?.score,
+            method = worstRating?.method,
+        )
+    }
+
+    private fun create(
+        component: OshDependencyResponse,
+        subsystem: String,
+        vulnerabilitiesByRef: Map<String, List<OshVulnerabilityResponse>>,
+    ): OpenSourceHealthDependency {
         val props = component.properties.associate { it.name to it.value }
         val licenseRisk       = RiskSeverity.from(props[LICENSE_RISK_KEY])
         val vulnerabilityRisk = RiskSeverity.from(props[VULNERABILITY_RISK_KEY])
@@ -59,6 +100,7 @@ object OpenSourceHealthMapper {
             href = component.externalReferences
                 ?.firstOrNull { it.type == "website" && !it.url.isNullOrEmpty() }
                 ?.url,
+            vulnerabilities = mapVulnerabilities(component, vulnerabilitiesByRef),
         )
     }
 

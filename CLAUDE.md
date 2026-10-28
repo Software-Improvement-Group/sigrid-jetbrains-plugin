@@ -23,14 +23,14 @@ To run a single test class:
 The plugin targets IntelliJ IDEA 2026.1+ and is written in Kotlin 2.3.21. Package root: `com.softwareimprovementgroup.plugins.sigrid`.
 
 **Entry points registered in `plugin.xml`:**
-- `toolWindow` → `SigridWindowFactory` — creates a bottom tool window; `SigridToolWindowContent` shows 4 tabs (Maintainability, Security, Open Source Health, Architecture), or `OnboardingPanel` while the system is not yet onboarded in Sigrid
+- `toolWindow` → `SigridWindowFactory` — creates a bottom tool window; `SigridToolWindowContent` shows 5 tabs (Prioritized, Maintainability, Security, Open Source Health, Architecture), or `OnboardingPanel` while the system is not yet onboarded in Sigrid
 - `postStartupActivity` → `MyProjectActivity` — runs on every project open (currently unused)
 - `applicationConfigurable` → `SigridSettingsConfigurable` — global settings under Settings → Tools → Sigrid
 - `projectConfigurable` → `SigridProjectSettingsConfigurable` — per-project settings
 
 **Data flow:**
 
-1. `SigridWindowFactory` creates one panel per tab and wires up cross-panel search callbacks
+1. `SigridToolWindowContent` (created by `SigridWindowFactory`) creates one panel per tab and wires up cross-panel search callbacks
 2. Each panel extends `SigridPanel` (abstract base with search, table, loading/error states)
 3. On refresh, the panel calls `SigridApiService.get*Findings(project)` on a pooled thread
 4. `SigridApiService` uses the effective credentials from `SigridProjectConfiguration` to make an HTTP GET with a Bearer token; JSON is parsed via GSON
@@ -46,8 +46,9 @@ The plugin targets IntelliJ IDEA 2026.1+ and is written in Kotlin 2.3.21. Packag
 
 **Panels:**
 - `SigridPanel` — abstract base; subclasses implement `fetchData()`, `getColumnNames()`, and `toRow()`
-- `MaintainabilityPanel`, `SecurityPanel`, `OpenSourceHealthPanel` — one per tab
+- `PrioritizedPanel`, `MaintainabilityPanel`, `SecurityPanel`, `OpenSourceHealthPanel`, `ArchitecturePanel` — one per tab. `ArchitecturePanel` (findings) and `PrioritizedPanel` (per-file Git activity) both read `SigridApiService.getArchitectureQualityRaw`; responses are cached until `invalidateCache()` (called by Refresh), so they share one request
 - `RiskIcon` / `RiskIconCellRenderer` — severity-to-color mapping and table cell rendering
+- `FindingTreeTable` — the `TreeTable` every panel renders in; callers use `findingAt`/`findingsAt`/`selectedFindings` by view row, never tree nodes. Panels opt into a "Group by file" toggle with `fileGroupingSupported = true` plus a `getGroupKey()` override (Prioritized only)
 
 **Mappers** (`mappers/` package) contain most of the business logic and are comprehensively unit-tested:
 - Filter findings by subsystem
@@ -61,6 +62,11 @@ The plugin targets IntelliJ IDEA 2026.1+ and is written in Kotlin 2.3.21. Packag
 **Localization:** All user-facing strings go through `SigridBundle` (wraps `DynamicBundle`) backed by `src/main/resources/messages/Sigrid.properties`. Access via `SigridBundle["key"]` or `SigridBundle["key", param1]`.
 
 **Icons:** `src/main/resources/icons/` — `sigrid.png` (light) and `sigrid_dark.png` (dark); the platform selects the dark variant automatically.
+
+**Services (`services/` package):** beyond the core Sigrid API/config classes above, this package also holds several unrelated concerns — worth knowing before adding to it:
+- *Issue-tracker write-back* — `IssueTrackerApiUtils` (shared internal helpers: HTTP client builder, URL normalization, Basic-auth header, path encoding), `JiraApiService`, `AzureDevOpsApiService` — both `@Service(APP)`, create work items in the respective tracker from an `IssueFinding`
+- *AI-agent integration* — `ClaudeCodeDetector` (`@Service(APP)`, detects/caches whether the `claude` CLI is available), `ClaudeCodeWarmupActivity` (`ProjectActivity` that warms up detection on project open), `ClaudeCodeTerminalLauncher` (writes fix-prompt files and opens them in the IDE terminal running `claude`), `SigridMcpDetection`/`SigridToolNames` (models Sigrid's MCP server tool names; deliberately excludes `update_finding_status` since the agent must stay read-only), and the `aiAgents/` subpackage (`AiAgentProvider`/`AiAgentRegistry`/`AiAgentAvailabilityTopic`/`ClaudeCodeProvider` — a small pluggable registry for AI agent integrations)
+- *Telemetry* — `UsageStatisticsActivity` (`ProjectActivity` pinging a Matomo analytics endpoint with the customer name on project open)
 
 ## Key Configuration
 

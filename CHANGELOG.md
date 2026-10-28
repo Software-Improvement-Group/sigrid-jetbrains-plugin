@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.6] - 2026-10-28
+
+### Added
+
+- **Prioritized tab** — a new first tab merges Maintainability, Security, Reliability, and Open Source Health findings into a single cross-capability ranked list, reusing the existing table, search, and Scope UI. Each row has a searchable "Why" column explaining its rank.
+- **Reliability findings** — the plugin now fetches Reliability findings from the Sigrid API; they are surfaced in the Prioritized tab.
+- **Ranking rules** — Security findings and Open Source Health vulnerabilities are ranked first, followed by Reliability findings, then the remaining findings by severity and size (duplication by lines of code, unit size by weight, unit complexity by McCabe, unit interfacing by parameter count, module coupling by fan-in). Duplication findings are sequenced first within the remaining ones when their files overlap, and findings with the same priority, category, and location are ordered by start line.
+- **Open Source Health in the Prioritized tab** — only dependencies with a known vulnerability are listed, ranked by vulnerability risk (real CVE/CVSS data), with duplicate vulnerabilities and dependencies sharing a library name collapsed into one finding.
+- **Deprioritization of dormant files** — Maintainability findings in files with no Git activity drop one severity tier, with the reason in the "Why" column. Sigrid's change history only covers a short window, so the plugin also checks the local Git history over the last 12 months (needs the Git plugin; without it only Sigrid's window is used). Dates only are shown in the reason.
+- **Objectives awareness** — findings in a capability whose quality objective is already met are dampened by one severity tier (Security and Reliability findings are always prioritized). Maintainability compares its live rating against the configured target, or a 3.0-star market benchmark if none is set; Open Source Health compares against the market benchmark. The Maintainability rating is fetched once at project open and refreshed when Sigrid settings change.
+- **"Your files" section** — findings in files you changed on the current branch (committed since it left the default branch, or uncommitted) are pinned at the top ("Prioritized because you modified this file") and update as you edit. Needs the Git plugin for the branch diff; uncommitted changes work with any VCS.
+- **"Show all"** — the Prioritized tab opens with the top 50 findings; "Show all" reveals the rest and "Show top 50" collapses it again. Searching or filtering always covers every finding.
+- **Group by file** — a toggle nests Prioritized findings under expandable file rows (each finding under its first file location); expand/collapse state is kept across searches, filters, and refreshes.
+- **Exclusion and test-code lanes** — findings in vendored, generated, or config files are dropped from the Prioritized tab, and findings in test code are routed to a separate lane.
+- **Line numbers for Security and Reliability findings** — the Prioritized tab's location column shows `file:line`; the line is searchable and included in the fix prompt title.
+
+### Changed
+
+- **Architecture tab loads with the other tabs** — it is no longer loaded lazily on first open. It shares a single raw architecture graph request with the Prioritized tab, and responses are cached between tabs until you press Refresh.
+- All tabs now render in an IntelliJ `TreeTable` instead of a plain table. Flat tabs look the same; the first left-aligned column hosts the expander.
+
+### Fixed
+
+- **Duplicate security findings** — when the API returns the same finding several times (same location, rule, and severity, differing only in id and first-seen date), it is now shown once in the Security tab and the Prioritized list. A triaged copy (non-RAW status or a remark) is kept over untriaged ones.
+- **Prioritized tab reloads when Git repositories appear after startup** — on IDE start, Git could still be registering its repositories when the tab first loaded, so the local-history check was skipped until a manual refresh.
+
 ## [1.0.5] - 2026-10-27
 
 ### Added

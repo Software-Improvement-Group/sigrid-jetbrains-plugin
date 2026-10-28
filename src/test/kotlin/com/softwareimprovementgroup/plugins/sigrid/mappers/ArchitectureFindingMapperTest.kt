@@ -7,12 +7,15 @@ import org.junit.jupiter.api.Assertions.assertTrue
 
 class ArchitectureFindingMapperTest {
     private fun element(id: String, type: String, name: String? = null, shortName: String? = null) =
-        ArchitectureElementResponse(id, type, name, shortName)
+        SystemElementResponse(id, type, name, shortName)
 
     private fun dependency(
         source: String, target: String, type: String = "CODE_CALL",
         qualification: String? = null, qualifications: List<String>? = null, lines: List<List<Int>>? = null,
     ) = ArchitectureDependencyResponse(null, type, source, target, qualification, qualifications, lines)
+
+    private fun rawExport(elements: List<SystemElementResponse>, dependencies: List<ArchitectureDependencyResponse>?) =
+        ArchitectureQualityRawResponse(ArchitectureQualityMetadataResponse(null, null, null, null), elements, dependencies)
 
     private fun contains(parent: String, child: String) = dependency(parent, child, "CONTAINS")
 
@@ -25,7 +28,7 @@ class ArchitectureFindingMapperTest {
     private val structure = listOf(contains("c1", "f1"), contains("c2", "f2"))
 
     private fun graph(vararg calls: ArchitectureDependencyResponse) =
-        ArchitectureGraphResponse(elements, structure + calls)
+        rawExport(elements, structure + calls)
 
     @Test
     fun `undesirable dependency is high and located at source file and line`() {
@@ -79,6 +82,6 @@ class ArchitectureFindingMapperTest {
 
     @Test
     fun `missing arrays give no findings`() {
-        assertTrue(ArchitectureFindingMapper.map(ArchitectureGraphResponse(null, null), "").isEmpty())
+        assertTrue(ArchitectureFindingMapper.map(rawExport(emptyList(), null), "").isEmpty())
     }
 }

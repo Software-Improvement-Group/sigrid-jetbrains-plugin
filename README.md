@@ -52,14 +52,15 @@ The plugin ZIP is written to `build/distributions/`. Then install it from **Sett
 
 ## Usage
 
-Once configured, open the **Sigrid** tool window at the bottom of the IDE. The window has four tabs:
+Once configured, open the **Sigrid** tool window at the bottom of the IDE. The window has five tabs:
 
 | Tab | What it shows |
 |-----|--------------|
+| Prioritized | Maintainability, Security, Reliability, and Open Source Health findings merged into one ranked list, with a "Why" column explaining each rank and your recently changed files pinned at the top |
 | Maintainability | Refactoring candidates grouped by category and severity |
 | Security | Security findings with risk level and file location |
 | Open Source Health | OSH findings for your project's dependencies |
-| Architecture | Undesirable and cyclic dependencies between components (loaded when the tab is first opened) |
+| Architecture | Undesirable and cyclic dependencies between components |
 
 Use the search bar at the top of each tab to filter findings by any text. Use the segmented button in the toolbar to switch between **All findings** and **Active file** — the latter shows only findings for the file currently open in the editor. Click the filter icon in a column header to open a dropdown and select one or more values to filter by (risk level, status, or dependency type); active filters are highlighted and stack across columns. Double-click a row to open the file at the finding's location; if the finding has multiple locations a picker lets you choose. To edit a finding's status or remark, select one or more rows and click the edit button in the toolbar, use the keyboard shortcut (**F2**), or right-click and choose **Edit…** from the context menu; batch edits are supported for up to 25 findings at a time. To open a finding in the Sigrid web app, select a row and click **Open in Sigrid** in the toolbar, press **F3**, or choose **Open in Sigrid** from the right-click context menu. Right-clicking also exposes **Navigate to location** for quick file navigation. When one or more issue trackers are configured, a **Create Issue** split button appears in the toolbar and a **Create Issue** item appears in the right-click context menu; clicking it opens a dialog where you can edit the issue title and preview the auto-generated description before submitting. The dropdown arrow on the split button lets you choose a specific tracker or open Issue Tracker Settings. When Claude Code is detected, a **Fix with AI** button appears in the toolbar and a **Fix it with Claude Code** item appears in the right-click context menu; selecting one or more findings and triggering either one opens (or reuses) a terminal running `claude` with a generated prompt describing the selected findings, ready for Claude Code to act on.
 

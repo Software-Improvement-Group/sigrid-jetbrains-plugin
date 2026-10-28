@@ -15,10 +15,13 @@ class SecurityFindingMapperTest {
         component: String = "svc",
         startLine: Int = 1,
         endLine: Int = 5,
+        ruleId: String? = "rule1",
+        firstSeenAnalysisDate: String = "",
+        remark: String? = "",
     ) = SecurityFindingResponse(
         id = id,
         href = "",
-        firstSeenAnalysisDate = "",
+        firstSeenAnalysisDate = firstSeenAnalysisDate,
         lastSeenAnalysisDate = "",
         firstSeenSnapshotDate = "",
         lastSeenSnapshotDate = "",
@@ -35,7 +38,8 @@ class SecurityFindingMapperTest {
         impactScore = 5f,
         exploitabilityScore = 2f,
         status = status,
-        remark = "",
+        remark = remark,
+        ruleId = ruleId,
         toolName = null,
         isManualFinding = false,
         isSeverityOverridden = false,
@@ -134,4 +138,83 @@ class SecurityFindingMapperTest {
         val result = SecurityFindingMapper.map(responses, "svc")
         assertEquals(listOf("B", "C", "A"), result.map { it.id })
     }
+
+    // region duplicate suppression
+
+    @Test
+    fun map_sameLocationAndRuleWithDifferentIds_collapsesToOne() {
+        val responses = listOf(makeResponse(id = "A"), makeResponse(id = "B"))
+        assertEquals(1, SecurityFindingMapper.map(responses, "").size)
+    }
+
+    @Test
+    fun map_differentRuleId_notCollapsed() {
+        val responses = listOf(makeResponse(id = "A", ruleId = "r1"), makeResponse(id = "B", ruleId = "r2"))
+        assertEquals(2, SecurityFindingMapper.map(responses, "").size)
+    }
+
+    @Test
+    fun map_differentStartLine_notCollapsed() {
+        val responses = listOf(makeResponse(id = "A", startLine = 1), makeResponse(id = "B", startLine = 2))
+        assertEquals(2, SecurityFindingMapper.map(responses, "").size)
+    }
+
+    @Test
+    fun map_differentSeverity_notCollapsed() {
+        val responses = listOf(makeResponse(id = "A", severity = "HIGH"), makeResponse(id = "B", severity = "CRITICAL"))
+        assertEquals(2, SecurityFindingMapper.map(responses, "").size)
+    }
+
+    @Test
+    fun map_differentFilePath_notCollapsed() {
+        val responses = listOf(makeResponse(id = "A", filePath = "svc/A.kt"), makeResponse(id = "B", filePath = "svc/B.kt"))
+        assertEquals(2, SecurityFindingMapper.map(responses, "").size)
+    }
+
+    @Test
+    fun map_nullRuleIdOnBoth_stillCollapsed() {
+        val responses = listOf(makeResponse(id = "A", ruleId = null), makeResponse(id = "B", ruleId = null))
+        assertEquals(1, SecurityFindingMapper.map(responses, "").size)
+    }
+
+    @Test
+    fun map_duplicatesWithOneTriaged_keepsTriagedFinding() {
+        val responses = listOf(
+            makeResponse(id = "raw1", firstSeenAnalysisDate = "2024-01-01"),
+            makeResponse(id = "refined", status = "REFINED", remark = "checked", firstSeenAnalysisDate = "2025-01-01"),
+            makeResponse(id = "raw2", firstSeenAnalysisDate = "2024-02-01"),
+        )
+        val result = SecurityFindingMapper.map(responses, "")
+        assertEquals(listOf("refined"), result.map { it.id })
+        assertEquals("checked", result[0].remark)
+    }
+
+    @Test
+    fun map_duplicatesWithRemarkOnly_keepsFindingWithRemark() {
+        val responses = listOf(makeResponse(id = "A", firstSeenAnalysisDate = "2024-01-01"), makeResponse(id = "B", remark = "note"))
+        assertEquals(listOf("B"), SecurityFindingMapper.map(responses, "").map { it.id })
+    }
+
+    @Test
+    fun map_untriagedDuplicates_keepsEarliestFirstSeen() {
+        val responses = listOf(
+            makeResponse(id = "late", firstSeenAnalysisDate = "2026-06-11"),
+            makeResponse(id = "early", firstSeenAnalysisDate = "2024-08-30"),
+        )
+        assertEquals(listOf("early"), SecurityFindingMapper.map(responses, "").map { it.id })
+    }
+
+    @Test
+    fun map_untriagedDuplicatesWithSameDate_keepsSmallestId() {
+        val responses = listOf(makeResponse(id = "b"), makeResponse(id = "a"))
+        assertEquals(listOf("a"), SecurityFindingMapper.map(responses, "").map { it.id })
+    }
+
+    @Test
+    fun map_duplicatesInOtherSubsystem_doNotAffectSelectedSubsystem() {
+        val responses = listOf(makeResponse(id = "A", component = "svc"), makeResponse(id = "B", component = "other"))
+        assertEquals(listOf("A"), SecurityFindingMapper.map(responses, "svc").map { it.id })
+    }
+
+    // endregion
 }

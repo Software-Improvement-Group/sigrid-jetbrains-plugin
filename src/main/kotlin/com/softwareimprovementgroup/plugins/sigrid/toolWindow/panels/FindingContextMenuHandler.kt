@@ -4,7 +4,6 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
-import com.intellij.ui.table.JBTable
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.notifySigrid
@@ -18,8 +17,7 @@ import javax.swing.KeyStroke
 
 class FindingContextMenuHandler<T>(
     private val project: Project,
-    private val table: JBTable,
-    private val getDisplayedFindings: () -> List<T>,
+    private val table: FindingTreeTable<T>,
     private val isEditable: (T) -> Boolean,
     private val getId: (T) -> String,
     private val getDisplayLocation: (T) -> String,
@@ -98,30 +96,17 @@ class FindingContextMenuHandler<T>(
         triggerEdit(findings)
     }
 
-    private fun hrefAtPoint(e: MouseEvent): String? {
-        val viewRow = table.rowAtPoint(e.point)
-        if (viewRow < 0) return null
-        val modelRow = table.convertRowIndexToModel(viewRow)
-        val finding = getDisplayedFindings().getOrNull(modelRow) ?: return null
-        return getHref(finding)?.takeIf { it.isNotEmpty() }
-    }
+    private fun hrefAtPoint(e: MouseEvent): String? =
+        findingAtPoint(e)?.let { getHref(it) }?.takeIf { it.isNotEmpty() }
 
-    private fun navigableLocationsAtPoint(e: MouseEvent): List<FileLocation>? {
-        val viewRow = table.rowAtPoint(e.point)
-        if (viewRow < 0) return null
-        val displayedFindings = getDisplayedFindings()
-        val modelRow = table.convertRowIndexToModel(viewRow)
-        val finding = displayedFindings.getOrNull(modelRow) ?: return null
-        val locations = FindingNavigator.filterValidLocations(getFileLocations(finding))
-        return if (locations.isNotEmpty()) locations else null
-    }
+    private fun navigableLocationsAtPoint(e: MouseEvent): List<FileLocation>? =
+        findingAtPoint(e)
+            ?.let { FindingNavigator.filterValidLocations(getFileLocations(it)) }
+            ?.takeIf { it.isNotEmpty() }
 
-    internal fun selectedFindings(): List<T> {
-        val displayedFindings = getDisplayedFindings()
-        return table.selectedRows
-            .map { table.convertRowIndexToModel(it) }
-            .mapNotNull { displayedFindings.getOrNull(it) }
-    }
+    private fun findingAtPoint(e: MouseEvent): T? = table.findingsAt(table.rowAtPoint(e.point)).firstOrNull()
+
+    internal fun selectedFindings(): List<T> = table.selectedFindings()
 
     private fun hasEditableFindings(): Boolean = selectedFindings().any { isEditable(it) }
 

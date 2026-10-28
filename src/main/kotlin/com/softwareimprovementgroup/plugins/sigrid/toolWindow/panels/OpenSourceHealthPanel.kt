@@ -49,8 +49,9 @@ class OpenSourceHealthPanel(project: Project) : SigridPanel<OpenSourceHealthDepe
             getOptionId = { activityRisk.name },
         ),
     ),
+    columnMaxWidths = mapOf(SigridBundle["column.risk"] to 80, SigridBundle["column.activity"] to 100),
 ) {
-    override val emptyMessage = SigridBundle["osh.empty"]
+    override val emptyMessage get() = SigridBundle["osh.empty"]
 
     override fun fetch(subsystem: String): List<OpenSourceHealthDependency> =
         OpenSourceHealthMapper.map(SigridApiService.getInstance().getOpenSourceHealthFindings(project), subsystem)

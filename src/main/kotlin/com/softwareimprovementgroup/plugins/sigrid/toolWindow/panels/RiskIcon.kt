@@ -2,6 +2,7 @@ package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.MaintainabilitySeverity
+import com.softwareimprovementgroup.plugins.sigrid.models.PriorityRank
 import com.softwareimprovementgroup.plugins.sigrid.models.RiskSeverity
 import java.awt.Color
 
@@ -24,4 +25,12 @@ fun RiskSeverity.toRiskIcon(): RiskIcon = when (this) {
     RiskSeverity.Medium      -> RiskIcon(Color.decode("#ff9900"), SigridBundle["risk.medium"])
     RiskSeverity.High        -> RiskIcon(Color.decode("#ff0000"), SigridBundle["risk.high"])
     RiskSeverity.Critical    -> RiskIcon(Color.decode("#8b0000"), SigridBundle["risk.critical"])
+}
+
+fun PriorityRank.toRiskIcon(): RiskIcon = when (this) {
+    PriorityRank.Unknown  -> RiskIcon(Color.decode("#d3d3d3"), SigridBundle["risk.unknown"])
+    PriorityRank.Low      -> RiskIcon(Color.decode("#ffd700"), SigridBundle["risk.low"])
+    PriorityRank.Medium   -> RiskIcon(Color.decode("#ff9900"), SigridBundle["risk.medium"])
+    PriorityRank.High     -> RiskIcon(Color.decode("#ff0000"), SigridBundle["risk.high"])
+    PriorityRank.Critical -> RiskIcon(Color.decode("#8b0000"), SigridBundle["risk.critical"])
 }

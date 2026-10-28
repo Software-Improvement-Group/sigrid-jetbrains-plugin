@@ -22,19 +22,19 @@ object ArchitectureFindingMapper {
     private val CALL_DEPENDENCY_TYPES = setOf("CODE_CALL", "DATA_ACCESS", "INTERFACE_CALL")
 
     private class GraphIndex(
-        val files: Map<String?, ArchitectureElementResponse>,
-        val components: Map<String?, ArchitectureElementResponse>,
+        val files: Map<String?, SystemElementResponse>,
+        val components: Map<String?, SystemElementResponse>,
         val parentIds: Map<String?, String?>,
     )
 
     private class DependencyLink(
-        val sourceFile: ArchitectureElementResponse,
-        val source: ArchitectureElementResponse,
-        val target: ArchitectureElementResponse,
+        val sourceFile: SystemElementResponse,
+        val source: SystemElementResponse,
+        val target: SystemElementResponse,
     )
 
-    fun map(response: ArchitectureGraphResponse, subsystem: String): List<ArchitectureFinding> {
-        val elements = response.systemElements ?: return emptyList()
+    fun map(response: ArchitectureQualityRawResponse, subsystem: String): List<ArchitectureFinding> {
+        val elements = response.systemElements
         val dependencies = response.dependencies ?: return emptyList()
         val index = buildIndex(elements, dependencies)
 
@@ -46,7 +46,7 @@ object ArchitectureFindingMapper {
             .sortedWith(compareByDescending<ArchitectureFinding> { it.severity }.thenBy { it.description })
     }
 
-    private fun buildIndex(elements: List<ArchitectureElementResponse>, dependencies: List<ArchitectureDependencyResponse>) =
+    private fun buildIndex(elements: List<SystemElementResponse>, dependencies: List<ArchitectureDependencyResponse>) =
         GraphIndex(
             files = elements.filter { it.type == "FILE" }.associateBy { it.id },
             components = elements.filter { it.type == "CODE_COMPONENT" }.associateBy { it.id },
@@ -106,5 +106,5 @@ object ArchitectureFindingMapper {
         return QUALIFICATION_RULES.firstOrNull { it.name in qualifications }
     }
 
-    private fun displayName(element: ArchitectureElementResponse) = element.shortName ?: element.name ?: element.id.orEmpty()
+    private fun displayName(element: SystemElementResponse) = element.shortName ?: element.name ?: element.id.orEmpty()
 }

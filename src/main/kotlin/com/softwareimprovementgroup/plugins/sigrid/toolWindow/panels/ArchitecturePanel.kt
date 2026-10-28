@@ -24,13 +24,12 @@ class ArchitecturePanel(project: Project) : SigridPanel<ArchitectureFinding>(
             getOptionId = { severity.name },
         ),
     ),
-    lastColumnMaxWidth = Int.MAX_VALUE,
-    lazyLoad = true,
+    columnMaxWidths = mapOf(SigridBundle["column.risk"] to 80),
 ) {
-    override val emptyMessage = SigridBundle["architecture.empty"]
+    override val emptyMessage get() = SigridBundle["architecture.empty"]
 
     override fun fetch(subsystem: String): List<ArchitectureFinding> =
-        ArchitectureFindingMapper.map(SigridApiService.getInstance().getArchitectureGraph(project), subsystem)
+        ArchitectureFindingMapper.map(SigridApiService.getInstance().getArchitectureQualityRaw(project), subsystem)
 
     override fun ArchitectureFinding.matchesSearch(query: String) =
         description.contains(query, ignoreCase = true) ||

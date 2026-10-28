@@ -69,4 +69,5 @@ data class RefactoringCandidate(
     val remark: String,
     val fileLocations: List<FileLocation>,
     val href: String?,
+    val loc: Int? = null,
 )

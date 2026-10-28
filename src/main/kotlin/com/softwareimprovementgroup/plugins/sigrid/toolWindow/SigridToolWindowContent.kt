@@ -7,9 +7,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.icons.AllIcons
 import com.intellij.ui.content.ContentFactory
-import com.intellij.ui.content.ContentManagerEvent
-import com.intellij.ui.content.ContentManagerListener
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
+import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
 import com.softwareimprovementgroup.plugins.sigrid.services.onboarding.OnboardingStatus
 import com.softwareimprovementgroup.plugins.sigrid.services.onboarding.SigridOnboardingListener
@@ -19,6 +18,7 @@ import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.Architectur
 import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.MaintainabilityPanel
 import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.OnboardingPanel
 import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.OpenSourceHealthPanel
+import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.PrioritizedPanel
 import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.SecurityPanel
 import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.SigridPanel
 import javax.swing.JComponent
@@ -33,7 +33,6 @@ internal class SigridToolWindowContent(private val project: Project, private val
 
     private val onboarding = SystemOnboardingService.getInstance(project)
     private val onboardingPanel = OnboardingPanel(project)
-    private val architecturePanel by lazy { ArchitecturePanel(project) }
     private val tabs by lazy { createTabs() }
     private var current: View? = null
     private var tabsAttachedBefore = false
@@ -50,19 +49,24 @@ internal class SigridToolWindowContent(private val project: Project, private val
     fun refreshAction() =
         object : AnAction(SigridBundle["panel.refresh.button"], null, AllIcons.Actions.Refresh) {
             override fun actionPerformed(e: AnActionEvent) {
-                if (current == View.TABS) tabs.forEach { it.second.loadData() } else onboarding.check()
+                if (current == View.TABS) reloadTabs() else onboarding.check()
             }
         }
 
+    private fun reloadTabs() {
+        SigridApiService.getInstance().invalidateCache()
+        tabs.forEach { it.second.loadData() }
+    }
+
     private fun createTabs(): List<Pair<String, SigridPanel<*>>> {
         val panels = listOf(
+            SigridBundle["prioritized.tab"] to PrioritizedPanel(project),
             SigridBundle["maintainability.tab"] to MaintainabilityPanel(project),
             SigridBundle["security.tab"] to SecurityPanel(project),
             SigridBundle["osh.tab"] to OpenSourceHealthPanel(project),
-            SigridBundle["architecture.tab"] to architecturePanel,
+            SigridBundle["architecture.tab"] to ArchitecturePanel(project),
         )
         syncSearchAndFileFilter(panels.map { it.second })
-        activateOnFirstSelection(architecturePanel)
         return panels
     }
 
@@ -86,7 +90,7 @@ internal class SigridToolWindowContent(private val project: Project, private val
 
     private fun attachTabs() {
         tabs.forEach { (title, panel) -> addContent(title, panel) }
-        if (tabsAttachedBefore) tabs.forEach { it.second.loadData() }
+        if (tabsAttachedBefore) reloadTabs()
         tabsAttachedBefore = true
         toolWindow.contentManager.getContent(0)?.let { toolWindow.contentManager.setSelectedContent(it) }
     }
@@ -100,14 +104,5 @@ internal class SigridToolWindowContent(private val project: Project, private val
             panel.onSearchChange = { query -> allPanels.filter { it !== panel }.forEach { it.setSearchText(query) } }
             panel.onFileFilterChange = { value -> allPanels.filter { it !== panel }.forEach { it.setActiveFileOnly(value) } }
         }
-    }
-
-    /** The architecture graph is large, so its panel only loads once its tab is first selected. */
-    private fun activateOnFirstSelection(panel: SigridPanel<*>) {
-        toolWindow.contentManager.addContentManagerListener(object : ContentManagerListener {
-            override fun selectionChanged(event: ContentManagerEvent) {
-                if (event.operation == ContentManagerEvent.ContentOperation.add && event.content.component === panel) panel.activate()
-            }
-        })
     }
 }

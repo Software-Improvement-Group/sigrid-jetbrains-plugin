@@ -1,0 +1,125 @@
+package com.softwareimprovementgroup.plugins.sigrid.models
+
+import com.softwareimprovementgroup.plugins.sigrid.promptBuilders.FindingCategory
+
+enum class PriorityCapability(val label: String) {
+    Maintainability(FindingCategory.MAINTAINABILITY),
+    Security(FindingCategory.SECURITY),
+    Reliability(FindingCategory.RELIABILITY),
+    OpenSourceHealth(FindingCategory.OPEN_SOURCE_HEALTH),
+}
+
+// `findings` is the main ranked list; `testCodeFindings` is the same shape but laned out separately
+// (per the Prioritization Epic: test code is excluded from the main list, not hidden entirely). No UI surfaces
+// testCodeFindings yet - PrioritizedPanel currently only renders `findings`.
+data class PrioritizedFindingResult(
+    val findings: List<PrioritizedFinding>,
+    val testCodeFindings: List<PrioritizedFinding>,
+)
+
+data class PrioritizedFinding(
+    val id: String,
+    val capability: PriorityCapability,
+    val priorityRank: PriorityRank,
+    val displayLocation: String,
+    val description: String,
+    val statusLabel: String,
+    val remark: String,
+    val fileLocations: List<FileLocation>,
+    val href: String?,
+    val editable: Boolean,
+    val statusOptions: List<Pair<String, String>>,
+    val currentStatusValue: String,
+    // Null for every capability except Maintainability. Lets PriorityGrouper identify Duplication
+    // findings after the merge, since Duplication's severity is uninformative on its own (always
+    // VERY_HIGH) and needs separate "fix first" sequencing instead.
+    val refactoringCategory: RefactoringCategory? = null,
+    val promotionReason: List<String> = emptyList(),
+    val tier: PriorityTier = PriorityTier.Standard,
+    // Magnitude used to order same-rank findings; 0 for everything but Maintainability.
+    val sortMetric: Int = 0,
+    // Set for Security/Reliability, whose vague descriptions can otherwise make distinct findings in one file look identical.
+    val startLine: Int? = null,
+) {
+    val locationLabel: String
+        get() = startLine?.let { "$displayLocation:$it" } ?: displayLocation
+
+    // The grouped view lists each finding once, under its first file. A finding without a file location
+    // (e.g. a dependency with no manifest reference) falls back to its display location.
+    val fileGroupKey: String
+        get() = fileLocations.firstOrNull { it.filePath.isNotBlank() }?.filePath ?: displayLocation
+
+    companion object {
+        /**
+         * Orders file groups by the best tier among their findings (so Security/Reliability files stay first),
+         * then by highest severity, then by number of findings. Ties keep the incoming (ranked) order.
+         */
+        val fileGroupOrder: Comparator<Map.Entry<String, List<PrioritizedFinding>>> =
+            compareBy<Map.Entry<String, List<PrioritizedFinding>>> { (_, members) -> members.minOf { it.tier } }
+                .thenByDescending { (_, members) -> members.maxOf { it.priorityRank } }
+                .thenByDescending { it.value.size }
+    }
+}
+
+/** Ranking tiers, most important first; declaration order is the precedence. */
+enum class PriorityTier { VulnerabilityFirst, AlwaysFirst, DuplicationFirst, Standard }
+
+// The metric that makes a candidate "bigger" within its refactoring category.
+private fun RefactoringCandidate.sortMetric(): Int = when (category) {
+    RefactoringCategory.Duplication -> loc
+    RefactoringCategory.UnitSize -> weight
+    RefactoringCategory.UnitComplexity -> mcCabe
+    RefactoringCategory.UnitInterfacing -> parameters
+    RefactoringCategory.ModuleCoupling -> fanIn
+} ?: 0
+
+fun RefactoringCandidate.toPrioritizedFinding() = PrioritizedFinding(
+    id = id,
+    capability = PriorityCapability.Maintainability,
+    priorityRank = severity.toPriorityRank(),
+    displayLocation = displayLocation,
+    description = description,
+    statusLabel = statusLabel,
+    remark = remark,
+    fileLocations = fileLocations,
+    href = href,
+    editable = true,
+    statusOptions = MaintainabilityFindingStatus.entries.map { "${it.icon} ${snakeCaseToTitleCase(it.apiValue)}" to it.apiValue },
+    currentStatusValue = status.apiValue,
+    refactoringCategory = category,
+    sortMetric = sortMetric(),
+)
+
+// Reliability findings share this exact response/domain shape with Security (both come from
+// SecurityFindingMapper.map() - see SigridApiService.getReliabilityFindings()), so the capability is
+// passed in rather than hardcoded, letting the same finding type serve both tabs.
+fun SecurityFinding.toPrioritizedFinding(capability: PriorityCapability = PriorityCapability.Security) = PrioritizedFinding(
+    id = id,
+    capability = capability,
+    priorityRank = severity.toPriorityRank(),
+    displayLocation = displayFilePath,
+    description = type,
+    statusLabel = statusLabel,
+    remark = remark,
+    fileLocations = fileLocations,
+    href = href,
+    editable = true,
+    statusOptions = FindingStatus.entries.map { "${it.icon} ${snakeCaseToTitleCase(it.apiValue)}" to it.apiValue },
+    currentStatusValue = status.apiValue,
+    startLine = fileLocations.firstOrNull()?.startLine,
+)
+
+fun OpenSourceHealthDependency.toPrioritizedFinding() = PrioritizedFinding(
+    id = purl ?: name,
+    capability = PriorityCapability.OpenSourceHealth,
+    priorityRank = vulnerabilityRisk.toPriorityRank(),
+    displayLocation = displayName,
+    description = "$displayName $version",
+    statusLabel = "",
+    remark = "",
+    fileLocations = fileLocations,
+    href = href,
+    editable = false,
+    statusOptions = emptyList(),
+    currentStatusValue = "",
+)
