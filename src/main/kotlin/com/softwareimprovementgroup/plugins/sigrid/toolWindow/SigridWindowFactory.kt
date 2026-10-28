@@ -8,50 +8,22 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.ui.content.ContentFactory
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.settings.SigridProjectSettingsConfigurable
-import com.softwareimprovementgroup.plugins.sigrid.services.SigridApiService
-import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.MaintainabilityPanel
-import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.OpenSourceHealthPanel
-import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.PrioritizedPanel
-import com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels.SecurityPanel
 
 
 class SigridWindowFactory : ToolWindowFactory, DumbAware {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val contentFactory = ContentFactory.getInstance()
+        val content = SigridToolWindowContent(project, toolWindow)
+        toolWindow.setTitleActions(listOf(content.refreshAction(), settingsAction(project)))
+        content.start()
+    }
 
-        val prioritizedPanel = PrioritizedPanel(project)
-        val maintainabilityPanel = MaintainabilityPanel(project)
-        val securityPanel = SecurityPanel(project)
-        val oshPanel = OpenSourceHealthPanel(project)
-
-        val allPanels = listOf(prioritizedPanel, maintainabilityPanel, securityPanel, oshPanel)
-        allPanels.forEach { panel ->
-            panel.onSearchChange = { query -> allPanels.filter { it !== panel }.forEach { it.setSearchText(query) } }
-            panel.onFileFilterChange = { value -> allPanels.filter { it !== panel }.forEach { it.setActiveFileOnly(value) } }
-        }
-
-        val refreshAction = object : AnAction(SigridBundle["panel.refresh.button"], null, AllIcons.Actions.Refresh) {
-            override fun actionPerformed(e: AnActionEvent) {
-                SigridApiService.getInstance().invalidateCache()
-                allPanels.forEach { it.loadData() }
-            }
-        }
-        val settingsAction = object : AnAction(SigridBundle["panel.settings.button"], null, AllIcons.General.Settings) {
+    private fun settingsAction(project: Project) =
+        object : AnAction(SigridBundle["panel.settings.button"], null, AllIcons.General.Settings) {
             override fun actionPerformed(e: AnActionEvent) {
                 ShowSettingsUtil.getInstance().showSettingsDialog(project, SigridProjectSettingsConfigurable::class.java)
             }
         }
-        toolWindow.setTitleActions(listOf(refreshAction, settingsAction))
-
-        toolWindow.contentManager.addContent(contentFactory.createContent(prioritizedPanel, SigridBundle["prioritized.tab"], false))
-        toolWindow.contentManager.addContent(contentFactory.createContent(maintainabilityPanel, SigridBundle["maintainability.tab"], false))
-        toolWindow.contentManager.addContent(contentFactory.createContent(securityPanel, SigridBundle["security.tab"], false))
-        toolWindow.contentManager.addContent(contentFactory.createContent(oshPanel, SigridBundle["osh.tab"], false))
-
-        toolWindow.contentManager.setSelectedContent(toolWindow.contentManager.getContent(0)!!)
-    }
 }

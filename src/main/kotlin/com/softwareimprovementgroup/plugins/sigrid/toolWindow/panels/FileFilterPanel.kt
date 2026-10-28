@@ -37,21 +37,23 @@ class FileFilterPanel(
     private var suppressCallback = false
     var onFileFilterChange: (Boolean) -> Unit = {}
 
-    init {
-        val filterButton = panel {
-            row {
-                fileFilterSegmentedButton = segmentedButton(FileFilter.entries.toList()) { value ->
-                    val label = when (value) {
-                        FileFilter.ALL -> SigridBundle["panel.filter.all"]
-                        FileFilter.ACTIVE -> SigridBundle["panel.filter.active"]
-                    }
-                    text = if (selectedFileFilterProperty.get() == value) "● $label" else label
-                    toolTipText = SigridBundle["panel.filter.active.tooltip"]
-                }.bind(selectedFileFilterProperty)
-            }
+    private val segmentedPanel = panel {
+        row {
+            fileFilterSegmentedButton = segmentedButton(FileFilter.entries.toList()) { value ->
+                val label = when (value) {
+                    FileFilter.ALL -> SigridBundle["panel.filter.all"]
+                    FileFilter.ACTIVE -> SigridBundle["panel.filter.active"]
+                }
+                text = if (selectedFileFilterProperty.get() == value) "● $label" else label
+                toolTipText = SigridBundle["panel.filter.active.tooltip"]
+            }.bind(selectedFileFilterProperty)
         }
-        add(filterButton)
-        setFocusableRecursively(filterButton, false)
+    }
+
+    init {
+        add(JBLabel(SigridBundle["panel.filter.scope"]))
+        add(segmentedPanel)
+        setFocusableRecursively(segmentedPanel, false)
         add(activeFileLabel)
 
         selectedFileFilterProperty.afterChange { value ->
@@ -102,6 +104,9 @@ class FileFilterPanel(
             suppressCallback = false
         }
     }
+
+    internal val filterControlHeight: Int
+        get() = segmentedPanel.preferredSize.height
 
     internal fun activeFilePath(): String? {
         val vFile = FileEditorManager.getInstance(project).selectedFiles.firstOrNull() ?: return null

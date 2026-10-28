@@ -4,82 +4,56 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.0.5-beta5] - 2026-10-26
-
-### Changed
-
-- **"Why" text for pinned findings** — findings in the "Your files" section now read "Prioritized because you modified this file" instead of the fetch-time reasons, which could contradict their pinned position (e.g. "No Git activity … — deprioritized").
-- **Dormant "Why" text shows dates only** — the "No Git activity between X and Y" reason no longer includes the time of day.
-- **Prioritization message** — now mentions that findings are ranked by severity and size.
-
-### Fixed
-
-- **Prioritized tab reloads when Git repositories appear after startup** — on IDE start, Git could still be registering its repositories when the tab first loaded, so the local-history check was skipped until a manual refresh. The tab now reloads once when the repositories become available.
-
-## [1.0.5-beta4]
+## [1.0.6] - 2026-10-28
 
 ### Added
 
-- **"Your files" section in the Prioritized tab** — findings in files you have changed on the current branch (committed since it left the default branch, or uncommitted) are pinned in a section at the top, and update as you edit. Needs the Git plugin for the branch diff; uncommitted changes work with any VCS.
-- **"Show all" in the Prioritized tab** — the list opens with the top 50 findings and a "Show all" button reveals the rest, and "Show top 50" collapses it again. Searching or filtering always covers every finding.
+- **Prioritized tab** — a new first tab merges Maintainability, Security, Reliability, and Open Source Health findings into a single cross-capability ranked list, reusing the existing table, search, and Scope UI. Each row has a searchable "Why" column explaining its rank.
+- **Reliability findings** — the plugin now fetches Reliability findings from the Sigrid API; they are surfaced in the Prioritized tab.
+- **Ranking rules** — Security findings and Open Source Health vulnerabilities are ranked first, followed by Reliability findings, then the remaining findings by severity and size (duplication by lines of code, unit size by weight, unit complexity by McCabe, unit interfacing by parameter count, module coupling by fan-in). Duplication findings are sequenced first within the remaining ones when their files overlap, and findings with the same priority, category, and location are ordered by start line.
+- **Open Source Health in the Prioritized tab** — only dependencies with a known vulnerability are listed, ranked by vulnerability risk (real CVE/CVSS data), with duplicate vulnerabilities and dependencies sharing a library name collapsed into one finding.
+- **Deprioritization of dormant files** — Maintainability findings in files with no Git activity drop one severity tier, with the reason in the "Why" column. Sigrid's change history only covers a short window, so the plugin also checks the local Git history over the last 12 months (needs the Git plugin; without it only Sigrid's window is used). Dates only are shown in the reason.
+- **Objectives awareness** — findings in a capability whose quality objective is already met are dampened by one severity tier (Security and Reliability findings are always prioritized). Maintainability compares its live rating against the configured target, or a 3.0-star market benchmark if none is set; Open Source Health compares against the market benchmark. The Maintainability rating is fetched once at project open and refreshed when Sigrid settings change.
+- **"Your files" section** — findings in files you changed on the current branch (committed since it left the default branch, or uncommitted) are pinned at the top ("Prioritized because you modified this file") and update as you edit. Needs the Git plugin for the branch diff; uncommitted changes work with any VCS.
+- **"Show all"** — the Prioritized tab opens with the top 50 findings; "Show all" reveals the rest and "Show top 50" collapses it again. Searching or filtering always covers every finding.
+- **Group by file** — a toggle nests Prioritized findings under expandable file rows (each finding under its first file location); expand/collapse state is kept across searches, filters, and refreshes.
+- **Exclusion and test-code lanes** — findings in vendored, generated, or config files are dropped from the Prioritized tab, and findings in test code are routed to a separate lane.
+- **Line numbers for Security and Reliability findings** — the Prioritized tab's location column shows `file:line`; the line is searchable and included in the fix prompt title.
 
 ### Changed
 
-- **Findings in files with no recent Git activity are deprioritized instead of hidden** — Sigrid's change history only covers a short window, so a quiet file isn't necessarily dormant. Before demoting, the plugin checks the local Git history over the last 12 months (needs the Git plugin; without it only Sigrid's shorter window is used). Such Maintainability findings now drop one severity tier, with the reason in the "Why" column. Files you have changed on your branch are never deprioritized.
-
-## [1.0.4-beta3] - 2026-10-16
-
-### Added
-
-- **Line numbers for Security and Reliability findings** — the Prioritized tab's location column now shows `file:line` for these findings, so distinct findings with similar descriptions in the same file can be told apart. The line is also searchable and included in the fix prompt title.
-
-### Changed
-
-- **Vulnerabilities ranked first in the Prioritized tab** — Security findings and Open Source Health vulnerabilities are now ranked ahead of everything else regardless of severity, followed by Reliability findings, then the remaining findings.
-- **Open Source Health in the Prioritized tab** — only dependencies with a known vulnerability are listed, and their rank is based on vulnerability risk rather than overall dependency risk.
-- **"Why" text for always-prioritized findings with a met objective** — Security and Reliability findings whose objective is met now read "Security objective met — Security findings are always prioritized." instead of the contradictory "deprioritized · always prioritized".
-- **Same-location ordering** — findings with the same priority, category, and location are ordered by start line.
-
-### Removed
-
-- **Urgency override gate** — superseded by the vulnerabilities-first ranking above.
-- **50-finding cap** — the Prioritized tab now lists all ranked findings.
-
-## [1.0.4-beta2] - 2026-10-12
-
-### Added
-
-- **Group by file in the Prioritized tab** — a "Group by file" toggle nests findings under expandable file rows (each finding appears once, under its first file location). Expand/collapse state is kept across searches, filters, and refreshes.
-
-### Fixed
-
-- **Same-severity maintainability ordering** — in the Prioritized tab (flat and grouped views), maintainability findings of equal severity are now ordered by size within their refactoring category, descending: duplication by lines of code, unit size by weight, unit complexity by McCabe, unit interfacing by parameter count (module coupling by fan-in). Previously they were tie-broken by location only.
-- **Duplicate security findings** — when the API returns the same finding several times (same location, rule, and severity, differing only in id and first-seen date), it is now shown once in the Security tab and the Prioritized list. A triaged copy (non-RAW status or a remark) is kept over untriaged ones.
-
-### Changed
-
+- **Architecture tab loads with the other tabs** — it is no longer loaded lazily on first open. It shares a single raw architecture graph request with the Prioritized tab, and responses are cached between tabs until you press Refresh.
 - All tabs now render in an IntelliJ `TreeTable` instead of a plain table. Flat tabs look the same; the first left-aligned column hosts the expander.
 
-## [1.0.4-beta1] - 2026-10-02
+### Fixed
+
+- **Duplicate security findings** — when the API returns the same finding several times (same location, rule, and severity, differing only in id and first-seen date), it is now shown once in the Security tab and the Prioritized list. A triaged copy (non-RAW status or a remark) is kept over untriaged ones.
+- **Prioritized tab reloads when Git repositories appear after startup** — on IDE start, Git could still be registering its repositories when the tab first loaded, so the local-history check was skipped until a manual refresh.
+
+## [1.0.5] - 2026-10-27
 
 ### Added
 
-- **Unified "Prioritized" tab** — a new tab merges Maintainability, Security, Reliability, and Open Source Health findings into a single cross-capability ranked list, reusing the existing table, search, and All/Active toggle UI.
-- **Reliability findings** — the plugin now fetches and maps Reliability findings from the Sigrid API; they're tagged distinctly from Security findings and currently surfaced only in the Prioritized tab.
-- **Three-stage gating pipeline** for the Prioritized tab:
-  - **Urgency override** — Open Source Health findings with a real CVE/GHSA identifier and high severity are promoted ahead of other non-Security/Reliability findings.
-  - **Activity gate** — Maintainability findings in files with no recent Git activity (via a new raw Architecture Quality export fetch exposing per-file churn) are filtered out of the ranked list; systems or files without activity data fail open and fall back to severity-only ranking.
-  - **Objectives gate** — findings in a capability whose quality objective is already met are dampened by one severity tier. Maintainability compares its live rating against the configured target (via a new `objectives/config` fetch) or, if none is set, a 3.0-star market-benchmark fallback; Security/Reliability use the pre-computed `objectives-evaluation` result; Open Source Health always compares against the market benchmark, since Sigrid has no rating-scale OSH objective type.
-- **Cross-capability ranking rules** — Security and Reliability findings are always ranked ahead of every other capability regardless of severity; Duplication findings are sequenced first within the remaining findings when `PriorityGrouper`'s file-overlap eligibility rule is met; Open Source Health vulnerabilities are deduplicated and dependencies sharing a library name are collapsed into a single finding.
-- **Exclusion and test-code lanes** — findings in vendored, generated, or config files are dropped from the Prioritized tab entirely; findings in test code are routed to a separate lane instead of the main ranked list.
-- **"Why" column** — each row in the Prioritized tab explains why it's ranked where it is (always-first, urgency override, duplication-first, objective-met/market-benchmark dampening), and is searchable like the other columns.
-- **Capped, explainable output** — the Prioritized tab's list is capped at 50 visible findings, always keeping every Critical-rank finding visible even past the cap.
-- **Real CVE/CVSS data for Open Source Health** — `OpenSourceHealthMapper` now maps `bomRef`/`purl`, so `OpenSourceHealthDependency` carries genuine CVE identifiers and CVSS scores (used by the Prioritized tab's urgency override).
-- **Cached Maintainability rating** — the live Maintainability star rating is fetched once at project open and kept warm via a new startup activity, re-fetching automatically when Sigrid settings change instead of on every refresh.
+- **Onboard from the IDE** — when the configured system does not exist in Sigrid yet, the tool window explains this and offers an "Onboard" button. It uploads the repository (respecting `.gitignore`) to Sigrid; onboarding takes a few minutes, so use Refresh to check back.
 
-### Fixed
+## [1.0.4] - 2026-10-21
 
-- **Prioritized tab column widths** — Capability and "Why" were clipped to an icon-sized width cap intended for the Risk/Status columns in the other tabs; column width caps are now applied by column name instead of position, so each tab's columns size appropriately for its own content.
+### Added
+
+- **Architecture tab** — lists undesirable and cyclic dependencies between components, derived from the raw architecture graph, with "Fix with AI" support. The architecture graph is large, so the tab is only loaded once you first open it.
+
+### Changed
+
+- **Findings toolbar layout** — the Scope control is left-aligned with a "Scope:" label (the "Active" option is now "Active file"), the action buttons sit directly left of the search bar, and all toolbar controls share the same height.
+- **Column order** — Description now comes before Location on the Maintainability and Security tabs.
+
+## [1.0.3] - 2026-10-05
+
+### Changed
+
+- **Sigrid Axis support** — "Fix with AI" now uses the Sigrid Axis plugin skills (`/axis:autofix maintainability|security|open-source`), including for security findings. Note that `/axis:autofix` commits its fixes on a local branch, and for security findings updates their status in Sigrid.
+- **Legacy fallback** — when only the old `sigrid-ai-toolkit` plugin is enabled, the prompt keeps using its skills (`/sigrid:sigrid-improve`, `/sigrid:resolve-security-findings`, `/sigrid:fix-osh-risk`).
+- The install hint now links to the [Sigrid Axis installation guide](https://docs.sigrid-says.com/axis/installation.html).
 
 ## [1.0.2] - 2026-09-07
 

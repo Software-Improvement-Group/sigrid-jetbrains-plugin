@@ -23,14 +23,14 @@ To run a single test class:
 The plugin targets IntelliJ IDEA 2026.1+ and is written in Kotlin 2.3.21. Package root: `com.softwareimprovementgroup.plugins.sigrid`.
 
 **Entry points registered in `plugin.xml`:**
-- `toolWindow` → `SigridWindowFactory` — creates a bottom tool window with 3 tabs (Maintainability, Security, Open Source Health)
+- `toolWindow` → `SigridWindowFactory` — creates a bottom tool window; `SigridToolWindowContent` shows 5 tabs (Prioritized, Maintainability, Security, Open Source Health, Architecture), or `OnboardingPanel` while the system is not yet onboarded in Sigrid
 - `postStartupActivity` → `MyProjectActivity` — runs on every project open (currently unused)
 - `applicationConfigurable` → `SigridSettingsConfigurable` — global settings under Settings → Tools → Sigrid
 - `projectConfigurable` → `SigridProjectSettingsConfigurable` — per-project settings
 
 **Data flow:**
 
-1. `SigridWindowFactory` creates one panel per tab and wires up cross-panel search callbacks
+1. `SigridToolWindowContent` (created by `SigridWindowFactory`) creates one panel per tab and wires up cross-panel search callbacks
 2. Each panel extends `SigridPanel` (abstract base with search, table, loading/error states)
 3. On refresh, the panel calls `SigridApiService.get*Findings(project)` on a pooled thread
 4. `SigridApiService` uses the effective credentials from `SigridProjectConfiguration` to make an HTTP GET with a Bearer token; JSON is parsed via GSON
@@ -46,7 +46,7 @@ The plugin targets IntelliJ IDEA 2026.1+ and is written in Kotlin 2.3.21. Packag
 
 **Panels:**
 - `SigridPanel` — abstract base; subclasses implement `fetchData()`, `getColumnNames()`, and `toRow()`
-- `MaintainabilityPanel`, `SecurityPanel`, `OpenSourceHealthPanel` — one per tab
+- `PrioritizedPanel`, `MaintainabilityPanel`, `SecurityPanel`, `OpenSourceHealthPanel`, `ArchitecturePanel` — one per tab. `ArchitecturePanel` (findings) and `PrioritizedPanel` (per-file Git activity) both read `SigridApiService.getArchitectureQualityRaw`; responses are cached until `invalidateCache()` (called by Refresh), so they share one request
 - `RiskIcon` / `RiskIconCellRenderer` — severity-to-color mapping and table cell rendering
 - `FindingTreeTable` — the `TreeTable` every panel renders in; callers use `findingAt`/`findingsAt`/`selectedFindings` by view row, never tree nodes. Panels opt into a "Group by file" toggle with `fileGroupingSupported = true` plus a `getGroupKey()` override (Prioritized only)
 
@@ -56,6 +56,8 @@ The plugin targets IntelliJ IDEA 2026.1+ and is written in Kotlin 2.3.21. Packag
 - Compute display fields: `displayLocation` (abbreviated path), `normalizedPath` (strips subsystem prefix)
 - Sort results (severity descending, then name/path ascending)
 - OSH mapper uses `maxOf()` across 7 risk dimensions to derive an overall risk level
+
+**Onboarding** (`services/onboarding/`): `SystemOnboardingService` (project service) checks whether the system exists (`SigridApiService.isSystemOnboarded`: 2xx/404) and, on request, uploads the repo zipped by `RepositoryArchiver` (`git ls-files`, falling back to `GitignoreMatcher`). State changes are published on `SigridOnboardingTopic`; the tool window swaps tabs/onboarding view accordingly.
 
 **Localization:** All user-facing strings go through `SigridBundle` (wraps `DynamicBundle`) backed by `src/main/resources/messages/Sigrid.properties`. Access via `SigridBundle["key"]` or `SigridBundle["key", param1]`.
 

@@ -10,6 +10,7 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
+import com.softwareimprovementgroup.plugins.sigrid.services.toErrorMessage as httpErrorMessage
 import com.softwareimprovementgroup.plugins.sigrid.models.FileLocation
 import com.softwareimprovementgroup.plugins.sigrid.models.FixItContext
 import com.softwareimprovementgroup.plugins.sigrid.models.IssueFinding
@@ -57,6 +58,7 @@ abstract class SigridPanel<T>(
 ) : JBPanel<SigridPanel<T>>(BorderLayout()) {
 
     protected abstract val emptyMessage: String
+
     protected abstract fun fetch(subsystem: String): List<T>
     protected abstract fun T.toRow(): Array<Any>
     protected abstract fun T.matchesSearch(query: String): Boolean
@@ -314,18 +316,28 @@ abstract class SigridPanel<T>(
     }
 
     private fun setupLayout() {
-        val leftButtons = JPanel(GridBagLayout()).apply {
-            val gbc = GridBagConstraints().apply { anchor = GridBagConstraints.CENTER }
-            add(editButton, gbc)
-            add(openInSigridButton, gbc)
-            add(createIssueButton.button, gbc)
-            add(fixWithAiButton, gbc)
-            if (fileGroupingSupported) add(groupByFileCheckBox, gbc)
-        }
-        val toolbar = JPanel(BorderLayout()).apply {
-            add(leftButtons, BorderLayout.WEST)
-            add(fileFilterPanel, BorderLayout.CENTER)
-            add(searchField, BorderLayout.EAST)
+        val toolbar = JPanel(GridBagLayout()).apply {
+            val leading = GridBagConstraints().apply {
+                anchor = GridBagConstraints.WEST
+                fill = GridBagConstraints.VERTICAL
+                weightx = 1.0
+            }
+            val trailing = GridBagConstraints().apply {
+                anchor = GridBagConstraints.EAST
+                fill = GridBagConstraints.VERTICAL
+            }
+            val controlHeight = fileFilterPanel.filterControlHeight
+            listOf(editButton, openInSigridButton, createIssueButton.button, fixWithAiButton).forEach { button ->
+                button.preferredSize = java.awt.Dimension(button.preferredSize.width, controlHeight)
+            }
+            searchField.preferredSize = java.awt.Dimension(searchField.preferredSize.width, controlHeight)
+            add(fileFilterPanel, leading)
+            if (fileGroupingSupported) add(groupByFileCheckBox, trailing)
+            add(editButton, trailing)
+            add(openInSigridButton, trailing)
+            add(createIssueButton.button, trailing)
+            add(fixWithAiButton, trailing)
+            add(searchField, trailing)
         }
         cards.add(JBLabel(SigridBundle["panel.loading"]).apply { horizontalAlignment = JBLabel.CENTER }, CARD_LOADING)
         cards.add(statusLabel, CARD_ERROR)
@@ -537,17 +549,7 @@ abstract class SigridPanel<T>(
         }
     }
 
-    private fun toErrorMessage(e: Exception): String {
-        if (e is java.io.IOException || e.cause is java.io.IOException) {
-            return SigridBundle["panel.error.network"]
-        }
-        val status = e.message?.substringAfter("HTTP ")?.substringBefore(" ")?.toIntOrNull()
-        return when (status) {
-            401  -> SigridBundle["panel.error.unauthorized"]
-            403  -> SigridBundle["panel.error.forbidden"]
-            404  -> SigridBundle["panel.error.not.found"]
-            else -> SigridBundle["panel.error.generic", e.message ?: ""]
-        }
-    }
+    private fun toErrorMessage(e: Exception): String =
+        httpErrorMessage(e) { SigridBundle["panel.error.generic", it] }
 
 }

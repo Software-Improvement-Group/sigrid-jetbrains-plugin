@@ -10,6 +10,7 @@ import com.softwareimprovementgroup.plugins.sigrid.models.FixPromptContext
 import com.softwareimprovementgroup.plugins.sigrid.promptBuilders.FixItPromptBuilder
 import com.softwareimprovementgroup.plugins.sigrid.promptBuilders.FixPromptOptions
 import com.softwareimprovementgroup.plugins.sigrid.services.SigridProjectConfiguration
+import com.softwareimprovementgroup.plugins.sigrid.services.SigridMcpDetection
 import com.softwareimprovementgroup.plugins.sigrid.services.aiAgents.AiAgentProvider
 import com.softwareimprovementgroup.plugins.sigrid.services.aiAgents.AiAgentRegistry
 import java.util.concurrent.ConcurrentHashMap
@@ -33,7 +34,11 @@ class FixItHandler<T>(
             val prompt = FixItPromptBuilder.build(
                 findings = findings.map(toFixItContext),
                 context = FixPromptContext(config.effectiveCustomer, config.system),
-                options = FixPromptOptions(agent.supportsSlashCommands, mcpDetected),
+                options = FixPromptOptions(
+                    agent.supportsSlashCommands,
+                    mcpDetected,
+                    legacySkills = SigridMcpDetection.usesLegacySigridPlugin(),
+                ),
             )
 
             agent.handoff(project, prompt)

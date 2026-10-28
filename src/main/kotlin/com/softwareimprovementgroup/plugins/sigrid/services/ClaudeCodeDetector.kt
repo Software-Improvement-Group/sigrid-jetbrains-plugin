@@ -71,6 +71,7 @@ private fun runClaudeVersionCheck(path: String): Boolean {
  * Dock inherits a truncated PATH that often misses Homebrew and user-local bin directories.
  */
 private fun resolveClaudePath(): String? =
+    // TODO: Replace `PathEnvironmentVariableUtil.findInPath` with `PathEnvironmentVariableUtil.findFirst` when baseline is set to 2026.3 or newer
     PathEnvironmentVariableUtil.findInPath(CLAUDE_CLI_NAME)?.absolutePath
         ?: findInWellKnownDirectories(System.getProperty("user.home"))
 

@@ -1,9 +1,9 @@
 package com.softwareimprovementgroup.plugins.sigrid.models
 
 // Mirrors Sigrid's "raw" Architecture Quality export
-// (see https://docs.sigrid-says.com/reference/aq-json-export-format.html). This is a much larger export -
-// it also contains a full dependency graph - but only the fields needed for the per-file Git activity
-// signal (Epic 432 Gate 2) are modelled here.
+// (see https://docs.sigrid-says.com/reference/aq-json-export-format.html). This is a much larger export; only
+// the fields needed by its two consumers are modelled: the per-file Git activity signal (Epic 432 Gate 2,
+// `measurementValues`) and the Architecture tab's findings (`shortName` and `dependencies`).
 //
 // Confirmed against a real export (sigrid-backend): FILE elements carry their Git activity only as scalar
 // `measurementValues` (CHURN, COMMITS, AUTHORS) aggregated over the whole history window. Their
@@ -12,6 +12,7 @@ package com.softwareimprovementgroup.plugins.sigrid.models
 data class ArchitectureQualityRawResponse(
     val metadata: ArchitectureQualityMetadataResponse,
     val systemElements: List<SystemElementResponse>,
+    val dependencies: List<ArchitectureDependencyResponse>? = null,
 )
 
 data class ArchitectureQualityMetadataResponse(
@@ -22,10 +23,21 @@ data class ArchitectureQualityMetadataResponse(
 )
 
 data class SystemElementResponse(
-    val id: String,
-    val name: String,
-    val type: String,
-    val measurementValues: Map<String, Double>?,
+    val id: String?,
+    val type: String?,
+    val name: String?,
+    val shortName: String? = null,
+    val measurementValues: Map<String, Double>? = null,
+)
+
+data class ArchitectureDependencyResponse(
+    val id: String?,
+    val type: String?,
+    val sourceElementId: String?,
+    val targetElementId: String?,
+    val qualification: String?,
+    val qualifications: List<String>?,
+    val lines: List<List<Int>>?,
 )
 
 // Per-file Git activity (CHURN = lines changed, COMMITS = commit count, both over the export's history

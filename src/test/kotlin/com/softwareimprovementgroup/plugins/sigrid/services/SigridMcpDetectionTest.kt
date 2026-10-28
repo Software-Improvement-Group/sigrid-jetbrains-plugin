@@ -22,6 +22,25 @@ class SigridMcpDetectionTest {
     }
 
     @Test
+    fun axisPlugin_isDetectedAndNotLegacy() {
+        writeSettings("""{ "enabledPlugins": { "axis@sigrid": true } }""")
+        assertTrue(SigridMcpDetection.hasSigridClaudePlugin(claudeHome))
+        assertFalse(SigridMcpDetection.usesLegacySigridPlugin(claudeHome))
+    }
+
+    @Test
+    fun onlyLegacyPlugin_usesLegacy() {
+        writeSettings("""{ "enabledPlugins": { "sigrid@sigrid-ai-toolkit": true, "axis@sigrid": false } }""")
+        assertTrue(SigridMcpDetection.usesLegacySigridPlugin(claudeHome))
+    }
+
+    @Test
+    fun bothPlugins_prefersAxis() {
+        writeSettings("""{ "enabledPlugins": { "sigrid@sigrid-ai-toolkit": true, "axis@sigrid": true } }""")
+        assertFalse(SigridMcpDetection.usesLegacySigridPlugin(claudeHome))
+    }
+
+    @Test
     fun disabledPlugin_isNotDetected() {
         writeSettings("""{ "enabledPlugins": { "sigrid@sigrid-ai-toolkit": false } }""")
         assertFalse(SigridMcpDetection.hasSigridClaudePlugin(claudeHome))

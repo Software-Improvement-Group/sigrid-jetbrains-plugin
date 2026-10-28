@@ -3,6 +3,7 @@ package com.softwareimprovementgroup.plugins.sigrid.services
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class SigridApiServiceTest {
@@ -104,4 +105,28 @@ class SigridApiServiceTest {
         )
     }
 
+    @Test
+    fun isOnboardedStatus_noContent_isOnboarded() =
+        assertEquals(true, SigridApiService.isOnboardedStatus(204, null))
+
+    @Test
+    fun isOnboardedStatus_notFound_isNotOnboarded() =
+        assertEquals(false, SigridApiService.isOnboardedStatus(404, null))
+
+    @Test
+    fun isOnboardedStatus_serverError_throwsWithStatus() {
+        val e = assertThrows(Exception::class.java) { SigridApiService.isOnboardedStatus(500, "uri") }
+        assertEquals("HTTP 500 from uri", e.message)
+    }
+
+    @Test
+    fun licensedCapabilities_dropsUnknownLicenses() =
+        assertEquals(
+            listOf("MAINTAINABILITY", "SECURITY"),
+            SigridApiService.licensedCapabilities(listOf("MAINTAINABILITY", "SOME_UNKNOWN", "SECURITY")),
+        )
+
+    @Test
+    fun licensedCapabilities_null_isEmpty() =
+        assertTrue(SigridApiService.licensedCapabilities(null).isEmpty())
 }
