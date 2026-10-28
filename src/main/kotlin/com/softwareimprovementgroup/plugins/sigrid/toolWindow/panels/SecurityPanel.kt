@@ -32,7 +32,7 @@ class SecurityPanel(project: Project) : SigridPanel<SecurityFinding>(
     ),
     columnMaxWidths = mapOf(SigridBundle["column.risk"] to 80, SigridBundle["column.status"] to 100),
 ) {
-    override val emptyMessage = SigridBundle["security.empty"]
+    override val emptyMessage get() = SigridBundle["security.empty"]
 
     override fun fetch(subsystem: String): List<SecurityFinding> =
         SecurityFindingMapper.map(SigridApiService.getInstance().getSecurityFindings(project), subsystem)

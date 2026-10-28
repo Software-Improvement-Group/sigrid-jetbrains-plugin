@@ -2,6 +2,7 @@ package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import com.intellij.ui.SearchTextField
@@ -33,6 +34,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.FlowLayout
 import java.awt.FocusTraversalPolicy
+import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JButton
 import javax.swing.JCheckBoxMenuItem
 import javax.swing.JMenuItem
@@ -86,6 +88,8 @@ abstract class SigridPanel<T>(
     protected open fun groupOrder(): Comparator<Map.Entry<String, List<T>>>? = null
 
     private var allFindings: List<T> = emptyList()
+    // Overlapping loads (refresh, settings change, git becoming ready) must not let an older one overwrite a newer result.
+    private val loadGeneration = AtomicInteger()
     private var groupByFile = false
     private val disclosure = ProgressiveDisclosure(initialLimit)
 
@@ -484,6 +488,7 @@ abstract class SigridPanel<T>(
     fun loadData() {
         showCard(CARD_LOADING)
         disclosure.reset()
+        val generation = loadGeneration.incrementAndGet()
 
         ApplicationManager.getApplication().executeOnPooledThread {
             val projectConfig = SigridProjectConfiguration.getInstance(project)
@@ -502,13 +507,22 @@ abstract class SigridPanel<T>(
 
             try {
                 val findings = fetch(projectConfig.subsystem)
-                ApplicationManager.getApplication().invokeLater {
-                    allFindings = findings
-                    applyFilter()
-                }
+                ApplicationManager.getApplication().invokeLater { applyLoaded(generation, findings) }
             } catch (e: Exception) {
-                showError(toErrorMessage(e))
+                if (generation == loadGeneration.get()) showError(toErrorMessage(e))
             }
+        }
+    }
+
+    /** Applies a finished load on the EDT unless a newer load has started; a failure shows as an error, not a stale card. */
+    private fun applyLoaded(generation: Int, findings: List<T>) {
+        if (generation != loadGeneration.get()) return
+        try {
+            allFindings = findings
+            applyFilter()
+        } catch (e: Exception) {
+            thisLogger().warn("Could not display loaded findings", e)
+            showError(toErrorMessage(e))
         }
     }
 

@@ -1,6 +1,7 @@
 package com.softwareimprovementgroup.plugins.sigrid.toolWindow.panels
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.mappers.ArchitectureQualityMapper
@@ -55,7 +56,7 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
     fileGroupingSupported = true,
     initialLimit = INITIAL_FINDING_LIMIT,
 ) {
-    override val emptyMessage = SigridBundle["prioritized.empty"]
+    override val emptyMessage get() = SigridBundle["prioritized.empty"]
     override val pinnedTitle: String get() = SigridBundle["prioritized.your.files"]
 
     init {
@@ -91,9 +92,16 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
         val changedFiles = branchChanges.refresh()
         // .testCodeFindings is intentionally unused here - test code is laned out of the main list per
         // the Prioritization Epic, but no dedicated view for that lane exists in the UI yet.
-        return PrioritizedFindingMapper.map(
+        val findings = PrioritizedFindingMapper.map(
             maintainability, security, reliability, openSourceHealth, fileActivity, objectives, objectivesConfig, currentRatings, changedFiles, branchChanges.recentHistory,
         ).findings
+        if (findings.isEmpty()) {
+            thisLogger().info(
+                "Prioritized findings empty: maintainability=${maintainability.size}, security=${security.size}, " +
+                    "reliability=${reliability.size}, openSourceHealth=${openSourceHealth.size}",
+            )
+        }
+        return findings
     }
 
     private fun currentRatings(api: SigridApiService, oshResponse: OpenSourceHealthResponse): Map<PriorityCapability, Double> = buildMap {
