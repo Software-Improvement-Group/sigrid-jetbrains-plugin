@@ -26,7 +26,7 @@ object ArchitectureQualityMapper {
     }
 
     // Elements with neither a CHURN nor a COMMITS value have no activity data (as opposed to zero activity) -
-    // excluded here rather than defaulted to zero, so Gate 2 can tell the two cases apart later.
+    // excluded here rather than defaulted to zero, so the Activity Gate can tell the two cases apart later.
     private fun create(element: SystemElementResponse, subsystem: String): FileActivity? {
         val churn = element.measurementValues?.get(CHURN_METRIC)
         val commits = element.measurementValues?.get(COMMITS_METRIC)

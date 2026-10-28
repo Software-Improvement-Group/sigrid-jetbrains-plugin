@@ -47,8 +47,8 @@ object PrioritizedFindingMapper {
 
         val (testCode, everythingElse) = merged.partition { PriorityExclusionFilter.isTestCode(it) }
         TempFilterLog.log("TestCode", "test code, moved to testCodeFindings", testCode)
-        val gated = ActivityGate(fileActivity, changedFiles, localHistory).apply(dropExcluded(everythingElse)) // GATE 2
-        val dampened = gated.map { ObjectivesGate.applyIfMet(it, objectives, objectivesConfig, currentRatings) } // GATE 3
+        val gated = ActivityGate(fileActivity, changedFiles, localHistory).apply(dropExcluded(everythingElse)) // Activity Gate
+        val dampened = gated.map { ObjectivesGate.applyIfMet(it, objectives, objectivesConfig, currentRatings) } // Objectives Gate
 
         return PrioritizedFindingResult(
             findings = rank(dampened, rawMaintainability),

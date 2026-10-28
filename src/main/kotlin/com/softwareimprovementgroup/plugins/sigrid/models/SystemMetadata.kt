@@ -1,8 +1,8 @@
 package com.softwareimprovementgroup.plugins.sigrid.models
 
 // Mirrors /rest/analysis-results/api/v1/system-metadata/{customer}/{system}. Used by the prioritization feature
-// (Epic 432) as the secondary dampener (businessCriticality, lifecyclePhase) and to gate duplication-first sequencing
-// by technologyCategory (see section 2.8 of the prioritization design doc) - not as a primary sort key.
+// as the secondary dampener (businessCriticality, lifecyclePhase) and to gate duplication-first sequencing
+// by technologyCategory - not as a primary sort key.
 data class SystemMetadataResponse(
     val displayName: String?,
     val divisionName: String?,

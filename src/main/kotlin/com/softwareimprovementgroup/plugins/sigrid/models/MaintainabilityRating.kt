@@ -1,6 +1,6 @@
 package com.softwareimprovementgroup.plugins.sigrid.models
 
-// Mirrors GET .../maintainability/{customer}/{system} - used only by ObjectivesGate's Gate 3
+// Mirrors GET .../maintainability/{customer}/{system} - used only by the Objectives Gate's
 // market-benchmark fallback, for Maintainability findings with no explicit quality objective configured
 // for this system.
 //

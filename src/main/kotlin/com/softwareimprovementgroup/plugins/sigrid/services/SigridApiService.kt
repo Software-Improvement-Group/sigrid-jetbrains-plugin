@@ -155,7 +155,7 @@ class SigridApiService {
     }
 
     // "maintainability" end point (system-level rating, not the /raw or /components variants) - used only
-    // by ObjectivesGate's Gate 3 market-benchmark fallback, for Maintainability findings with no explicit
+    // by the Objectives Gate's market-benchmark fallback, for Maintainability findings with no explicit
     // objective configured. Cached separately (see maintainabilityRatingCache above);
     // MaintainabilityRatingWarmupActivity keeps this warm on project open and re-fetches it when Sigrid
     // settings change, so this should almost always be a cache hit rather than a live HTTP call.
@@ -191,8 +191,8 @@ class SigridApiService {
             val response = httpClient.send(buildRequest(url, projectConfig).GET().build(), HttpResponse.BodyHandlers.ofString())
             checkStatusCode(response)
             // Unlike checkStatus()'s blank/"null" body handling elsewhere in this service: a system with
-            // zero objective coverage at all (a real, documented case - "orphan systems", design doc
-            // section 2.7) is expected to return an empty object here, not an error. Treat a blank body
+            // zero objective coverage at all (a real, documented case - "orphan systems")
+            // is expected to return an empty object here, not an error. Treat a blank body
             // the same way, defensively, in case it comes back empty instead of "{}".
             if (response.body().isNullOrBlank() || response.body() == "null") return@cached emptyMap()
             val type = object : TypeToken<Map<String, Any>>() {}.type

@@ -10,7 +10,7 @@ enum class PriorityCapability(val label: String) {
 }
 
 // `findings` is the main ranked list; `testCodeFindings` is the same shape but laned out separately
-// (per Epic 432 section 3: test code is excluded from the main list, not hidden entirely). No UI surfaces
+// (per the Prioritization Epic: test code is excluded from the main list, not hidden entirely). No UI surfaces
 // testCodeFindings yet - PrioritizedPanel currently only renders `findings`.
 data class PrioritizedFindingResult(
     val findings: List<PrioritizedFinding>,
@@ -32,7 +32,7 @@ data class PrioritizedFinding(
     val currentStatusValue: String,
     // Null for every capability except Maintainability. Lets PriorityGrouper identify Duplication
     // findings after the merge, since Duplication's severity is uninformative on its own (always
-    // VERY_HIGH - see design doc section 2.3) and needs separate "fix first" sequencing instead.
+    // VERY_HIGH) and needs separate "fix first" sequencing instead.
     val refactoringCategory: RefactoringCategory? = null,
     val promotionReason: List<String> = emptyList(),
     val tier: PriorityTier = PriorityTier.Standard,

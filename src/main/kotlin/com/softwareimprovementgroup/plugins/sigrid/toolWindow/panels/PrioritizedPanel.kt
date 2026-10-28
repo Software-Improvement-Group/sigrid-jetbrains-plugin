@@ -79,18 +79,18 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
         val oshResponse = api.getOpenSourceHealthFindings(project)
         val openSourceHealth = OpenSourceHealthMapper.map(oshResponse, subsystem)
         val fileActivity = ArchitectureQualityMapper.map(api.getArchitectureQualityRaw(project), subsystem)
-        // Used by Gate 3 for Security/Reliability's severity-scale objectives only (targetMetAtEnd) - 90
+        // Used by the Objectives Gate for Security/Reliability's severity-scale objectives only (targetMetAtEnd) - 90
         // days is enough to establish that without depending on exactly when the user happens to refresh.
         val objectives = api.getObjectivesEvaluation(project, ninetyDaysAgo(), today())
-        // Used by Gate 3 for Maintainability's rating-scale objective - the resolved target, with no date
+        // Used by the Objectives Gate for Maintainability's rating-scale objective - the resolved target, with no date
         // range dependency (see ObjectivesGate for why this replaces objectives-evaluation for this case).
         val objectivesConfig = api.getObjectivesConfig(project)
-        // Gate 3's market-benchmark fallback, and Maintainability's "actual" side of its target comparison.
+        // The Objectives Gate's market-benchmark fallback, and Maintainability's "actual" side of its target comparison.
         val currentRatings = currentRatings(api, oshResponse)
         val branchChanges = BranchChangesProvider.getInstance(project)
         val changedFiles = branchChanges.refresh()
         // .testCodeFindings is intentionally unused here - test code is laned out of the main list per
-        // Epic 432 section 3, but no dedicated view for that lane exists in the UI yet.
+        // the Prioritization Epic, but no dedicated view for that lane exists in the UI yet.
         return PrioritizedFindingMapper.map(
             maintainability, security, reliability, openSourceHealth, fileActivity, objectives, objectivesConfig, currentRatings, changedFiles, branchChanges.recentHistory,
         ).findings
@@ -107,10 +107,10 @@ class PrioritizedPanel(project: Project) : SigridPanel<PrioritizedFinding>(
     private fun today(): String = LocalDate.now().toString()
     private fun ninetyDaysAgo(): String = LocalDate.now().minusDays(90).toString()
 
-    // Epic 432 section 3 (OUTPUT step): "why it's here" rendered as its own column rather than a hover
+    // Output stage of the Prioritization Epic's pipeline: "why it's here" rendered as its own column rather than a hover
     // tooltip, so it's visible at a glance rather than hidden behind a hover. Empty promotionReason means
     // plain severity ranking - shown as a baseline label rather than a blank cell, so every row answers
-    // the "why" question, matching the design doc's "each item shows... why it's here" requirement.
+    // the "why" question.
     // A pinned row's reasons were computed at fetch time and may say "deprioritized", which contradicts
     // the row sitting in "Your files", so pinning replaces them.
     private val PrioritizedFinding.reasonLabel: String

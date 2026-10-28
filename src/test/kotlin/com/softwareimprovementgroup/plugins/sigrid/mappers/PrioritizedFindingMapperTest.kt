@@ -85,9 +85,6 @@ class PrioritizedFindingMapperTest {
         vulnerabilities = vulnerabilities,
     )
 
-    private fun makeVulnerability(id: String = "CVE-2024-1234", severity: RiskSeverity = RiskSeverity.Critical) =
-        OshVulnerability(id = id, severity = severity, score = null, method = null)
-
     private fun makeActivity(hasHistory: Boolean = true, fileActivities: List<FileActivity> = emptyList()) =
         FileActivityData(hasHistory = hasHistory, historyStartDate = null, historyEndDate = null, fileActivities = fileActivities)
 
@@ -303,7 +300,7 @@ class PrioritizedFindingMapperTest {
         assertEquals(1, result.findings.size)
     }
 
-    // rank: Security and Reliability always first (product decision, confirmed with the epic's author)
+    // rank: Security and Reliability always first (a product decision)
 
     @Test
     fun map_lowSeveritySecurity_stillRankedAheadOfCriticalOtherFindings() {
@@ -404,7 +401,7 @@ class PrioritizedFindingMapperTest {
         assertEquals(listOf("vuln-dep", "maint-critical"), result.findings.map { it.id })
     }
 
-    // gate 2: activity (Maintainability only, fails open with no/unknown history)
+    // activity gate: (Maintainability only, fails open with no/unknown history)
 
     @Test
     fun map_maintainabilityInDormantFile_demotedWhenHistoryKnown() {
@@ -449,7 +446,7 @@ class PrioritizedFindingMapperTest {
 
     @Test
     fun map_securityInDormantFile_notGated() {
-        // Gate 2 is Maintainability-only - Security findings are never activity-gated.
+        // The Activity Gate is Maintainability-only - Security findings are never activity-gated.
         val findings = listOf(makeSecurityFinding(id = "sec", fileLocations = listOf(FileLocation("svc", "svc/Dormant.kt"))))
         val activity = makeActivity(fileActivities = listOf(FileActivity("svc/Dormant.kt", 0.0, 0.0)))
 
@@ -458,7 +455,7 @@ class PrioritizedFindingMapperTest {
         assertEquals(listOf("sec"), result.findings.map { it.id })
     }
 
-    // gate 3: objectives (dampens by one tier when the capability's objective is already met)
+    // objectives gate: (dampens by one tier when the capability's objective is already met)
 
     @Test
     fun map_maintainabilityActualAtConfiguredTarget_allMaintainabilityFindingsDampenedOneTier() {
@@ -478,7 +475,7 @@ class PrioritizedFindingMapperTest {
 
     @Test
     fun map_maintainabilityActualBelowConfiguredTarget_noDampening() {
-        // The design doc's own worked example: 3.48 actual vs. 3.5 target is a documented miss.
+        // A documented example: 3.48 actual vs. 3.5 target is a documented miss.
         val maint = makeCandidate(id = "maint-critical", severity = MaintainabilitySeverity.VeryHigh)
         val config = mapOf("MAINTAINABILITY" to 3.5)
         val ratings = mapOf(PriorityCapability.Maintainability to 3.48)
@@ -491,7 +488,7 @@ class PrioritizedFindingMapperTest {
     @Test
     fun map_informationSeveritySecurityFinding_metObjective_dampensToLowNotUnknown() {
         // Regression test for a reported bug: an Information-severity Security finding maps to
-        // PriorityRank.Low. With its objective met, Gate 3 must dampen it to Low (its floor), not
+        // PriorityRank.Low. With its objective met, the Objectives Gate must dampen it to Low (its floor), not
         // Unknown - Unknown is reserved for "severity couldn't be determined" elsewhere in the mapper.
         val info = makeSecurityFinding(id = "sec-info", severity = RiskSeverity.Information)
         val objectives = listOf(makeObjective("SECURITY", "MET"))
@@ -541,7 +538,7 @@ class PrioritizedFindingMapperTest {
     }
 
     // promotionReason: each pipeline stage that does something non-obvious to a finding's position or
-    // severity must label why, per Epic 432 section 3's "why it's here" requirement.
+    // severity must label why, per the Prioritization Epic's "why it's here" requirement.
 
     @Test
     fun map_securityFinding_hasAlwaysFirstPromotionReason() {
@@ -601,7 +598,7 @@ class PrioritizedFindingMapperTest {
 
     @Test
     fun map_objectiveMetSecurityFinding_showsCombinedObjectiveMetAlwaysFirstReason() {
-        // Gate 3 adds "objective met - deprioritized", but the finding stays on top as always-first, so
+        // The Objectives Gate adds "objective met - deprioritized", but the finding stays on top as always-first, so
         // rank() folds both facts into one message instead of showing a contradiction.
         val sec = makeSecurityFinding(id = "sec-critical", severity = RiskSeverity.Critical)
         val objectives = listOf(makeObjective("SECURITY", "MET"))

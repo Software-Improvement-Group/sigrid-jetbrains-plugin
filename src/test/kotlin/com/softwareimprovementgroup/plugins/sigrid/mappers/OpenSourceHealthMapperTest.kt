@@ -351,7 +351,7 @@ class OpenSourceHealthMapperTest {
     }
 
     // Regression guard for the PriorityDeduplicator wiring in mapVulnerabilities(): the raw feed can list
-    // the same CVE twice for one component (design doc: one real dependency listed ~125 CVE entries but
+    // the same CVE twice for one component (real data: one dependency listed ~125 CVE entries but
     // only 94 were unique) - this must come out deduplicated end-to-end through the real mapper, not just
     // in PriorityDeduplicatorTest's isolated unit tests.
     @Test
@@ -365,7 +365,7 @@ class OpenSourceHealthMapperTest {
         assertEquals(listOf("CVE-2021-1111"), result[0].vulnerabilities.map { it.id })
     }
 
-    // systemRating - used only by ObjectivesGate's Gate 3 market-benchmark fallback
+    // systemRating - used only by the Objectives Gate's market-benchmark fallback
 
     @Test
     fun systemRating_propertyPresent_parsed() {

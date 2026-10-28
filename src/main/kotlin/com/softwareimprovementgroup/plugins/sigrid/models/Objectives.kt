@@ -17,7 +17,7 @@ data class SystemObjectivesResponse(
 // rating-scale objective (e.g. ARCHITECTURE_QUALITY, MAINTAINABILITY) reports them as a number (a 0.5-5.5
 // star rating). Both are JSON scalars rather than objects, so Gson deserializes each into the matching
 // Kotlin type at runtime (String or Double) - callers must check `is String` / `is Double` before use,
-// which is exactly the "no equivalent benchmark for count/enum objectives" distinction Gate 3 needs to make.
+// which is exactly the "no equivalent benchmark for count/enum objectives" distinction the Objectives Gate needs to make.
 data class ObjectiveEvaluationResponse(
     val type: String,
     val feature: String,

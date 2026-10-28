@@ -2,10 +2,10 @@ package com.softwareimprovementgroup.plugins.sigrid.models
 
 // Mirrors Sigrid's "raw" Architecture Quality export
 // (see https://docs.sigrid-says.com/reference/aq-json-export-format.html). This is a much larger export; only
-// the fields needed by its two consumers are modelled: the per-file Git activity signal (Epic 432 Gate 2,
+// the fields needed by its two consumers are modelled: the per-file Git activity signal (used by the Prioritization Epic's Activity Gate,
 // `measurementValues`) and the Architecture tab's findings (`shortName` and `dependencies`).
 //
-// Confirmed against a real export (sigrid-backend): FILE elements carry their Git activity only as scalar
+// Confirmed against a real export: FILE elements carry their Git activity only as scalar
 // `measurementValues` (CHURN, COMMITS, AUTHORS) aggregated over the whole history window. Their
 // `measurementTimeSeries` is always empty - weekly time series exist only on CODE_COMPONENT elements.
 
@@ -43,14 +43,14 @@ data class ArchitectureDependencyResponse(
 // Per-file Git activity (CHURN = lines changed, COMMITS = commit count, both over the export's history
 // window), extracted from the FILE-type system
 // elements. Only files where Sigrid actually reported a CHURN or COMMITS value are represented - a missing entry means
-// "no activity data for this file", not "zero activity", which matters for Gate 2's decision to fall back to
+// "no activity data for this file", not "zero activity", which matters for the Activity Gate's decision to fall back to
 // severity-only when a system (or a specific file within it) has no change-history coverage.
 //
 // Confirmed against a real export: a FILE element's `name` is the full repo-relative path
 // (e.g. "src/main/java/com/exin/astride/controller/FooController.java"), unlike Maintainability/Security
 // responses, which carry an explicit `component` field. Architecture Quality has no such field on FILE
 // elements - a file's owning component only exists via the CODE_COMPONENT hierarchy and CONTAINS edges in
-// the dependency graph (not modelled here), so there's deliberately no `component` on this class. Gate 2
+// the dependency graph (not modelled here), so there's deliberately no `component` on this class. The Activity Gate
 // should join FileActivity to findings by normalized file path, not by a fabricated component match.
 data class FileActivity(
     val filePath: String,

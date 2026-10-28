@@ -4,8 +4,8 @@ import com.softwareimprovementgroup.plugins.sigrid.models.PriorityCapability
 import com.softwareimprovementgroup.plugins.sigrid.models.PrioritizedFinding
 
 // PROVISIONAL path heuristics, standing in for the SAT's own production/test/generated classification,
-// which Sigrid does not yet expose via the public API (see the Epic 432 design doc, section 2.8 and open
-// item #13 - the classification already exists inside the SAT, it's just not surfaced on findings today).
+// which Sigrid does not yet expose via the public API (the classification already exists inside the SAT,
+// it's just not surfaced on findings today).
 // Deliberately conservative: only common, unambiguous markers, so real findings on plausible-looking
 // application code aren't hidden by a false positive. Revisit once Sigrid exposes the real classification.
 object PriorityExclusionFilter {
@@ -19,7 +19,7 @@ object PriorityExclusionFilter {
 
     // Config-file exclusion only applies to Maintainability - Security/Reliability tools like KICS exist
     // specifically to scan config/IaC files, so excluding them there would delete the category those tools
-    // are for (Epic 432 design doc, section 3).
+    // are for.
     private val CONFIG_FILE_EXTENSIONS = listOf(
         ".yml", ".yaml", ".json", ".xml", ".properties", ".toml", ".ini", ".conf", ".tf", ".tfvars",
     )

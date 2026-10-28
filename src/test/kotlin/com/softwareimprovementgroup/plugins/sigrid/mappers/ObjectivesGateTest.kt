@@ -87,7 +87,7 @@ class ObjectivesGateTest {
 
     @Test
     fun isObjectiveMet_maintainability_actualBelowConfiguredTarget_isFalse() {
-        // The design doc's own worked example: 3.48 actual vs. 3.5 target is a documented miss.
+        // A documented example: 3.48 actual vs. 3.5 target is a documented miss.
         val config = mapOf("MAINTAINABILITY" to 3.5)
         val ratings = mapOf(PriorityCapability.Maintainability to 3.48)
         assertFalse(ObjectivesGate.isObjectiveMet(PriorityCapability.Maintainability, emptyList(), config, ratings))
@@ -231,7 +231,7 @@ class ObjectivesGateTest {
         assertEquals(PriorityRank.Low, result.priorityRank)
     }
 
-    // applyIfMet: promotionReason labeling - section 2.7 requires the market-benchmark fallback to be
+    // applyIfMet: promotionReason labeling - the market-benchmark fallback must be
     // "clearly labeled... so it's never mistaken for something the customer chose", so EXPLICIT_OBJECTIVE
     // and MARKET_BENCHMARK must each attach their own distinct, correct label.
 
@@ -291,7 +291,7 @@ class ObjectivesGateTest {
     @Test
     fun applyIfMet_appendsToExistingPromotionReason_doesNotOverwrite() {
         // Append-only design: a finding can legitimately already carry a reason from an earlier pipeline
-        // stage (e.g. Security's "always first" label) - Gate 3 must add to that list, not replace it.
+        // stage (e.g. Security's "always first" label) - the Objectives Gate must add to that list, not replace it.
         val finding = makeFinding(PriorityCapability.Security, promotionReason = listOf("earlier reason"))
         val result = ObjectivesGate.applyIfMet(finding, listOf(makeObjective("SECURITY", "MET")))
         assertEquals(

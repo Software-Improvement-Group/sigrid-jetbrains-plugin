@@ -4,14 +4,14 @@ import com.softwareimprovementgroup.plugins.sigrid.models.DependencyType
 import com.softwareimprovementgroup.plugins.sigrid.models.OpenSourceHealthDependency
 import com.softwareimprovementgroup.plugins.sigrid.models.OshVulnerability
 
-// DE-DUPLICATE stage of the Epic 432 prioritization pipeline (see design doc section 3). Two distinct
+// De-duplicate stage of the Prioritization Epic's pipeline. Two distinct
 // duplication problems live in the same OSH data: the same CVE listed more than once within one
 // dependency's own vulnerability list, and the same library listed multiple times under different
 // version constraints.
 object PriorityDeduplicator {
 
     // A single OSH finding's own vulnerability list can list the same CVE more than once - confirmed in
-    // the design doc: one real dependency listed ~125 CVE entries but only 94 were unique. Collapse by
+    // real data: one dependency listed ~125 CVE entries but only 94 were unique. Collapse by
     // CVE id, keeping whichever duplicate reports the worst severity.
     fun deduplicateVulnerabilities(vulnerabilities: List<OshVulnerability>): List<OshVulnerability> =
         vulnerabilities

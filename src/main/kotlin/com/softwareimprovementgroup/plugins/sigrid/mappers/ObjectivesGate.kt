@@ -6,17 +6,17 @@ import com.softwareimprovementgroup.plugins.sigrid.models.PriorityCapability
 import com.softwareimprovementgroup.plugins.sigrid.models.PriorityRank
 import com.softwareimprovementgroup.plugins.sigrid.models.PrioritizedFinding
 
-// GATE 3 of the Epic 432 prioritization pipeline (design doc section 3/2.7): system-level dampening when a
+// Objectives Gate of the Prioritization Epic's pipeline: system-level dampening when a
 // capability's own quality objective is already met - a system that deteriorated but still meets its
-// target isn't the hotspot Epic 432 is trying to surface.
+// target isn't the hotspot the Prioritization Epic is trying to surface.
 //
 // Two different comparisons live here, because Sigrid's objective types split the same way:
 //  - Severity-scale (Security: SECURITY_MAX_SEVERITY, Reliability: RELIABILITY_MAX_SEVERITY) - resolved via
 //    objectives-evaluation's own pre-computed `targetMetAtEnd`, keyed by `feature`. There's no cheap way to
 //    fetch "current worst severity" as a standalone value, so this trusts the server's own comparison.
 //  - Rating-scale, 0.5-5.5 stars (Maintainability only - see below on OSH) - computed here directly as
-//    actual >= target, matching section 2.7's own worked example ("Maintainability 3.48 vs. 3.5 target" is
-//    a documented miss). `target` comes from the objectives/config end point (SigridApiService.
+//    actual >= target, so e.g. "Maintainability 3.48 vs. 3.5 target" is
+//    a miss. `target` comes from the objectives/config end point (SigridApiService.
 //    getObjectivesConfig - resolved via Sigrid's system-over-portfolio precedence, no date range needed),
 //    `actual` from SigridApiService.getMaintainabilityRating(). This deliberately does NOT use
 //    objectives-evaluation for Maintainability: that endpoint's targetMetAtEnd is computed as of a
@@ -30,7 +30,7 @@ import com.softwareimprovementgroup.plugins.sigrid.models.PrioritizedFinding
 // Its rating (from OpenSourceHealthMapper.systemRating) is therefore always compared straight against the
 // 3.0 market-average benchmark - there's no "explicit objective" branch to fall through from.
 //
-// Section 2.7 explicitly requires the market-benchmark fallback to be "clearly labeled wherever shown...
+// The market-benchmark fallback must be "clearly labeled wherever shown...
 // so it's never mistaken for something the customer chose" - MetVia tracks which of the two applied so
 // applyIfMet() can attach the right label as a promotionReason (see PrioritizedFinding.promotionReason).
 object ObjectivesGate {
