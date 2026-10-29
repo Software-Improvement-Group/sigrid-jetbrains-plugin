@@ -12,6 +12,14 @@ plugins {
 //    }
 //}
 
+// Default mode generates bridge overrides for platform interface defaults (e.g. the deprecated
+// ToolWindowFactory.isApplicable), which the verifier then reports as deprecated overrides and calls.
+kotlin {
+    compilerOptions {
+        jvmDefault = org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode.NO_COMPATIBILITY
+    }
+}
+
 tasks.test {
     useJUnitPlatform()
     jvmArgs("-Djunit.platform.launcher.interceptors.enabled=false")

@@ -4,10 +4,10 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
+import com.intellij.terminal.frontend.toolwindow.TerminalToolWindowTabsManager
 import com.softwareimprovementgroup.plugins.sigrid.SigridBundle
 import com.softwareimprovementgroup.plugins.sigrid.models.FixPrompt
 import com.softwareimprovementgroup.plugins.sigrid.notifySigrid
-import org.jetbrains.plugins.terminal.TerminalToolWindowManager
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
@@ -22,8 +22,8 @@ object ClaudeCodeTerminalLauncher {
         ApplicationManager.getApplication().executeOnPooledThread {
             try {
                 // The prompt goes into a file rather than onto the command line: it is multi-line and
-                // contains finding text from the Sigrid API, which must never be interpreted by a shell.
-                // The command line only ever holds text we control plus quoted paths.
+                // contains finding text from the Sigrid API. The arguments only ever hold text we control
+                // plus paths, and are passed as argv, so no shell ever interprets them.
                 val promptFile = writePromptFile(prompt.text)
                 ApplicationManager.getApplication().invokeLater {
                     try {
@@ -41,18 +41,15 @@ object ClaudeCodeTerminalLauncher {
     }
 
     private fun openTerminalAndRun(project: Project, prompt: FixPrompt, promptFile: Path, claudeCli: String) {
-        // TODO: Replace createShellWidget with a stable non-deprecated alternative.
-        // createShellWidget returns the engine-agnostic com.intellij.terminal.ui.TerminalWidget and is only
-        // soft-deprecated (plain @Deprecated, not scheduled for removal); every non-deprecated creator that
-        // returns a TerminalWidget is @ApiStatus.Internal, which the Marketplace verifier flags, so this stays
-        // the safest public option.
-        val widget = TerminalToolWindowManager.getInstance(project).createShellWidget(
-            project.basePath,
-            SigridBundle["finding.fixit.terminal.tab.title"],
-            true,
-            true,
-        )
-        widget.sendCommandToExecute(buildCommand(prompt.lead, promptFile, claudeCli))
+        // The experimental tab builder replaces the soft-deprecated TerminalToolWindowManager.createShellWidget;
+        // every other non-deprecated creator is @ApiStatus.Internal, which the Marketplace verifier flags.
+        TerminalToolWindowTabsManager.getInstance(project)
+            .createTabBuilder()
+            .workingDirectory(project.basePath)
+            .tabName(SigridBundle["finding.fixit.terminal.tab.title"])
+            .shellCommand(buildArguments(prompt.lead, promptFile, claudeCli))
+            .requestFocus(true)
+            .createTab()
     }
 
     private fun writePromptFile(text: String): Path {
@@ -68,17 +65,12 @@ object ClaudeCodeTerminalLauncher {
     }
 
     /**
+     * The program followed by its arguments, executed directly with no shell in between.
      * `claude [options] [prompt]` accepts the prompt positionally, but `--add-dir` is variadic and
      * would swallow it, so every option has to come after the prompt.
      */
-    internal fun buildCommand(lead: String, promptFile: Path, claudeCli: String = CLAUDE_CLI): String {
-        val message = "${sanitizeForCommandLine(lead)} The findings to fix are described in $promptFile. Read that file first."
-        return "$claudeCli ${quote(message)} --add-dir ${quote(promptFile.parent.toString())}"
+    internal fun buildArguments(lead: String, promptFile: Path, claudeCli: String = CLAUDE_CLI): List<String> {
+        val message = "$lead The findings to fix are described in $promptFile. Read that file first."
+        return listOf(claudeCli, message, "--add-dir", promptFile.parent.toString())
     }
-
-    internal fun quote(value: String): String = "\"${value.replace("\"", "\\\"")}\""
-
-    /** Strips anything a shell would act on, defending the controlled lead against future changes. */
-    private fun sanitizeForCommandLine(value: String): String =
-        value.replace(Regex("""["`$\\!;|&()<>\r\n]"""), " ").trim()
 }
