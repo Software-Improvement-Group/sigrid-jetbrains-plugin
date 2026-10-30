@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.7] - 2026-10-29
+
+### Changed
+
+- **"Fix it" terminal launch** — Claude Code now opens through the terminal tab builder instead of the deprecated `createShellWidget`, and is started directly with its arguments rather than through a shell command line.
+- Removed the deprecated `DynamicBundle` constructor usage and compiled with `-jvm-default=no-compatibility`, so the Marketplace verifier no longer reports deprecated API overrides and calls.
+
 ## [1.0.6] - 2026-10-28
 
 ### Added

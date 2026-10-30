@@ -7,7 +7,7 @@ import org.jetbrains.annotations.PropertyKey
 @NonNls
 private const val BUNDLE = "messages.Sigrid"
 
-object SigridBundle : DynamicBundle(BUNDLE) {
+object SigridBundle : DynamicBundle(SigridBundle::class.java, BUNDLE) {
 
     operator fun get(@PropertyKey(resourceBundle = BUNDLE) key: String, vararg params: Any) =
         getMessage(key, *params)
