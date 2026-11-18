@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- **"Portfolio Name" renamed to "Customer Name"** — the label, help text, and validation/error messages in the global and project settings, the README, and the Marketplace description now use "Customer Name" to match Sigrid's documentation. No change in behaviour or stored settings.
+
 ## [1.0.7] - 2026-10-29
 
 ### Changed

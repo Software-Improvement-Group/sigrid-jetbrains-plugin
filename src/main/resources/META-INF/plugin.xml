@@ -24,7 +24,7 @@
         <ul>
             <li>A Sigrid account</li>
             <li>A Sigrid API token</li>
-            <li>Customer ID</li>
+            <li>Customer Name</li>
             <li>System ID</li>
         </ul>
         <p>Configuration instructions are available in the <a href="https://docs.sigrid-says.com/integrations/jetbrains-extension.html">Sigrid documentation</a>.</p>
