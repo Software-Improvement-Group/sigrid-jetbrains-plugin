@@ -15,7 +15,7 @@ A JetBrains IDE plugin that lets you view and manage [Sigrid](https://www.softwa
 - **Issue tracker integration** — create a Jira issue or Azure DevOps work item from any selected finding via the **Create Issue** split button in the toolbar or the right-click context menu; a dialog lets you edit the title and preview the auto-generated description before submitting.
 - **Fix with AI** — hand selected findings to [Claude Code](https://claude.com/product/claude-code) via the **Fix with AI** toolbar button or the **Fix it with Claude Code** context menu item; a prompt built from the findings (and Sigrid Axis slash commands, when the [Sigrid Axis plugin](https://docs.sigrid-says.com/axis/installation.html) is installed) is sent to a `claude` terminal session.
 - **Search** — filter findings across all three panels with a real-time search bar.
-- **Settings** — configure your Sigrid API key, portfolio name, and API base URL globally (IDE-level), with per-project overrides; the tool window refreshes automatically when settings change. A gear icon in the tool window title bar opens project settings directly.
+- **Settings** — configure your Sigrid API key, customer name, and API base URL globally (IDE-level), with per-project overrides; the tool window refreshes automatically when settings change. A gear icon in the tool window title bar opens project settings directly.
 
 ## Requirements
 
@@ -45,7 +45,7 @@ The plugin ZIP is written to `build/distributions/`. Then install it from **Sett
 ## Configuration
 
 1. Open **Settings → Tools → Sigrid**.
-2. Enter your **API Key**, **Portfolio Name**, and optionally a custom **Sigrid API URL** (defaults to the SIG-hosted instance).
+2. Enter your **API Key**, **Customer Name**, and optionally a custom **Sigrid API URL** (defaults to the SIG-hosted instance).
 3. For per-project overrides (e.g. a different system name or API key), click **Configure system and other per-project Sigrid settings…** at the bottom of the global settings page, or open **Settings → Tools → Sigrid → Project Settings** directly. You can also reach project settings via the gear icon in the Sigrid tool window title bar.
 4. To enable Jira integration, open **Settings → Tools → Sigrid → Issue Trackers → Jira** and enter your Jira base URL, project key, username, and API token.
 5. To enable Azure DevOps integration, open **Settings → Tools → Sigrid → Issue Trackers → Azure DevOps** and enter your organization URL, personal access token, and project name. Per-project overrides are available under **Settings → Tools → Sigrid → Issue Trackers → Azure DevOps → Project Settings**.
